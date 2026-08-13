@@ -612,9 +612,13 @@ alter table public.products add column if not exists supplier_type text;
 alter table public.products add column if not exists supplier_cost numeric(12, 2);
 
 -- นำเข้าสินค้าเดิมซ้ำได้โดยไม่เกิดรายการซ้ำ
+--
+-- ต้องเป็น unique index เต็ม ไม่ใช่ partial (where supplier is not null) เพราะ
+-- ON CONFLICT (supplier, supplier_product_id) อนุมาน partial index ไม่ได้ (42P10)
+-- สินค้าที่ไม่ได้มาจากซัพพลายเออร์มี supplier เป็น NULL ซึ่ง Postgres ถือว่าไม่ชนกันเอง
+drop index if exists public.products_supplier_uidx;
 create unique index if not exists products_supplier_uidx
-  on public.products (supplier, supplier_product_id)
-  where supplier is not null;
+  on public.products (supplier, supplier_product_id);
 
 -- บัญชีเกมที่ส่งมอบให้ลูกค้าแล้ว หนึ่งแถวต่อหนึ่งรายการในคำสั่งซื้อ
 create table if not exists public.order_fulfillments (
