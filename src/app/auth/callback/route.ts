@@ -1,35 +1,43 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/server';
+import { safeRedirectPath } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
 
+/**
+ * OAuth / email-confirmation landing route.
+ *
+ * Google redirects here with a PKCE `code`. Exchanging it writes the Supabase
+ * session (access token JWT + refresh token) into cookies on the redirect
+ * response, so the very next request is already authenticated on the server.
+ */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/';
+  const next = safeRedirectPath(searchParams.get('next'));
 
-  if (code) {
-    try {
-      const supabase = await createClient();
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      
-      if (!error) {
-        const forwardedHost = request.headers.get('x-forwarded-host');
-        const isLocalEnv = process.env.NODE_ENV === 'development';
-        
-        if (isLocalEnv) {
-          return NextResponse.redirect(`${origin}${next}`);
-        } else if (forwardedHost) {
-          return NextResponse.redirect(`https://${forwardedHost}${next}`);
-        } else {
-          return NextResponse.redirect(`${origin}${next}`);
-        }
-      } else {
-        console.error('Supabase exchangeCodeForSession error:', error.message);
-      }
-    } catch (err) {
-      console.error('Auth callback exception:', err);
+  // The provider (or Supabase) can bounce back with an error instead of a code.
+  const providerError = searchParams.get('error_description') || searchParams.get('error');
+
+  const redirectBase = (() => {
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    if (process.env.NODE_ENV === 'development' || !forwardedHost) return origin;
+    return `https://${forwardedHost}`;
+  })();
+
+  if (!providerError && code) {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (!error) {
+      return NextResponse.redirect(`${redirectBase}${next}`);
     }
+
+    console.error('exchangeCodeForSession failed:', error.message);
+    return NextResponse.redirect(
+      `${redirectBase}/login?error=${encodeURIComponent(error.message)}`
+    );
   }
 
-  // Return user to login page with error flag if code exchange failed
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+  return NextResponse.redirect(
+    `${redirectBase}/login?error=${encodeURIComponent(providerError || 'auth_callback_failed')}`
+  );
 }

@@ -1,30 +1,30 @@
 'use client';
 
 import React from 'react';
-import { Truck, ShieldCheck, CreditCard, Headphones } from 'lucide-react';
+import { Zap, ShieldCheck, Wallet, Headphones } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 export const FeatureBar: React.FC = () => {
   const features = [
     {
-      icon: Truck,
-      title: 'จัดส่งฟรีทั่วประเทศ',
-      desc: 'เมื่อสั่งซื้อสินค้า ฿500 ขึ้นไป'
+      icon: Zap,
+      title: 'ได้รับทันทีหลังชำระ',
+      desc: 'ไม่ต้องรอ ไม่มีค่าจัดส่ง'
+    },
+    {
+      icon: Wallet,
+      title: 'เติมเงินด้วยสลิปโอน',
+      desc: 'ระบบตรวจสลิปกับธนาคารอัตโนมัติ'
     },
     {
       icon: ShieldCheck,
-      title: 'รับประกันศูนย์ไทย 100%',
-      desc: 'สินค้าแท้ มือหนึ่ง เคลมง่าย'
-    },
-    {
-      icon: CreditCard,
-      title: 'ชำระเงินปลอดภัย',
-      desc: 'รองรับ PromptPay, บัตร และ COD'
+      title: 'ตรวจสลิปกันปลอม',
+      desc: 'ใช้สลิปซ้ำหรือสลิปปลอมไม่ได้'
     },
     {
       icon: Headphones,
-      title: 'บริการลูกค้า 24/7',
-      desc: 'ทีมงานพร้อมตอบข้อสงสัยทันที'
+      title: 'ดูแลหลังการขาย',
+      desc: 'ติดต่อทีมงานได้ตลอดเวลา'
     }
   ];
 

@@ -1,9 +1,16 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product, Order, CartItem, CustomerInfo, OrderStatus, PaymentMethod, Coupon, Review } from '../types/ecommerce';
-import { INITIAL_PRODUCTS, INITIAL_ORDERS, INITIAL_COUPONS } from '../data/initialData';
-import { createClient } from '../lib/supabase/client';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import {
+  CartItem,
+  Coupon,
+  CustomerInfo,
+  Order,
+  OrderStatus,
+  Product,
+  WalletTransaction,
+} from '../types/ecommerce';
+import { DEFAULT_SETTINGS, StoreSettings } from '../lib/settings';
 
 interface Toast {
   id: string;
@@ -11,9 +18,18 @@ interface Toast {
   type: 'success' | 'info' | 'warning';
 }
 
+export interface ActionResult {
+  success: boolean;
+  message: string;
+}
+
 interface ShopContextType {
   products: Product[];
   orders: Order[];
+  coupons: Coupon[];
+  settings: StoreSettings;
+  isLoading: boolean;
+
   cart: CartItem[];
   wishlist: string[];
   searchQuery: string;
@@ -23,6 +39,12 @@ interface ShopContextType {
   isCheckoutOpen: boolean;
   activeCoupon: Coupon | null;
   toasts: Toast[];
+
+  // Wallet
+  balance: number;
+  walletTransactions: WalletTransaction[];
+  refreshWallet: () => Promise<void>;
+  topUp: (amount: number, slip: File | null, payload?: string) => Promise<ActionResult>;
 
   // Setters & Filters
   setSearchQuery: (query: string) => void;
@@ -46,18 +68,22 @@ interface ShopContextType {
   isInWishlist: (productId: string) => boolean;
 
   // Coupon
-  applyCoupon: (code: string) => { success: boolean; message: string };
+  applyCoupon: (code: string) => Promise<ActionResult>;
   removeCoupon: () => void;
 
-  // Order actions
-  createOrder: (customer: CustomerInfo, paymentMethod: PaymentMethod) => Order;
-  updateOrderStatus: (orderId: string, status: OrderStatus, trackingNumber?: string) => void;
+  // Orders
+  createOrder: (customer: CustomerInfo) => Promise<Order | null>;
+  updateOrderStatus: (orderId: string, status: OrderStatus, trackingNumber?: string) => Promise<void>;
 
-  // Product Admin actions
-  addProduct: (newProd: Omit<Product, 'id' | 'rating' | 'reviewsCount'>) => Product;
-  updateProduct: (updatedProd: Product) => void;
-  deleteProduct: (id: string) => void;
-  addReview: (productId: string, rating: number, comment: string, userName: string) => void;
+  // Admin
+  addProduct: (product: Partial<Product>) => Promise<Product | null>;
+  updateProduct: (product: Partial<Product> & { id: string }) => Promise<Product | null>;
+  deleteProduct: (id: string) => Promise<void>;
+  uploadProductImage: (file: File) => Promise<string | null>;
+  saveSettings: (patch: Partial<StoreSettings>) => Promise<ActionResult>;
+  addReview: (productId: string, rating: number, comment: string) => Promise<ActionResult>;
+  refreshProducts: () => Promise<void>;
+  refreshOrders: () => Promise<void>;
 
   // UI Toast
   showToast: (text: string, type?: 'success' | 'info' | 'warning') => void;
@@ -65,123 +91,179 @@ interface ShopContextType {
 
 const ShopContext = createContext<ShopContextType | undefined>(undefined);
 
+/** Every endpoint answers `{ success, data?, message?, error? }`. */
+async function callApi<T>(
+  input: string,
+  init?: RequestInit
+): Promise<{ ok: boolean; data?: T; message: string }> {
+  try {
+    const response = await fetch(input, init);
+    const body = await response.json().catch(() => ({}));
+
+    return {
+      ok: response.ok && body.success !== false,
+      data: body.data as T,
+      message: body.message || body.error || (response.ok ? '' : `เกิดข้อผิดพลาด (${response.status})`),
+    };
+  } catch {
+    return { ok: false, message: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้' };
+  }
+}
+
+const readStored = <T,>(key: string, fallback: T): T => {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? (JSON.parse(saved) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [balance, setBalance] = useState(0);
+  const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
+
+  // Cart and wishlist are the only things that stay in the browser — they belong
+  // to the visitor, not to the shop, and are worthless to anyone else.
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlist, setWishlist] = useState<string[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
-  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [activeCoupon, setActiveCoupon] = useState<Coupon | null>(null);
+  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  const supabase = createClient();
+  const showToast = useCallback(
+    (text: string, type: 'success' | 'info' | 'warning' = 'success') => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      setToasts((prev) => [...prev, { id, text, type }]);
+      setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 3500);
+    },
+    []
+  );
 
-  // Load state from localStorage or initialData
-  useEffect(() => {
-    try {
-      const savedProducts = localStorage.getItem('owen_products');
-      if (savedProducts) {
-        setProducts(JSON.parse(savedProducts));
-      } else {
-        setProducts(INITIAL_PRODUCTS);
-      }
+  const refreshProducts = useCallback(async () => {
+    const { data } = await callApi<Product[]>('/api/products');
+    if (data) setProducts(data);
+  }, []);
 
-      const savedOrders = localStorage.getItem('owen_orders');
-      if (savedOrders) {
-        setOrders(JSON.parse(savedOrders));
-      } else {
-        setOrders(INITIAL_ORDERS);
-      }
+  const refreshOrders = useCallback(async () => {
+    const { data } = await callApi<Order[]>('/api/orders');
+    if (data) setOrders(data);
+  }, []);
 
-      const savedCart = localStorage.getItem('owen_cart');
-      if (savedCart) {
-        setCart(JSON.parse(savedCart));
-      }
-
-      const savedWishlist = localStorage.getItem('owen_wishlist');
-      if (savedWishlist) {
-        setWishlist(JSON.parse(savedWishlist));
-      }
-    } catch {
-      setProducts(INITIAL_PRODUCTS);
-      setOrders(INITIAL_ORDERS);
-    } finally {
-      setIsLoaded(true);
+  const refreshWallet = useCallback(async () => {
+    const { data } = await callApi<{ balance: number; transactions: WalletTransaction[] }>(
+      '/api/wallet'
+    );
+    if (data) {
+      setBalance(data.balance);
+      setWalletTransactions(data.transactions ?? []);
     }
   }, []);
 
-  // Sync quickViewProduct with latest products state
+  /* localStorage does not exist during the server render, so cart and wishlist
+     can only be read after mount. */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (quickViewProduct) {
-      const updated = products.find((p) => p.id === quickViewProduct.id);
-      if (updated) {
-        setQuickViewProduct(updated);
-      } else {
-        setQuickViewProduct(null);
-      }
-    }
-  }, [products]);
+    setCart(readStored<CartItem[]>('neo_cart', []));
+    setWishlist(readStored<string[]>('neo_wishlist', []));
+    setIsHydrated(true);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Save changes to localStorage only after initial load
+  /* Initial load. The storefront is client-rendered and every endpoint is
+     per-user (RLS), so the first fetch happens on mount; `active` drops the
+     result if the provider unmounts while the requests are in flight. */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('owen_products', JSON.stringify(products));
-    }
-  }, [products, isLoaded]);
+    let active = true;
+
+    const load = async () => {
+      const [productList, orderList, couponList, storeSettings] = await Promise.all([
+        callApi<Product[]>('/api/products'),
+        callApi<Order[]>('/api/orders'),
+        callApi<Coupon[]>('/api/coupons'),
+        callApi<StoreSettings>('/api/settings'),
+      ]);
+
+      if (!active) return;
+
+      if (productList.data) setProducts(productList.data);
+      if (orderList.data) setOrders(orderList.data);
+      if (couponList.data) setCoupons(couponList.data);
+      if (storeSettings.data) setSettings(storeSettings.data);
+      setIsLoading(false);
+    };
+
+    load();
+    refreshWallet();
+
+    return () => {
+      active = false;
+    };
+  }, [refreshWallet]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('owen_orders', JSON.stringify(orders));
-    }
-  }, [orders, isLoaded]);
+    if (isHydrated) localStorage.setItem('neo_cart', JSON.stringify(cart));
+  }, [cart, isHydrated]);
 
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('owen_cart', JSON.stringify(cart));
-    }
-  }, [cart, isLoaded]);
+    if (isHydrated) localStorage.setItem('neo_wishlist', JSON.stringify(wishlist));
+  }, [wishlist, isHydrated]);
 
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('owen_wishlist', JSON.stringify(wishlist));
-    }
-  }, [wishlist, isLoaded]);
+  // Derived from `products`, so the quick-view modal always shows current stock.
+  const quickViewProduct = quickViewProductId
+    ? products.find((p) => p.id === quickViewProductId) ?? null
+    : null;
 
-  const showToast = (text: string, type: 'success' | 'info' | 'warning' = 'success') => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, text, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3500);
+  const setQuickViewProduct = (product: Product | null) =>
+    setQuickViewProductId(product?.id ?? null);
+
+  // ── Cart maths ────────────────────────────────────────────────────────────
+  const subtotalOf = (items: CartItem[]) =>
+    items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+
+  const cartSubtotal = subtotalOf(cart);
+
+  // A coupon only counts while the cart still meets its minimum spend. Deriving it
+  // (instead of clearing the state) means it applies again if the cart grows back.
+  const activeCoupon =
+    selectedCoupon && cartSubtotal >= selectedCoupon.minSpend ? selectedCoupon : null;
+
+  const warnIfCouponLapses = (nextCart: CartItem[]) => {
+    if (!activeCoupon) return;
+    if (subtotalOf(nextCart) >= activeCoupon.minSpend) return;
+
+    showToast(
+      `พักการใช้คูปอง "${activeCoupon.code}" ชั่วคราว เนื่องจากยอดสั่งซื้อไม่ถึงขั้นต่ำ ฿${activeCoupon.minSpend.toLocaleString()}`,
+      'warning'
+    );
   };
 
-  // Cart Calculations
-  const cartSubtotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-
-  // Auto invalidate coupon if cart subtotal falls below minimum spend
-  useEffect(() => {
-    if (activeCoupon && cartSubtotal < activeCoupon.minSpend) {
-      setActiveCoupon(null);
-      showToast(`ยกเลิกคูปอง "${activeCoupon.code}" เนื่องจากยอดสั่งซื้อไม่ถึงขั้นต่ำ ฿${activeCoupon.minSpend.toLocaleString()}`, 'warning');
-    }
-  }, [cartSubtotal, activeCoupon]);
-
   const discountAmount = activeCoupon
-    ? activeCoupon.discountPercent > 0
-      ? Math.round((cartSubtotal * activeCoupon.discountPercent) / 100)
-      : 0
+    ? Math.round((cartSubtotal * activeCoupon.discountPercent) / 100)
     : 0;
 
-  const isFreeShipCoupon = activeCoupon?.code === 'FREESHIP';
-  const shippingFee = cartSubtotal === 0 ? 0 : cartSubtotal >= 500 || isFreeShipCoupon ? 0 : 50;
+  const shippingFee =
+    cartSubtotal === 0 || cartSubtotal >= settings.freeShippingMin || activeCoupon?.freeShipping
+      ? 0
+      : settings.shippingFee;
+
   const cartTotal = Math.max(0, cartSubtotal - discountAmount + shippingFee);
 
-  // Cart Handlers
+  // ── Cart actions ──────────────────────────────────────────────────────────
   const addToCart = (product: Product, quantity = 1, selectedColor?: string) => {
     if (product.stock <= 0) {
       showToast('สินค้าชิ้นนี้หมดสต็อกชั่วคราว', 'warning');
@@ -196,188 +278,237 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updated[existingIndex] = {
           ...updated[existingIndex],
           quantity: Math.min(newQty, product.stock),
-          selectedColor: selectedColor || updated[existingIndex].selectedColor
+          selectedColor: selectedColor || updated[existingIndex].selectedColor,
         };
         return updated;
-      } else {
-        return [...prev, { product, quantity: Math.min(quantity, product.stock), selectedColor }];
       }
+      return [...prev, { product, quantity: Math.min(quantity, product.stock), selectedColor }];
     });
 
     showToast(`เพิ่ม "${product.name}" เข้าตะกร้าเรียบร้อยแล้ว`, 'success');
   };
 
   const removeFromCart = (productId: string) => {
-    setCart((prev) => prev.filter((item) => item.product.id !== productId));
+    const nextCart = cart.filter((item) => item.product.id !== productId);
+    setCart(nextCart);
     showToast('ลบรายการสินค้าเรียบร้อยแล้ว', 'info');
+    warnIfCouponLapses(nextCart);
   };
 
   const updateCartQuantity = (productId: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          if (item.product.id === productId) {
-            const newQty = item.quantity + delta;
-            if (newQty <= 0) return null;
-            return { ...item, quantity: Math.min(newQty, item.product.stock) };
-          }
-          return item;
-        })
-        .filter(Boolean) as CartItem[]
-    );
+    const nextCart = cart.flatMap((item) => {
+      if (item.product.id !== productId) return [item];
+
+      const newQty = item.quantity + delta;
+      if (newQty <= 0) return [];
+      return [{ ...item, quantity: Math.min(newQty, item.product.stock) }];
+    });
+
+    setCart(nextCart);
+    warnIfCouponLapses(nextCart);
   };
 
   const clearCart = () => {
     setCart([]);
-    setActiveCoupon(null);
+    setSelectedCoupon(null);
   };
 
-  // Wishlist Handlers
+  // ── Wishlist ──────────────────────────────────────────────────────────────
   const toggleWishlist = (productId: string) => {
     setWishlist((prev) => {
-      const exists = prev.includes(productId);
-      if (exists) {
+      if (prev.includes(productId)) {
         showToast('ถอดออกจากรายการโปรดแล้ว', 'info');
         return prev.filter((id) => id !== productId);
-      } else {
-        showToast('บันทึกในรายการโปรดแล้ว', 'success');
-        return [...prev, productId];
       }
+      showToast('บันทึกในรายการโปรดแล้ว', 'success');
+      return [...prev, productId];
     });
   };
 
   const isInWishlist = (productId: string) => wishlist.includes(productId);
 
-  // Coupon Handlers
-  const applyCoupon = (code: string) => {
-    const cleanCode = code.trim().toUpperCase();
-    const found = INITIAL_COUPONS.find((c) => c.code === cleanCode);
-    if (!found) {
-      return { success: false, message: 'รหัสส่วนลดไม่ถูกต้องหรือหมดอายุ' };
-    }
-    if (cartSubtotal < found.minSpend) {
-      return {
-        success: false,
-        message: `รหัสนี้ใช้ได้เมื่อยอดขั้นต่ำ ฿${found.minSpend.toLocaleString()}`
-      };
+  // ── Coupons ───────────────────────────────────────────────────────────────
+  const applyCoupon = async (code: string): Promise<ActionResult> => {
+    const result = await callApi<Coupon>('/api/coupons', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, subtotal: cartSubtotal }),
+    });
+
+    if (!result.ok || !result.data) {
+      return { success: false, message: result.message || 'ใช้รหัสส่วนลดไม่สำเร็จ' };
     }
 
-    setActiveCoupon(found);
-    showToast(`ใช้คูปอง "${found.code}" เรียบร้อยแล้ว`, 'success');
-    return { success: true, message: 'ใช้โค้ดส่วนลดสำเร็จ!' };
+    setSelectedCoupon(result.data);
+    showToast(`ใช้คูปอง "${result.data.code}" เรียบร้อยแล้ว`, 'success');
+    return { success: true, message: result.message || 'ใช้โค้ดส่วนลดสำเร็จ!' };
   };
 
   const removeCoupon = () => {
-    setActiveCoupon(null);
+    setSelectedCoupon(null);
     showToast('ยกเลิกการใช้โค้ดส่วนลดแล้ว', 'info');
   };
 
-  // Order Handlers
-  const createOrder = (customer: CustomerInfo, paymentMethod: PaymentMethod): Order => {
-    const newOrder: Order = {
-      id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
-      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      customer,
-      items: [...cart],
-      subtotal: cartSubtotal,
-      discount: discountAmount,
-      shippingFee,
-      totalAmount: cartTotal,
-      status: 'รอดำเนินการ',
-      paymentMethod,
-      isPaid: paymentMethod === 'promptpay' || paymentMethod === 'credit_card',
-      couponCode: activeCoupon?.code
-    };
+  // ── Wallet ────────────────────────────────────────────────────────────────
+  const topUp = async (amount: number, slip: File | null, payload?: string): Promise<ActionResult> => {
+    const form = new FormData();
+    form.append('amount', String(amount));
+    if (slip) form.append('slip', slip);
+    if (payload) form.append('payload', payload);
 
-    // Update Product Stock
-    setProducts((prev) =>
-      prev.map((p) => {
-        const itemInCart = cart.find((ci) => ci.product.id === p.id);
-        if (itemInCart) {
-          return { ...p, stock: Math.max(0, p.stock - itemInCart.quantity) };
-        }
-        return p;
-      })
-    );
+    const result = await callApi<{ balance: number }>('/api/topups', { method: 'POST', body: form });
 
-    setOrders((prev) => [newOrder, ...prev]);
-    clearCart();
-    setIsCheckoutOpen(false);
-    showToast(`สร้างคำสั่งซื้อ #${newOrder.id} สำเร็จ!`, 'success');
+    if (!result.ok) return { success: false, message: result.message || 'เติมเงินไม่สำเร็จ' };
 
-    return newOrder;
+    await refreshWallet();
+    return { success: true, message: result.message || 'เติมเงินสำเร็จ' };
   };
 
-  const updateOrderStatus = (orderId: string, status: OrderStatus, trackingNumber?: string) => {
-    setOrders((prev) =>
-      prev.map((ord) => {
-        if (ord.id === orderId) {
-          return {
-            ...ord,
-            status,
-            trackingNumber: trackingNumber !== undefined ? trackingNumber : ord.trackingNumber
-          };
-        }
-        return ord;
-      })
-    );
+  // ── Orders ────────────────────────────────────────────────────────────────
+  const createOrder = async (customer: CustomerInfo): Promise<Order | null> => {
+    const result = await callApi<Order>('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer,
+        // Only ids and quantities: the server prices the order from the database.
+        items: cart.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          selectedColor: item.selectedColor,
+        })),
+        couponCode: activeCoupon?.code,
+      }),
+    });
+
+    if (!result.ok || !result.data) {
+      showToast(result.message || 'สั่งซื้อไม่สำเร็จ', 'warning');
+      return null;
+    }
+
+    setOrders((prev) => [result.data as Order, ...prev]);
+    clearCart();
+    setIsCheckoutOpen(false);
+    await Promise.all([refreshWallet(), refreshProducts()]);
+    showToast(`สร้างคำสั่งซื้อ #${result.data.id} สำเร็จ!`, 'success');
+
+    return result.data;
+  };
+
+  const updateOrderStatus = async (
+    orderId: string,
+    status: OrderStatus,
+    trackingNumber?: string
+  ) => {
+    const result = await callApi<Order>(`/api/orders/${orderId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, trackingNumber }),
+    });
+
+    if (!result.ok || !result.data) {
+      showToast(result.message || 'อัปเดตสถานะไม่สำเร็จ', 'warning');
+      return;
+    }
+
+    setOrders((prev) => prev.map((order) => (order.id === orderId ? result.data! : order)));
     showToast(`อัปเดตสถานะคำสั่งซื้อ #${orderId} เป็น "${status}" แล้ว`, 'success');
   };
 
-  // Product Admin Operations
-  const addProduct = (newProdData: Omit<Product, 'id' | 'rating' | 'reviewsCount'>): Product => {
-    const newProduct: Product = {
-      ...newProdData,
-      id: `prod-${Date.now()}`,
-      rating: 5.0,
-      reviewsCount: 0,
-      reviews: []
-    };
+  // ── Admin ─────────────────────────────────────────────────────────────────
+  const addProduct = async (product: Partial<Product>): Promise<Product | null> => {
+    const result = await callApi<Product>('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(product),
+    });
 
-    setProducts((prev) => [newProduct, ...prev]);
-    showToast(`เพิ่มสินค้าใหม่ "${newProduct.name}" สำเร็จ`, 'success');
-    return newProduct;
+    if (!result.ok || !result.data) {
+      showToast(result.message || 'เพิ่มสินค้าไม่สำเร็จ', 'warning');
+      return null;
+    }
+
+    setProducts((prev) => [result.data as Product, ...prev]);
+    showToast(`เพิ่มสินค้าใหม่ "${result.data.name}" สำเร็จ`, 'success');
+    return result.data;
   };
 
-  const updateProduct = (updatedProd: Product) => {
-    setProducts((prev) => prev.map((p) => (p.id === updatedProd.id ? updatedProd : p)));
-    showToast(`แก้ไขสินค้า "${updatedProd.name}" เรียบร้อยแล้ว`, 'success');
+  const updateProduct = async (
+    product: Partial<Product> & { id: string }
+  ): Promise<Product | null> => {
+    const result = await callApi<Product>(`/api/products/${product.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(product),
+    });
+
+    if (!result.ok || !result.data) {
+      showToast(result.message || 'แก้ไขสินค้าไม่สำเร็จ', 'warning');
+      return null;
+    }
+
+    setProducts((prev) => prev.map((p) => (p.id === product.id ? result.data! : p)));
+    showToast(`แก้ไขสินค้า "${result.data.name}" เรียบร้อยแล้ว`, 'success');
+    return result.data;
   };
 
-  const deleteProduct = (id: string) => {
+  const deleteProduct = async (id: string) => {
     const target = products.find((p) => p.id === id);
+    const result = await callApi(`/api/products/${id}`, { method: 'DELETE' });
+
+    if (!result.ok) {
+      showToast(result.message || 'ลบสินค้าไม่สำเร็จ', 'warning');
+      return;
+    }
+
     setProducts((prev) => prev.filter((p) => p.id !== id));
     showToast(`ลบสินค้า "${target?.name || id}" เรียบร้อยแล้ว`, 'info');
   };
 
-  const addReview = (productId: string, rating: number, comment: string, userName: string) => {
-    const newRev: Review = {
-      id: `rev-${Date.now()}`,
-      userName: userName || 'ลูกค้าผู้ใช้งานจริง',
-      rating,
-      comment,
-      date: new Date().toISOString().substring(0, 10)
-    };
+  const uploadProductImage = async (file: File): Promise<string | null> => {
+    const form = new FormData();
+    form.append('file', file);
 
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id === productId) {
-          const currentReviews = p.reviews || [];
-          const updatedReviews = [newRev, ...currentReviews];
-          const newAvgRating =
-            updatedReviews.reduce((sum, r) => sum + r.rating, 0) / updatedReviews.length;
-          return {
-            ...p,
-            rating: Number(newAvgRating.toFixed(1)),
-            reviewsCount: updatedReviews.length,
-            reviews: updatedReviews
-          };
-        }
-        return p;
-      })
-    );
+    const result = await callApi<{ url: string }>('/api/uploads', { method: 'POST', body: form });
 
-    showToast('ขอบคุณสำหรับรีวิวของคุณ!', 'success');
+    if (!result.ok || !result.data) {
+      showToast(result.message || 'อัปโหลดรูปไม่สำเร็จ', 'warning');
+      return null;
+    }
+
+    return result.data.url;
+  };
+
+  const saveSettings = async (patch: Partial<StoreSettings>): Promise<ActionResult> => {
+    const result = await callApi<StoreSettings>('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+
+    if (!result.ok || !result.data) {
+      return { success: false, message: result.message || 'บันทึกการตั้งค่าไม่สำเร็จ' };
+    }
+
+    setSettings(result.data);
+    return { success: true, message: result.message || 'บันทึกการตั้งค่าแล้ว' };
+  };
+
+  const addReview = async (
+    productId: string,
+    rating: number,
+    comment: string
+  ): Promise<ActionResult> => {
+    const result = await callApi(`/api/products/${productId}/reviews`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rating, comment }),
+    });
+
+    if (!result.ok) return { success: false, message: result.message || 'ส่งรีวิวไม่สำเร็จ' };
+
+    await refreshProducts();
+    return { success: true, message: result.message || 'ส่งรีวิวสำเร็จ' };
   };
 
   return (
@@ -385,6 +516,9 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         products,
         orders,
+        coupons,
+        settings,
+        isLoading,
         cart,
         wishlist,
         searchQuery,
@@ -394,6 +528,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isCheckoutOpen,
         activeCoupon,
         toasts,
+        balance,
+        walletTransactions,
+        refreshWallet,
+        topUp,
         setSearchQuery,
         setSelectedCategory,
         setQuickViewProduct,
@@ -416,8 +554,12 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addProduct,
         updateProduct,
         deleteProduct,
+        uploadProductImage,
+        saveSettings,
         addReview,
-        showToast
+        refreshProducts,
+        refreshOrders,
+        showToast,
       }}
     >
       {children}

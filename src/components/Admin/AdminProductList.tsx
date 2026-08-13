@@ -18,7 +18,8 @@ export const AdminProductList: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  const categories = ['ทั้งหมด', 'หูฟัง & แอคเซสซอรี', 'สมาร์ทวอทช์ & แกดเจ็ต', 'เกมมิ่ง & ไอที', 'ไลฟ์สไตล์ & เดสก์ท็อป'];
+  // Whatever categories the catalogue actually uses.
+  const categories = ['ทั้งหมด', ...new Set(products.map((p) => p.category).filter(Boolean))];
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
@@ -167,7 +168,7 @@ export const AdminProductList: React.FC = () => {
                     </TableCell>
 
                     <TableCell className="p-3.5 font-bold text-amber-500">
-                      ★ {p.rating} <span className="text-slate-400 text-[10px] font-normal">({p.reviewsCount})</span>
+                      {p.rating} <span className="text-slate-400 text-[10px] font-normal">({p.reviewsCount})</span>
                     </TableCell>
 
                     <TableCell className="p-3.5 text-right space-x-2">
@@ -206,12 +207,16 @@ export const AdminProductList: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal */}
-      <AdminProductModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        editingProduct={editingProduct}
-      />
+      {/* Modal — mounted only while open and keyed by product, so the form always
+          starts from the right values without a reset effect. */}
+      {isModalOpen && (
+        <AdminProductModal
+          key={editingProduct?.id ?? 'new'}
+          isOpen
+          onClose={() => setIsModalOpen(false)}
+          editingProduct={editingProduct}
+        />
+      )}
 
     </div>
   );

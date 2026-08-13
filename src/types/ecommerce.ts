@@ -24,8 +24,23 @@ export interface Product {
   isFeatured?: boolean;
 }
 
+/** A product in the cart — still linked to the live product record. */
 export interface CartItem {
   product: Product;
+  quantity: number;
+  selectedColor?: string;
+}
+
+/**
+ * A line on a placed order. Unlike CartItem this is a snapshot: the name, image
+ * and price are copied at checkout so an order never changes when a product is
+ * later edited, renamed or deleted.
+ */
+export interface OrderItem {
+  productId: string;
+  name: string;
+  image: string;
+  unitPrice: number;
   quantity: number;
   selectedColor?: string;
 }
@@ -43,13 +58,13 @@ export interface CustomerInfo {
 
 export type OrderStatus = 'รอดำเนินการ' | 'กำลังจัดเตรียม' | 'จัดส่งแล้ว' | 'สำเร็จ' | 'ยกเลิก';
 
-export type PaymentMethod = 'promptpay' | 'credit_card' | 'bank_transfer' | 'cod';
+export type PaymentMethod = 'wallet' | 'promptpay' | 'credit_card' | 'bank_transfer' | 'cod';
 
 export interface Order {
   id: string;
   createdAt: string;
   customer: CustomerInfo;
-  items: CartItem[];
+  items: OrderItem[];
   subtotal: number;
   discount: number;
   shippingFee: number;
@@ -65,5 +80,35 @@ export interface Coupon {
   code: string;
   discountPercent: number;
   minSpend: number;
+  freeShipping: boolean;
   description: string;
+  isActive: boolean;
+}
+
+export interface Wallet {
+  balance: number;
+  updatedAt: string;
+}
+
+export type WalletTransactionKind = 'topup' | 'purchase' | 'refund' | 'adjustment';
+
+export interface WalletTransaction {
+  id: string;
+  kind: WalletTransactionKind;
+  /** Positive credits the wallet, negative debits it. */
+  amount: number;
+  balanceAfter: number;
+  reference?: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface Topup {
+  id: string;
+  amount: number;
+  transRef: string;
+  senderName?: string;
+  receiverName?: string;
+  transferredAt?: string;
+  createdAt: string;
 }

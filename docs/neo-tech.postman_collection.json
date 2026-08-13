@@ -1,0 +1,668 @@
+{
+  "info": {
+    "name": "NEO APP API",
+    "description": "REST API ของร้าน NEO APP (Next.js App Router + Supabase Auth)\n\n## เริ่มใช้งาน\n\n1. ตั้งค่าตัวแปรใน Environment หรือที่แท็บ Variables ของ collection:\n   - `baseUrl` — เช่น `http://localhost:3000`\n   - `supabaseUrl` — ค่า `NEXT_PUBLIC_SUPABASE_URL`\n   - `supabaseKey` — ค่า `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`\n   - `email` / `password` — บัญชีที่ยืนยันอีเมลแล้ว\n2. ยิง request **Auth → Get access token** หนึ่งครั้ง — สคริปต์จะเก็บ `accessToken` ให้อัตโนมัติ\n3. request อื่นทุกเส้นใช้ `Authorization: Bearer {{accessToken}}` ที่ระดับ collection อยู่แล้ว\n\nถ้าใช้บัญชี Google (ไม่มีรหัสผ่าน) ให้ล็อกอินในเบราว์เซอร์ แล้วคัดลอกค่า `access_token` จาก cookie `sb-<project-ref>-auth-token` มาใส่ตัวแปร `accessToken` เอง\n\nโทเคนมีอายุ 1 ชั่วโมง ถ้าเจอ 401 ให้ยิง **Get access token** ใหม่",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "supabaseUrl",
+      "value": "https://pfvzcuefnyevybbstlnt.supabase.co"
+    },
+    {
+      "key": "supabaseKey",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": "prod-1"
+    },
+    {
+      "key": "orderId",
+      "value": "ORD-1001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Get access token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "",
+                  "pm.test('ได้ access token', function () {",
+                  "  pm.expect(body.access_token, 'access_token').to.be.a('string');",
+                  "});",
+                  "",
+                  "if (body.access_token) {",
+                  "  pm.collectionVariables.set('accessToken', body.access_token);",
+                  "  console.log('เก็บ accessToken แล้ว (หมดอายุใน ' + body.expires_in + ' วินาที)');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabaseKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{supabaseUrl}}/auth/v1/token?grant_type=password",
+              "host": [
+                "{{supabaseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "v1",
+                "token"
+              ],
+              "query": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                }
+              ]
+            },
+            "description": "ขอ JWT จาก Supabase Auth โดยตรง (ไม่ผ่าน API ของเว็บ) แล้วเก็บลงตัวแปร accessToken อัตโนมัติ"
+          }
+        },
+        {
+          "name": "Unauthorized check (ไม่มี token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ต้องได้ 401', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            },
+            "description": "ยืนยันว่า API ปิดสำหรับผู้ที่ยังไม่ล็อกอินจริง"
+          }
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products?limit=4&featured=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "4"
+                },
+                {
+                  "key": "featured",
+                  "value": "true"
+                },
+                {
+                  "key": "category",
+                  "value": "หูฟัง & แอคเซสซอรี",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "หูฟัง",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get product by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('สร้างสำเร็จ 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "if (body.data && body.data.id) {",
+                  "  pm.collectionVariables.set('productId', body.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"หูฟัง AuraSound Pro\",\n  \"category\": \"หูฟัง & แอคเซสซอรี\",\n  \"price\": 2990,\n  \"originalPrice\": 3990,\n  \"stock\": 25,\n  \"description\": \"หูฟังไร้สายตัดเสียงรบกวน แบตอึด 40 ชั่วโมง\",\n  \"specs\": {\n    \"การเชื่อมต่อ\": \"Bluetooth 5.3\",\n    \"การรับประกัน\": \"1 ปี ศูนย์ไทย\"\n  },\n  \"badge\": \"NEW\",\n  \"isFeatured\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 2490,\n  \"stock\": 12\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"เสียงดีมาก คุ้มราคา\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/products/{{productId}}/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "products",
+                "{{productId}}",
+                "reviews"
+              ]
+            },
+            "description": "ชื่อผู้รีวิวมาจากบัญชีที่ล็อกอิน ไม่ต้องส่ง userName"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "List orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "รอดำเนินการ",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "ORD-",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get order by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('สร้างสำเร็จ 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "if (body.data && body.data.id) {",
+                  "  pm.collectionVariables.set('orderId', body.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer\": {\n    \"name\": \"คุณสมชาย ใจดี\",\n    \"email\": \"somchai@example.com\",\n    \"phone\": \"081-987-6543\",\n    \"address\": \"99/1 ซอยสุขุมวิท 21\",\n    \"district\": \"วัฒนา\",\n    \"province\": \"กรุงเทพมหานคร\",\n    \"postalCode\": \"10110\"\n  },\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ],\n  \"couponCode\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "description": "ราคาคิดจากฐานข้อมูล และตัดจากกระเป๋าเงิน ถ้ายอดไม่พอจะได้ 400 พร้อมข้อความบอกยอดที่ขาด"
+          }
+        },
+        {
+          "name": "Update order status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"จัดส่งแล้ว\",\n  \"trackingNumber\": \"TH1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "orders",
+                "{{orderId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coupons",
+      "item": [
+        {
+          "name": "List coupons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/coupons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupons"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Validate coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"DISCOUNT500\",\n  \"subtotal\": 3500\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/coupons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "coupons"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stats",
+      "item": [
+        {
+          "name": "Dashboard stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stats"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallet",
+      "item": [
+        {
+          "name": "Balance & transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "wallet"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Top-up history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/topups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "topups"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Top up with slip",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "amount",
+                  "value": "100",
+                  "type": "text"
+                },
+                {
+                  "key": "slip",
+                  "type": "file",
+                  "src": [],
+                  "description": "รูปสลิปโอน JPG/PNG"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topups",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "topups"
+              ]
+            },
+            "description": "ยอดต้องตรงกับสลิป และสลิปต้องโอนเข้าบัญชีที่ตั้งไว้ในหน้าแอดมิน สลิปเดิมใช้ซ้ำไม่ได้"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "item": [
+        {
+          "name": "Get settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update settings (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"storeName\": \"NEO APP\",\n  \"topupReceiverName\": \"นายสมชาย ใจดี\",\n  \"topupReceiverAccount\": \"012-3-45678-9\",\n  \"topupBankName\": \"กสิกรไทย\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/settings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "settings"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

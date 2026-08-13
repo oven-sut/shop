@@ -2,13 +2,12 @@
 
 import React from 'react';
 import { useShop } from '../../context/ShopContext';
-import { INITIAL_COUPONS } from '../../data/initialData';
 import { PieChart, Tag, Award } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export const AdminAnalytics: React.FC = () => {
-  const { products, orders } = useShop();
+  const { products, coupons } = useShop();
 
   // Category counts
   const categoryCounts: Record<string, number> = {};
@@ -59,7 +58,13 @@ export const AdminAnalytics: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {INITIAL_COUPONS.map((c) => (
+            {coupons.length === 0 && (
+              <p className="text-xs text-slate-400 py-6 text-center">
+                ยังไม่มีคูปองในระบบ — เพิ่มได้ที่ตาราง coupons ในฐานข้อมูล
+              </p>
+            )}
+
+            {coupons.map((c) => (
               <div key={c.code} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs flex items-center justify-between">
                 <div>
                   <Badge variant="outline" className="font-mono font-bold text-emerald-700 bg-emerald-50 border-emerald-200">
@@ -67,8 +72,14 @@ export const AdminAnalytics: React.FC = () => {
                   </Badge>
                   <p className="text-slate-500 mt-1">{c.description}</p>
                 </div>
-                <Badge className="bg-emerald-100 text-emerald-800 font-bold border-0 text-[10px]">
-                  ใช้งานได้
+                <Badge
+                  className={
+                    c.isActive
+                      ? 'bg-emerald-100 text-emerald-800 font-bold border-0 text-[10px]'
+                      : 'bg-slate-200 text-slate-600 font-bold border-0 text-[10px]'
+                  }
+                >
+                  {c.isActive ? 'ใช้งานได้' : 'ปิดใช้งาน'}
                 </Badge>
               </div>
             ))}
@@ -90,7 +101,7 @@ export const AdminAnalytics: React.FC = () => {
               <img src={p.image} alt="" className="w-12 h-12 object-cover rounded-xl border border-slate-200 shrink-0" />
               <div className="min-w-0">
                 <span className="font-bold text-slate-900 text-xs truncate block">{p.name}</span>
-                <span className="text-amber-500 text-xs font-bold block mt-0.5">★ {p.rating} ({p.reviewsCount} รีวิว)</span>
+                <span className="text-amber-500 text-xs font-bold block mt-0.5">{p.rating} ({p.reviewsCount} รีวิว)</span>
                 <span className="text-indigo-600 text-xs font-bold">฿{p.price.toLocaleString()}</span>
               </div>
             </div>

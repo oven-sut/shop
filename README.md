@@ -1,5 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## เอกสารโปรเจกต์
+
+| เรื่อง | ไฟล์ / URL |
+| --- | --- |
+| โครงสร้างเว็บ ระบบล็อกอิน และการป้องกัน | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| Swagger UI (ต้องล็อกอินก่อน) | http://localhost:3000/docs |
+| OpenAPI 3.1 spec | [`public/openapi.json`](public/openapi.json) |
+| Postman collection | [`docs/neo-tech.postman_collection.json`](docs/neo-tech.postman_collection.json) |
+
+ทุกหน้าและทุก API ต้องเข้าสู่ระบบก่อน ยกเว้น `/login` และ `/auth/*`
+
 ## Getting Started
 
 First, run the development server:

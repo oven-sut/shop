@@ -2,13 +2,14 @@
 
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
+import { useAuth } from '../context/AuthContext';
 import { X, Star, ShoppingBag, Heart, ShieldCheck, Truck, Plus, Minus, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 
 export const ProductQuickViewModal: React.FC = () => {
-  const { quickViewProduct, setQuickViewProduct, addToCart, toggleWishlist, isInWishlist, addReview } = useShop();
+  const { quickViewProduct, setQuickViewProduct, addToCart, toggleWishlist, isInWishlist, addReview, showToast } = useShop();
+  const { user } = useAuth();
 
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -17,7 +18,6 @@ export const ProductQuickViewModal: React.FC = () => {
   // Review Form state
   const [newRating, setNewRating] = useState(5);
   const [newComment, setNewComment] = useState('');
-  const [userName, setUserName] = useState('');
 
   if (!quickViewProduct) return null;
 
@@ -26,12 +26,15 @@ export const ProductQuickViewModal: React.FC = () => {
   const mainImg = selectedImage || product.image;
   const galleryImages = [product.image, ...(product.gallery || [])];
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
-    addReview(product.id, newRating, newComment, userName);
-    setNewComment('');
-    setUserName('');
+
+    // The reviewer is the signed-in account — no name field is sent.
+    const res = await addReview(product.id, newRating, newComment);
+    showToast(res.message, res.success ? 'success' : 'warning');
+
+    if (res.success) setNewComment('');
   };
 
   return (
@@ -238,14 +241,9 @@ export const ProductQuickViewModal: React.FC = () => {
                 </h4>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Input
-                    type="text"
-                    placeholder="ชื่อของคุณ (เช่น คุณสมชาย)"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    className="bg-slate-50 border-slate-200 rounded-xl text-xs text-slate-900"
-                    required
-                  />
+                  <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-500">
+                    รีวิวในชื่อ <span className="font-bold text-slate-800 ml-1">{user?.name ?? 'บัญชีของคุณ'}</span>
+                  </div>
                   <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1">
                     <span className="text-xs text-slate-500">ให้คะแนน:</span>
                     <div className="flex gap-1">

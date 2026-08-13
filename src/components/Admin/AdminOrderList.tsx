@@ -6,7 +6,6 @@ import { Order, OrderStatus } from '../../types/ecommerce';
 import { Search, X, FileText, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export const AdminOrderList: React.FC = () => {
@@ -109,7 +108,7 @@ export const AdminOrderList: React.FC = () => {
                         {ord.items.length} รายการ ({ord.items.reduce((s, i) => s + i.quantity, 0)} ชิ้น)
                       </span>
                       <span className="block text-[10px] text-slate-400 truncate max-w-[160px]">
-                        {ord.items.map((i) => i.product.name).join(', ')}
+                        {ord.items.map((i) => i.name).join(', ')}
                       </span>
                     </TableCell>
 
@@ -120,7 +119,7 @@ export const AdminOrderList: React.FC = () => {
                     <TableCell className="p-3.5">
                       <span className="uppercase text-[10px] font-mono text-slate-600 block">{ord.paymentMethod}</span>
                       <span className={`text-[10px] font-bold ${ord.isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>
-                        {ord.isPaid ? '✓ ชำระแล้ว' : 'รอชำระ'}
+                        {ord.isPaid ? 'ชำระแล้ว' : 'รอชำระ'}
                       </span>
                     </TableCell>
 
@@ -233,11 +232,11 @@ export const AdminOrderList: React.FC = () => {
                 {viewingOrder.items.map((item, i) => (
                   <div key={i} className="flex justify-between p-2 bg-slate-50 rounded-lg border border-slate-200">
                     <div>
-                      <span className="font-bold text-slate-900 block">{item.product.name}</span>
-                      <span className="text-[10px] text-slate-400">฿{item.product.price.toLocaleString()} x {item.quantity}</span>
+                      <span className="font-bold text-slate-900 block">{item.name}</span>
+                      <span className="text-[10px] text-slate-400">฿{item.unitPrice.toLocaleString()} x {item.quantity}</span>
                     </div>
                     <span className="font-bold text-indigo-600">
-                      ฿{(item.product.price * item.quantity).toLocaleString()}
+                      ฿{(item.unitPrice * item.quantity).toLocaleString()}
                     </span>
                   </div>
                 ))}

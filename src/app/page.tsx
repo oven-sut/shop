@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { ShopProvider, useShop } from '../context/ShopContext';
-import { AuthProvider } from '../context/AuthContext';
 import { Navbar } from '../components/Navbar';
 import { HeroBanner } from '../components/HeroBanner';
 import { FeatureBar } from '../components/FeatureBar';
@@ -82,7 +81,7 @@ function StorefrontContent() {
                 <span>แคตตาล็อกสินค้าทั้งหมด</span>
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                แสดงผลสินค้าในหมวดหมู่ <strong className="text-indigo-600">"{selectedCategory}"</strong> ({filteredProducts.length} รายการ)
+                แสดงผลสินค้าในหมวดหมู่ <strong className="text-indigo-600">&quot;{selectedCategory}&quot;</strong> ({filteredProducts.length} รายการ)
               </p>
             </div>
           </div>
@@ -129,10 +128,8 @@ function StorefrontContent() {
 
 export default function StorefrontPage() {
   return (
-    <AuthProvider>
-      <ShopProvider>
-        <StorefrontContent />
-      </ShopProvider>
-    </AuthProvider>
+    <ShopProvider>
+      <StorefrontContent />
+    </ShopProvider>
   );
 }

@@ -6,7 +6,7 @@ export interface User {
   name: string;
   role: UserRole;
   avatar?: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface AuthSession {

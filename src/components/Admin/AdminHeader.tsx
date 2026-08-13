@@ -1,20 +1,24 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
-import { ShieldCheck, Store, LayoutDashboard, Package, ShoppingCart, BarChart3, Settings } from 'lucide-react';
+import { Store, LayoutDashboard, Package, Boxes, ShoppingCart, BarChart3, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
+type AdminTab = 'overview' | 'products' | 'supplier' | 'orders' | 'analytics' | 'settings';
+
 interface AdminHeaderProps {
-  activeTab: 'overview' | 'products' | 'orders' | 'analytics' | 'settings';
-  setActiveTab: (tab: 'overview' | 'products' | 'orders' | 'analytics' | 'settings') => void;
+  activeTab: AdminTab;
+  setActiveTab: (tab: AdminTab) => void;
 }
 
 export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeTab, setActiveTab }) => {
-  const tabs = [
+  const tabs: { id: AdminTab; label: string; icon: typeof LayoutDashboard }[] = [
     { id: 'overview', label: 'ภาพรวม (Overview)', icon: LayoutDashboard },
     { id: 'products', label: 'จัดการสินค้า (Products)', icon: Package },
+    { id: 'supplier', label: 'ซัพพลายเออร์', icon: Boxes },
     { id: 'orders', label: 'คำสั่งซื้อ (Orders)', icon: ShoppingCart },
     { id: 'analytics', label: 'วิเคราะห์ & รายงาน', icon: BarChart3 },
     { id: 'settings', label: 'ตั้งค่าร้านค้า', icon: Settings }
@@ -27,13 +31,18 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeTab, setActiveTa
           
           {/* Logo & Badge */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
+            <Image
+              src="/logo-mark.png"
+              alt=""
+              width={470}
+              height={462}
+              priority
+              className="h-10 w-auto"
+            />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-extrabold tracking-tight text-slate-900">
-                  NEO TECH
+                  NEO APP
                 </span>
                 <Badge variant="outline" className="bg-indigo-50 text-indigo-700 text-[10px] font-bold border-indigo-200">
                   BACKOFFICE
@@ -65,7 +74,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeTab, setActiveTa
                 key={tab.id}
                 variant={isActive ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                   isActive
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 border-0'

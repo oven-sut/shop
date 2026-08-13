@@ -1,0 +1,2027 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "NEO APP API",
+    "version": "1.0.0",
+    "description": "REST API ของร้าน NEO APP (ขายแอปพลิเคชัน + กระเป๋าเงิน)\n\n## การยืนยันตัวตน\n\nทุก endpoint ต้องผ่านการยืนยันตัวตน ไม่มีเส้นไหนเปิดสาธารณะ รองรับ 2 วิธี:\n\n1. **Cookie session (เบราว์เซอร์)** — ล็อกอินที่ `/login` แล้ว Supabase จะเก็บ JWT ไว้ใน cookie `sb-<project-ref>-auth-token`\n2. **Bearer token (Postman / curl / script)** — ส่งเฮดเดอร์ `Authorization: Bearer <access_token>`\n\nขอ access token:\n\n```bash\ncurl -X POST \"$NEXT_PUBLIC_SUPABASE_URL/auth/v1/token?grant_type=password\" \\\n  -H \"apikey: $NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY\" \\\n  -H \"content-type: application/json\" \\\n  -d '{\"email\":\"you@example.com\",\"password\":\"...\"}'\n```\n\n## สิทธิ์\n\nข้อมูลถูกคุมด้วย Row Level Security ของ Postgres: ลูกค้าเห็นเฉพาะคำสั่งซื้อ/กระเป๋าเงินของตัวเอง\nส่วนการเพิ่ม-แก้-ลบสินค้า อัปโหลดรูป และแก้ตั้งค่าร้าน ทำได้เฉพาะบัญชีที่มี `app_metadata.role = \"admin\"`\n\n## เอกสารนี้\n\nหน้า `/docs` และไฟล์ `/openapi.json` เปิดให้เฉพาะแอดมิน คนอื่นจะได้ 404",
+    "contact": {
+      "name": "NEO APP"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "System",
+      "description": "สถานะระบบ"
+    },
+    {
+      "name": "Products",
+      "description": "สินค้าและรีวิว"
+    },
+    {
+      "name": "Orders",
+      "description": "คำสั่งซื้อ (ชำระด้วยกระเป๋าเงิน)"
+    },
+    {
+      "name": "Wallet",
+      "description": "กระเป๋าเงินและการเติมเงินด้วยสลิป"
+    },
+    {
+      "name": "Coupons",
+      "description": "คูปองส่วนลด"
+    },
+    {
+      "name": "Stats",
+      "description": "สถิติสำหรับหน้าแอดมิน"
+    },
+    {
+      "name": "Settings",
+      "description": "ตั้งค่าร้าน"
+    },
+    {
+      "name": "Uploads",
+      "description": "อัปโหลดรูปสินค้า"
+    },
+    {
+      "name": "Supplier",
+      "description": "แคตตาล็อกและการนำเข้าสินค้าจาก 499K Network (แอดมิน)"
+    }
+  ],
+  "security": [
+    {
+      "cookieAuth": []
+    },
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "ตรวจสอบสถานะเซิร์ฟเวอร์และ env",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "ระบบทำงานปกติ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "service": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "env": {
+                      "type": "object",
+                      "properties": {
+                        "hasSupabaseUrl": {
+                          "type": "boolean"
+                        },
+                        "hasSupabaseKey": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "รายการสินค้า (กรอง/ค้นหา/จำกัดจำนวนได้)",
+        "operationId": "listProducts",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "description": "ชื่อหมวดหมู่ ใช้ค่า `ทั้งหมด` เพื่อไม่กรอง",
+            "schema": {
+              "type": "string"
+            },
+            "example": "เพิ่มประสิทธิภาพ"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "ค้นหาจากชื่อ หมวดหมู่ หรือคำอธิบาย",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "featured",
+            "in": "query",
+            "description": "ใส่ `true` เพื่อเอาเฉพาะสินค้าแนะนำหรือป้าย HOT",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "จำกัดจำนวนรายการที่ส่งกลับ",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Product"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "เพิ่มสินค้าใหม่",
+        "operationId": "createProduct",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductInput"
+              },
+              "example": {
+                "name": "Focus Timer Pro",
+                "category": "เพิ่มประสิทธิภาพ",
+                "price": 299,
+                "originalPrice": 499,
+                "stock": 100,
+                "description": "แอปจับเวลาโฟกัสแบบ Pomodoro",
+                "specs": {
+                  "รองรับ": "iOS, Android",
+                  "อัปเดต": "ตลอดอายุการใช้งาน"
+                },
+                "badge": "NEW",
+                "isFeatured": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "เพิ่มสินค้าสำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "example": "prod-1"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "ข้อมูลสินค้ารายชิ้น",
+        "operationId": "getProduct",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "แก้ไขข้อมูลสินค้า (ส่งเฉพาะฟิลด์ที่ต้องการเปลี่ยน)",
+        "operationId": "updateProduct",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductInput"
+              },
+              "example": {
+                "price": 2490,
+                "stock": 12
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "อัปเดตสำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "ลบสินค้า",
+        "operationId": "deleteProduct",
+        "responses": {
+          "200": {
+            "description": "ลบสำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/products/{id}/reviews": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "example": "prod-1"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "เพิ่มรีวิวสินค้า",
+        "description": "ชื่อผู้รีวิวมาจากบัญชีที่ล็อกอิน ไม่ได้รับค่าจาก request body",
+        "operationId": "createProductReview",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rating",
+                  "comment"
+                ],
+                "properties": {
+                  "rating": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "example": 5
+                  },
+                  "comment": {
+                    "type": "string",
+                    "example": "เสียงดีมาก คุ้มราคา"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "ส่งรีวิวสำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Review"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "รายการคำสั่งซื้อ",
+        "operationId": "listOrders",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "กรองตามสถานะ ใช้ `ทั้งหมด` เพื่อไม่กรอง",
+            "schema": {
+              "$ref": "#/components/schemas/OrderStatus"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "ค้นหาจากเลขที่คำสั่งซื้อ ชื่อลูกค้า หรือเบอร์โทร",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Order"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "สั่งซื้อและตัดเงินจากกระเป๋า",
+        "operationId": "createOrder",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "customer",
+                  "items"
+                ],
+                "properties": {
+                  "customer": {
+                    "$ref": "#/components/schemas/CustomerInfo"
+                  },
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "productId",
+                        "quantity"
+                      ],
+                      "properties": {
+                        "productId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "selectedColor": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "couponCode": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "สร้างคำสั่งซื้อสำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        },
+        "description": "เซิร์ฟเวอร์คิดราคาจากฐานข้อมูลเอง ตรวจสต็อก ตัดเงินในกระเป๋า และสร้างคำสั่งซื้อในทรานแซกชันเดียว ราคาที่ส่งมาจากเบราว์เซอร์ไม่ถูกใช้\n\nถ้าสินค้ามาจากซัพพลายเออร์ ระบบจะสั่งซื้อต่อให้อัตโนมัติและคืน account มาพร้อม response หากสั่งต่อไม่สำเร็จจะคืนเงินเข้ากระเป๋าให้ทันที"
+      }
+    },
+    "/api/orders/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "example": "ORD-1024"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "ข้อมูลคำสั่งซื้อรายรายการ",
+        "operationId": "getOrder",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "อัปเดตสถานะคำสั่งซื้อ",
+        "operationId": "updateOrderStatus",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "status"
+                ],
+                "properties": {
+                  "status": {
+                    "$ref": "#/components/schemas/OrderStatus"
+                  },
+                  "trackingNumber": {
+                    "type": "string",
+                    "example": "TH1234567890"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "อัปเดตสำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/coupons": {
+      "get": {
+        "tags": [
+          "Coupons"
+        ],
+        "summary": "รายการคูปองทั้งหมด",
+        "operationId": "listCoupons",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Coupon"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Coupons"
+        ],
+        "summary": "ตรวจสอบรหัสคูปองกับยอดสั่งซื้อ",
+        "operationId": "validateCoupon",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "code"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "example": "DISCOUNT500"
+                  },
+                  "subtotal": {
+                    "type": "number",
+                    "example": 3500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ใช้คูปองได้",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Coupon"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "รหัสไม่ถูกต้อง หรือยอดไม่ถึงขั้นต่ำ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "tags": [
+          "Stats"
+        ],
+        "summary": "สรุปยอดขายและสต็อกสำหรับแดชบอร์ด",
+        "operationId": "getStats",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Stats"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/wallet": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "ยอดเงินคงเหลือและความเคลื่อนไหวล่าสุด",
+        "operationId": "getWallet",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "balance": {
+                          "type": "number",
+                          "example": 1250
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "transactions": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/WalletTransaction"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/topups": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "ประวัติการเติมเงินที่ผ่านการตรวจสลิปแล้ว",
+        "operationId": "listTopups",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Topup"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "เติมเงินด้วยสลิปโอน (ตรวจกับธนาคารผ่าน RDCW)",
+        "description": "ขั้นตอนตรวจก่อนเติมเงินเข้าให้:\n\n1. ส่งสลิปไปตรวจกับ RDCW (https://slip.rdcw.co.th/docs)\n2. ยอดในสลิปต้องตรงกับ `amount` ที่ผู้ใช้กรอก\n3. ผู้รับในสลิปต้องตรงกับบัญชีร้านที่ตั้งไว้ใน `/api/settings`\n4. สลิปต้องไม่เก่ากว่าที่ตั้งไว้ และเลขอ้างอิงต้องไม่เคยถูกใช้มาก่อน (unique ทั้งระบบ)",
+        "operationId": "createTopup",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "description": "ยอดที่โอน (บาท) ต้องตรงกับสลิป"
+                  },
+                  "slip": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "รูปสลิป JPG/PNG"
+                  },
+                  "payload": {
+                    "type": "string",
+                    "description": "ข้อความ QR จากสลิป (ใช้แทนรูปได้)"
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount",
+                  "payload"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "payload": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "เติมเงินสำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "amount": {
+                          "type": "number"
+                        },
+                        "transRef": {
+                          "type": "string"
+                        },
+                        "balance": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "สลิปไม่ผ่านการตรวจ (ยอดไม่ตรง, ไม่ใช่บัญชีร้าน, สลิปเก่าเกินกำหนด)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "409": {
+            "description": "สลิปนี้ถูกใช้เติมเงินไปแล้ว",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "ติดต่อระบบตรวจสลิปไม่ได้ หรือโควตา RDCW หมด",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ร้านยังไม่ได้ตั้งค่าบัญชีรับเงิน",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "อ่านการตั้งค่าร้าน",
+        "operationId": "getSettings",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StoreSettings"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "แก้การตั้งค่าร้าน (แอดมินเท่านั้น)",
+        "operationId": "updateSettings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StoreSettings"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StoreSettings"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "ไม่ใช่แอดมิน",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/uploads": {
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "อัปโหลดรูปสินค้าไป Supabase Storage (แอดมินเท่านั้น)",
+        "operationId": "uploadImage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "อัปโหลดสำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "ไม่ใช่แอดมิน",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/supplier": {
+      "get": {
+        "tags": [
+          "Supplier"
+        ],
+        "summary": "แคตตาล็อกซัพพลายเออร์ + เครดิตคงเหลือ (แอดมิน)",
+        "operationId": "listSupplierCatalogue",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "account": {
+                          "type": "object"
+                        },
+                        "products": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "ไม่ใช่แอดมิน"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "description": "ซัพพลายเออร์ตอบผิดพลาด"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Supplier"
+        ],
+        "summary": "นำเข้าสินค้าจากซัพพลายเออร์เข้าร้าน (แอดมิน)",
+        "operationId": "importSupplierProduct",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "productId": {
+                    "type": "string"
+                  },
+                  "productIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "price": {
+                    "type": "number",
+                    "description": "ราคาขาย ถ้าไม่ระบุใช้ราคาแนะนำ"
+                  },
+                  "isFeatured": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "นำเข้าสำเร็จ"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "ไม่ใช่แอดมิน"
+          },
+          "404": {
+            "description": "ไม่พบสินค้าในแคตตาล็อก"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/fulfillments": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "บัญชีเกมที่ผู้ใช้ซื้อไปแล้ว",
+        "operationId": "listFulfillments",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/orders/{id}/code": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "example": "ORD-260814-A7F3C"
+        }
+      ],
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "summary": "ขอรหัส Steam Guard ของบัญชีที่ซื้อ",
+        "description": "ขอได้ 3 รอบต่อคำสั่งซื้อ แต่ละรอบเปิดหน้าต่าง 60 วินาที ภายในหน้าต่างเดิมขอซ้ำได้โดยไม่นับรอบใหม่ (ไม่ต้องส่ง reason)",
+        "operationId": "requestSteamGuardCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "description": "ใส่เมื่อเปิดรอบใหม่"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ได้รหัส",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "valid_for_sec": {
+                          "type": "integer"
+                        },
+                        "expiresInSec": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "ขอครบ 3 รอบแล้ว"
+          },
+          "404": {
+            "description": "ไม่พบบัญชีเกมของคำสั่งซื้อนี้"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sb-access-token",
+        "description": "Cookie session ของ Supabase (ชื่อจริงคือ `sb-<project-ref>-auth-token`) เบราว์เซอร์ส่งให้อัตโนมัติหลังล็อกอิน"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Supabase access token (JWT) สำหรับ API client ที่ไม่มี cookie jar"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "ยังไม่ได้ล็อกอิน หรือ token หมดอายุ/ไม่ถูกต้อง",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "success": false,
+              "error": "unauthorized",
+              "message": "กรุณาเข้าสู่ระบบก่อนเรียกใช้งาน API"
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "ข้อมูลที่ส่งมาไม่ครบหรือไม่ถูกต้อง",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "ไม่พบข้อมูลตาม ID ที่ระบุ",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ServerError": {
+        "description": "ข้อผิดพลาดฝั่งเซิร์ฟเวอร์",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "Review": {
+        "type": "object",
+        "required": [
+          "id",
+          "userName",
+          "rating",
+          "comment",
+          "date"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "rev-1"
+          },
+          "userName": {
+            "type": "string",
+            "example": "คุณสมชาย ใจดี"
+          },
+          "rating": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5,
+            "example": 5
+          },
+          "comment": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "example": "2026-08-14"
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "category",
+          "price",
+          "stock",
+          "description",
+          "specs",
+          "image",
+          "rating",
+          "reviewsCount"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "3f6d1c2e-0f1a-4d3b-9a7c-2b8e5d4f1a90"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "originalPrice": {
+            "type": "number"
+          },
+          "stock": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "specs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "image": {
+            "type": "string",
+            "format": "uri"
+          },
+          "gallery": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "rating": {
+            "type": "number"
+          },
+          "reviewsCount": {
+            "type": "integer"
+          },
+          "badge": {
+            "type": "string",
+            "enum": [
+              "HOT",
+              "NEW",
+              "SALE",
+              "LIMITED"
+            ]
+          },
+          "reviews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Review"
+            }
+          },
+          "isFeatured": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ProductInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "price",
+          "stock"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "price": {
+            "type": "number"
+          },
+          "originalPrice": {
+            "type": "number"
+          },
+          "stock": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "specs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "image": {
+            "type": "string",
+            "format": "uri"
+          },
+          "badge": {
+            "type": "string",
+            "enum": [
+              "HOT",
+              "NEW",
+              "SALE",
+              "LIMITED"
+            ]
+          },
+          "isFeatured": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ProductResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Product"
+          }
+        }
+      },
+      "CustomerInfo": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "phone",
+          "address",
+          "district",
+          "province",
+          "postalCode"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "คุณสมชาย ใจดี"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string",
+            "example": "081-987-6543"
+          },
+          "address": {
+            "type": "string"
+          },
+          "district": {
+            "type": "string"
+          },
+          "province": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string",
+            "example": "10110"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "OrderStatus": {
+        "type": "string",
+        "enum": [
+          "รอดำเนินการ",
+          "กำลังจัดเตรียม",
+          "จัดส่งแล้ว",
+          "สำเร็จ",
+          "ยกเลิก"
+        ]
+      },
+      "PaymentMethod": {
+        "type": "string",
+        "enum": [
+          "wallet",
+          "promptpay",
+          "credit_card",
+          "bank_transfer",
+          "cod"
+        ]
+      },
+      "Order": {
+        "type": "object",
+        "required": [
+          "id",
+          "createdAt",
+          "customer",
+          "items",
+          "subtotal",
+          "discount",
+          "shippingFee",
+          "totalAmount",
+          "status",
+          "paymentMethod",
+          "isPaid"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "ORD-260814-A7F3C"
+          },
+          "createdAt": {
+            "type": "string",
+            "example": "2026-08-14 09:30"
+          },
+          "customer": {
+            "$ref": "#/components/schemas/CustomerInfo"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          },
+          "subtotal": {
+            "type": "number"
+          },
+          "discount": {
+            "type": "number"
+          },
+          "shippingFee": {
+            "type": "number"
+          },
+          "totalAmount": {
+            "type": "number"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OrderStatus"
+          },
+          "paymentMethod": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "isPaid": {
+            "type": "boolean"
+          },
+          "trackingNumber": {
+            "type": "string"
+          },
+          "couponCode": {
+            "type": "string"
+          }
+        }
+      },
+      "OrderResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Order"
+          }
+        }
+      },
+      "Coupon": {
+        "type": "object",
+        "required": [
+          "code",
+          "discountPercent",
+          "minSpend",
+          "description"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "DISCOUNT500"
+          },
+          "discountPercent": {
+            "type": "number",
+            "example": 15
+          },
+          "minSpend": {
+            "type": "number",
+            "example": 1000
+          },
+          "description": {
+            "type": "string"
+          },
+          "freeShipping": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Stats": {
+        "type": "object",
+        "properties": {
+          "totalRevenue": {
+            "type": "number"
+          },
+          "totalOrders": {
+            "type": "integer"
+          },
+          "totalProducts": {
+            "type": "integer"
+          },
+          "lowStockCount": {
+            "type": "integer"
+          },
+          "monthlySalesTrend": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "month": {
+                  "type": "string"
+                },
+                "sales": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "description": "สำเนาข้อมูลสินค้า ณ เวลาที่สั่งซื้อ แก้สินค้าภายหลังไม่กระทบคำสั่งซื้อเดิม",
+        "required": [
+          "productId",
+          "name",
+          "unitPrice",
+          "quantity"
+        ],
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "image": {
+            "type": "string",
+            "format": "uri"
+          },
+          "unitPrice": {
+            "type": "number"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "selectedColor": {
+            "type": "string"
+          }
+        }
+      },
+      "WalletTransaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "topup",
+              "purchase",
+              "refund",
+              "adjustment"
+            ]
+          },
+          "amount": {
+            "type": "number",
+            "description": "บวกคือเงินเข้า ลบคือเงินออก"
+          },
+          "balanceAfter": {
+            "type": "number"
+          },
+          "reference": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Topup": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "transRef": {
+            "type": "string",
+            "description": "เลขอ้างอิงจากธนาคาร ใช้ซ้ำไม่ได้"
+          },
+          "senderName": {
+            "type": "string"
+          },
+          "receiverName": {
+            "type": "string"
+          },
+          "transferredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StoreSettings": {
+        "type": "object",
+        "properties": {
+          "storeName": {
+            "type": "string"
+          },
+          "isOpen": {
+            "type": "boolean"
+          },
+          "topupReceiverName": {
+            "type": "string"
+          },
+          "topupReceiverAccount": {
+            "type": "string"
+          },
+          "topupBankName": {
+            "type": "string"
+          },
+          "topupMinAmount": {
+            "type": "number"
+          },
+          "topupMaxAmount": {
+            "type": "number"
+          },
+          "topupMaxSlipAgeDays": {
+            "type": "integer"
+          },
+          "freeShippingMin": {
+            "type": "number"
+          },
+          "shippingFee": {
+            "type": "number"
+          },
+          "taxRate": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

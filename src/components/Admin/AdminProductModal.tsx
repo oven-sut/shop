@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Product } from '../../types/ecommerce';
 import { useShop } from '../../context/ShopContext';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -13,69 +13,50 @@ interface AdminProductModalProps {
   editingProduct?: Product | null;
 }
 
-const PRESET_IMAGES = [
-  { label: 'หูฟัง AuraSound', url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=800&auto=format&fit=crop' },
-  { label: 'สมาร์ทวอทช์ OLED', url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=800&auto=format&fit=crop' },
-  { label: 'คีย์บอร์ดกลไก RGB', url: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?q=80&w=800&auto=format&fit=crop' },
-  { label: 'เมาส์เกมมิ่งไร้สาย', url: 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?q=80&w=800&auto=format&fit=crop' },
-  { label: 'โคมไฟตั้งโต๊ะ LED', url: 'https://images.unsplash.com/photo-1534073828943-f801091bb18c?q=80&w=800&auto=format&fit=crop' },
-  { label: 'ลำโพงมอนิเตอร์ Studio', url: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?q=80&w=800&auto=format&fit=crop' },
-  { label: 'เว็บแคม 4K Streaming', url: 'https://images.unsplash.com/photo-1585060544812-6b45742d762f?q=80&w=800&auto=format&fit=crop' },
-  { label: 'แท่นชาร์จไร้สาย Fast Charge', url: 'https://images.unsplash.com/photo-1622445268465-84385d410d9f?q=80&w=800&auto=format&fit=crop' }
-];
+type ProductBadge = Product['badge'];
 
 export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   isOpen,
   onClose,
   editingProduct
 }) => {
-  const { addProduct, updateProduct } = useShop();
+  const { addProduct, updateProduct, uploadProductImage } = useShop();
 
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('หูฟัง & แอคเซสซอรี');
-  const [price, setPrice] = useState<number | ''>(2990);
-  const [originalPrice, setOriginalPrice] = useState<number | ''>(3990);
-  const [stock, setStock] = useState<number | ''>(10);
-  const [description, setDescription] = useState('');
-  const [image, setImage] = useState(PRESET_IMAGES[0].url);
-  const [badge, setBadge] = useState<'HOT' | 'NEW' | 'SALE' | 'LIMITED' | undefined>(undefined);
-  const [specs, setSpecs] = useState<{ key: string; val: string }[]>([
-    { key: 'การเชื่อมต่อ', val: 'Bluetooth 5.3' },
-    { key: 'การรับประกัน', val: '1 ปี ศูนย์ไทย' }
-  ]);
+  // The form is seeded once, at mount. AdminProductList mounts this only while the
+  // modal is open and keys it by product id, so switching products or reopening the
+  // modal remounts it with fresh values — no reset effect needed.
+  const [name, setName] = useState(editingProduct?.name ?? '');
+  const [category, setCategory] = useState(editingProduct?.category ?? '');
+  const [price, setPrice] = useState<number | ''>(editingProduct?.price ?? '');
+  const [originalPrice, setOriginalPrice] = useState<number | ''>(
+    editingProduct?.originalPrice ?? ''
+  );
+  const [stock, setStock] = useState<number | ''>(editingProduct?.stock ?? '');
+  const [description, setDescription] = useState(editingProduct?.description ?? '');
+  const [image, setImage] = useState(editingProduct?.image ?? '');
+  const [badge, setBadge] = useState<ProductBadge>(editingProduct ? editingProduct.badge : undefined);
+  const [specs, setSpecs] = useState<{ key: string; val: string }[]>(() =>
+    editingProduct?.specs ? Object.entries(editingProduct.specs).map(([key, val]) => ({ key, val })) : []
+  );
 
-  useEffect(() => {
-    if (editingProduct) {
-      setName(editingProduct.name);
-      setCategory(editingProduct.category);
-      setPrice(editingProduct.price);
-      setOriginalPrice(editingProduct.originalPrice || '');
-      setStock(editingProduct.stock);
-      setDescription(editingProduct.description);
-      setImage(editingProduct.image);
-      setBadge(editingProduct.badge);
-      if (editingProduct.specs) {
-        setSpecs(Object.entries(editingProduct.specs).map(([k, v]) => ({ key: k, val: v })));
-      }
-    } else {
-      setName('');
-      setCategory('หูฟัง & แอคเซสซอรี');
-      setPrice(1990);
-      setOriginalPrice(2590);
-      setStock(15);
-      setDescription('รายละเอียดสินค้านวัตกรรมไอทีรุ่นใหม่ ประสิทธิภาพสูง ตอบโจทย์ทุกการใช้งาน');
-      setImage(PRESET_IMAGES[0].url);
-      setBadge('NEW');
-      setSpecs([
-        { key: 'การเชื่อมต่อ', val: 'Bluetooth 5.3' },
-        { key: 'การรับประกัน', val: '1 ปี ศูนย์ไทย' }
-      ]);
-    }
-  }, [editingProduct, isOpen]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const url = await uploadProductImage(file);
+    setIsUploading(false);
+
+    if (url) setImage(url);
+    e.target.value = '';
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || price === '' || stock === '') return;
 
@@ -86,35 +67,26 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       }
     });
 
-    if (editingProduct) {
-      updateProduct({
-        ...editingProduct,
-        name,
-        category,
-        price: Number(price),
-        originalPrice: originalPrice !== '' ? Number(originalPrice) : undefined,
-        stock: Number(stock),
-        description,
-        image,
-        badge,
-        specs: specsObj
-      });
-    } else {
-      addProduct({
-        name,
-        category,
-        price: Number(price),
-        originalPrice: originalPrice !== '' ? Number(originalPrice) : undefined,
-        stock: Number(stock),
-        description,
-        image,
-        badge,
-        specs: specsObj,
-        isFeatured: true
-      });
-    }
+    const payload = {
+      name,
+      category,
+      price: Number(price),
+      originalPrice: originalPrice !== '' ? Number(originalPrice) : undefined,
+      stock: Number(stock),
+      description,
+      image,
+      badge,
+      specs: specsObj,
+    };
 
-    onClose();
+    setIsSaving(true);
+    const saved = editingProduct
+      ? await updateProduct({ ...payload, id: editingProduct.id })
+      : await addProduct({ ...payload, isFeatured: true });
+    setIsSaving(false);
+
+    // Stay open on failure so the admin does not lose what they typed.
+    if (saved) onClose();
   };
 
   const addSpecRow = () => {
@@ -226,11 +198,11 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
           <div>
             <label className="block font-semibold text-slate-700 mb-1">ป้ายกำกับสินค้า (Badge)</label>
             <div className="flex gap-2">
-              {[undefined, 'HOT', 'NEW', 'SALE', 'LIMITED'].map((b) => (
+              {([undefined, 'HOT', 'NEW', 'SALE', 'LIMITED'] as ProductBadge[]).map((b) => (
                 <button
                   type="button"
                   key={b || 'none'}
-                  onClick={() => setBadge(b as any)}
+                  onClick={() => setBadge(b)}
                   className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all ${
                     badge === b
                       ? 'bg-indigo-600 border-indigo-600 text-white shadow'
@@ -243,35 +215,40 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
             </div>
           </div>
 
-          {/* Image Selection with Presets */}
+          {/* Product image — uploaded to Supabase Storage */}
           <div className="space-y-2">
-            <label className="block font-semibold text-slate-700">
-              รูปภาพสินค้า (URL หรือเลือกภาพตัวอย่าง)
-            </label>
-            <Input
-              type="text"
-              required
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              className="w-full bg-slate-50 border-slate-200 text-slate-900"
-            />
-            
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-1">
-              <span className="text-slate-500 shrink-0">เลือกรูปตัวอย่าง:</span>
-              {PRESET_IMAGES.map((preset, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setImage(preset.url)}
-                  className={`px-2.5 py-1 rounded-lg border shrink-0 text-[10px] transition-all ${
-                    image === preset.url
-                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700 font-bold'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              ))}
+            <label className="block font-semibold text-slate-700">รูปภาพสินค้า</label>
+
+            <div className="flex items-start gap-3">
+              <div className="w-24 h-24 rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden shrink-0 flex items-center justify-center">
+                {image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={image} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <ImageIcon className="w-7 h-7 text-slate-300" />
+                )}
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/avif,image/gif"
+                  disabled={isUploading}
+                  onChange={handleImageUpload}
+                  className="w-full text-[11px] text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-bold file:text-[11px] hover:file:bg-indigo-100 cursor-pointer"
+                />
+                <Input
+                  type="url"
+                  required
+                  placeholder="หรือวาง URL รูปภาพ"
+                  value={image}
+                  onChange={(e) => setImage(e.target.value)}
+                  className="w-full bg-slate-50 border-slate-200 text-slate-900"
+                />
+                <p className="text-[11px] text-slate-400">
+                  {isUploading ? 'กำลังอัปโหลด...' : 'อัปโหลดเก็บที่ Supabase Storage · ไม่เกิน 5 MB'}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -348,9 +325,10 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
             </Button>
             <Button
               type="submit"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-600/20 transition-all border-0"
+              disabled={isSaving || isUploading}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-indigo-600/20 transition-all border-0 disabled:opacity-50"
             >
-              {editingProduct ? 'บันทึกการแก้ไข' : 'ยืนยันเพิ่มสินค้า'}
+              {isSaving ? 'กำลังบันทึก...' : editingProduct ? 'บันทึกการแก้ไข' : 'ยืนยันเพิ่มสินค้า'}
             </Button>
           </div>
 

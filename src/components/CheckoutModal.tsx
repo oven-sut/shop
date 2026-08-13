@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useShop } from '../context/ShopContext';
-import { CustomerInfo, PaymentMethod, Order } from '../types/ecommerce';
-import { X, CheckCircle2, QrCode, CreditCard, Building2, Truck, ArrowRight } from 'lucide-react';
+import { CustomerInfo, Order } from '../types/ecommerce';
+import { X, CheckCircle2, Wallet as WalletIcon, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -12,17 +13,17 @@ export const CheckoutModal: React.FC = () => {
     isCheckoutOpen,
     setIsCheckoutOpen,
     cart,
-    cartSubtotal,
-    discountAmount,
-    shippingFee,
     cartTotal,
+    balance,
     createOrder,
     showToast
   } = useShop();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('promptpay');
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
+  const [isPlacing, setIsPlacing] = useState(false);
+
+  const canAfford = balance >= cartTotal;
 
   const [customer, setCustomer] = useState<CustomerInfo>({
     name: 'คุณสมชาย ใจดี',
@@ -46,10 +47,17 @@ export const CheckoutModal: React.FC = () => {
     setStep(2);
   };
 
-  const handleConfirmPayment = () => {
-    const order = createOrder(customer, paymentMethod);
-    setCompletedOrder(order);
-    setStep(3);
+  const handleConfirmPayment = async () => {
+    setIsPlacing(true);
+    // The server re-prices the cart and debits the wallet in one transaction;
+    // it returns null (with a toast) when the balance or stock does not hold up.
+    const order = await createOrder(customer);
+    setIsPlacing(false);
+
+    if (order) {
+      setCompletedOrder(order);
+      setStep(3);
+    }
   };
 
   return (
@@ -206,108 +214,42 @@ export const CheckoutModal: React.FC = () => {
           </form>
         )}
 
-        {/* STEP 2: PAYMENT METHOD & SUMMARY */}
+        {/* STEP 2: PAY FROM WALLET */}
         {step === 2 && (
           <div className="mt-6 space-y-6">
-            {/* Payment Method Selector Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { id: 'promptpay', label: 'PromptPay QR', icon: QrCode },
-                { id: 'credit_card', label: 'บัตรเครดิต', icon: CreditCard },
-                { id: 'bank_transfer', label: 'โอนผ่านธนาคาร', icon: Building2 },
-                { id: 'cod', label: 'เก็บเงินปลายทาง', icon: Truck }
-              ].map((method) => {
-                const IconComp = method.icon;
-                const isSelected = paymentMethod === method.id;
-                return (
-                  <button
-                    key={method.id}
-                    onClick={() => setPaymentMethod(method.id as PaymentMethod)}
-                    className={`p-3.5 rounded-2xl border text-left flex flex-col items-center justify-center gap-2 transition-all ${
-                      isSelected
-                        ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-md shadow-indigo-600/10 font-bold'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900'
-                    }`}
+            <div
+              className={`p-5 rounded-2xl border space-y-3 ${
+                canAfford ? 'bg-slate-50 border-slate-200' : 'bg-amber-50 border-amber-200'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20">
+                  <WalletIcon className="w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-slate-900 text-sm">ชำระด้วยยอดเงินในกระเป๋า</h4>
+                  <p className="text-xs text-slate-500">
+                    ยอดคงเหลือ{' '}
+                    <strong className={canAfford ? 'text-emerald-600' : 'text-amber-700'}>
+                      ฿{balance.toLocaleString()}
+                    </strong>
+                  </p>
+                </div>
+              </div>
+
+              {!canAfford && (
+                <div className="text-xs text-amber-800 space-y-2">
+                  <p>
+                    ยอดเงินไม่พอ ต้องเติมอีก{' '}
+                    <strong>฿{(cartTotal - balance).toLocaleString()}</strong>
+                  </p>
+                  <Link
+                    href="/wallet"
+                    className="inline-flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl transition-colors"
                   >
-                    <IconComp className={`w-6 h-6 ${isSelected ? 'text-indigo-600' : 'text-slate-400'}`} />
-                    <span className="text-xs text-center">{method.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Selected Method Details */}
-            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-4">
-              {paymentMethod === 'promptpay' && (
-                <div className="flex flex-col sm:flex-row items-center gap-6">
-                  <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-200 flex flex-col items-center shrink-0">
-                    <div className="bg-indigo-900 text-white text-[10px] font-bold px-3 py-1 rounded mb-2 uppercase tracking-widest">
-                      PROMPTPAY QR
-                    </div>
-                    {/* Simulated PromptPay QR Graphic */}
-                    <div className="w-36 h-36 bg-slate-900 rounded-xl p-2 flex flex-col items-center justify-center text-white space-y-1">
-                      <QrCode className="w-24 h-24 text-indigo-400" />
-                      <span className="text-[9px] font-mono text-slate-400">SCAN TO PAY</span>
-                    </div>
-                    <span className="text-xs font-extrabold text-slate-900 mt-2">
-                      ฿{cartTotal.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="space-y-2 text-xs text-slate-600">
-                    <h4 className="font-bold text-slate-900 text-sm">สแกนจ่ายด้วยแอปธนาคารใดก็ได้</h4>
-                    <p className="text-slate-500">
-                      สแกน QR Code ด้วยแอปพลิเคชัน K PLUS, SCB EASY, Krungthai NEXT หรือแอปธนาคารชั้นนำ ยอดเงินจะตัดเข้าสู่ระบบทันทีแบบเรียลไทม์
-                    </p>
-                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 text-[11px] font-mono text-indigo-700 font-semibold">
-                      PromptPay ID: 098-765-4321 (บริษัท นีโอ เทค จำกัด)
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {paymentMethod === 'credit_card' && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] text-slate-600 mb-1">หมายเลขบัตรเครดิต / เดบิต</label>
-                    <Input
-                      type="text"
-                      placeholder="1234 •••• •••• 5678"
-                      className="w-full bg-white border-slate-200 text-xs text-slate-900"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] text-slate-600 mb-1">วันหมดอายุ (MM/YY)</label>
-                      <Input
-                        type="text"
-                        placeholder="12/28"
-                        className="w-full bg-white border-slate-200 text-xs text-slate-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] text-slate-600 mb-1">CVV</label>
-                      <Input
-                        type="password"
-                        placeholder="•••"
-                        className="w-full bg-white border-slate-200 text-xs text-slate-900"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {paymentMethod === 'bank_transfer' && (
-                <div className="text-xs text-slate-600 space-y-2">
-                  <p className="font-bold text-slate-900">โอนผ่านบัญชีธนาคารกสิกรไทย (KBANK)</p>
-                  <p className="text-slate-500">เลขที่บัญชี: <strong className="font-mono text-indigo-700">012-3-45678-9</strong> (บจก. นีโอ เทค)</p>
-                  <p className="text-slate-500">เมื่อโอนเรียบร้อย ระบบจะตรวจสอบสลิปการโอนเงินอัตโนมัติ</p>
-                </div>
-              )}
-
-              {paymentMethod === 'cod' && (
-                <div className="text-xs text-slate-600 space-y-1">
-                  <p className="font-bold text-slate-900">เก็บเงินปลายทาง (Cash on Delivery)</p>
-                  <p className="text-slate-500">ชำระเงินกับเจ้าหน้าที่จัดส่งพัสดุเมื่อได้รับสินค้าเรียบร้อย</p>
+                    <WalletIcon className="w-4 h-4" />
+                    ไปหน้าเติมเงิน
+                  </Link>
                 </div>
               )}
             </div>
@@ -336,10 +278,13 @@ export const CheckoutModal: React.FC = () => {
               </button>
               <Button
                 onClick={handleConfirmPayment}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 active:scale-95 border-0"
+                disabled={!canAfford || isPlacing}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 active:scale-95 border-0 disabled:opacity-50"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>ยืนยันคำสั่งซื้อทันที</span>
+                <span>
+                  {isPlacing ? 'กำลังสั่งซื้อ...' : `ยืนยันและจ่าย ฿${cartTotal.toLocaleString()}`}
+                </span>
               </Button>
             </div>
           </div>
@@ -377,7 +322,7 @@ export const CheckoutModal: React.FC = () => {
             </div>
 
             <div className="p-3 bg-indigo-50 rounded-xl border border-indigo-200 text-xs text-indigo-800">
-              💡 ข้อมูลคำสั่งซื้อนี้ถูกส่งไปยัง <strong>ระบบหลังบ้าน (Admin Dashboard)</strong> เรียบร้อยแล้ว สามารถสลับไปดูสถานะในหน้า Admin ได้ทันที!
+              หักจากกระเป๋าเงินเรียบร้อย ยอดคงเหลือ <strong>฿{balance.toLocaleString()}</strong>
             </div>
 
             <Button

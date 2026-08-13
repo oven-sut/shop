@@ -1,245 +1,162 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { User, UserRole } from '../types/auth';
-import { createClient } from '../lib/client';
+import { toAppUser } from '../lib/auth';
+import { createClient } from '../lib/supabase/client';
+
+export interface AuthResult {
+  success: boolean;
+  message: string;
+  /** Signup only: the account exists but the confirmation email must be opened first. */
+  needsEmailConfirmation?: boolean;
+}
 
 interface AuthContextType {
   user: User | null;
   role: UserRole | null;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
-  signup: (name: string, email: string, password: string) => Promise<{ success: boolean; message: string }>;
-  loginWithGoogle: () => Promise<{ success: boolean; message: string }>;
-  loginAsAdmin: (passcode: string) => { success: boolean; message: string };
-  loginAsDemoCustomer: () => void;
-  loginAsDemoGoogleUser: () => void;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  signup: (name: string, email: string, password: string) => Promise<AuthResult>;
+  loginWithGoogle: (next?: string) => Promise<AuthResult>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+/** Supabase returns English error strings; show something readable instead. */
+function translateAuthError(message: string): string {
+  const text = message.toLowerCase();
 
-  const supabase = createClient();
+  if (text.includes('provider is not enabled')) {
+    return 'ยังไม่ได้เปิดใช้งาน Google ในโปรเจกต์ Supabase (Authentication → Providers → Google)';
+  }
+  if (text.includes('invalid login credentials')) {
+    return 'อีเมลหรือรหัสผ่านไม่ถูกต้อง';
+  }
+  if (text.includes('email not confirmed')) {
+    return 'ยังไม่ได้ยืนยันอีเมล กรุณาเปิดลิงก์ยืนยันในกล่องจดหมายก่อน';
+  }
+  if (text.includes('user already registered') || text.includes('already been registered')) {
+    return 'อีเมลนี้ถูกใช้สมัครสมาชิกไปแล้ว';
+  }
+  if (text.includes('password should be at least')) {
+    return 'รหัสผ่านสั้นเกินไป กรุณาตั้งอย่างน้อย 6 ตัวอักษร';
+  }
+  return message;
+}
 
-  // Load persisted session & listen for Supabase auth state changes
+export const AuthProvider: React.FC<{
+  children: React.ReactNode;
+  /** Verified server-side from the cookie session, so the first paint is correct. */
+  initialUser?: User | null;
+}> = ({ children, initialUser = null }) => {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const [user, setUser] = useState<User | null>(initialUser);
+  const lastUserId = useRef<string | null>(initialUser?.id ?? null);
+
+  // The cookie session is the single source of truth — nothing is kept in localStorage.
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem('owen_auth_user');
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      } else {
-        // Default guest/demo initial state
-        const demoAdmin: User = {
-          id: 'admin-1',
-          email: 'admin@neotech.th',
-          name: 'ผู้ดูแลระบบ (Admin)',
-          role: 'admin',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
-          createdAt: new Date().toISOString()
-        };
-        setUser(demoAdmin);
-      }
-    } catch {
-      setUser(null);
-    }
-
-    // Subscribe to Supabase auth changes (Google login, session restore)
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const sbUser = session.user;
-        const userMeta = sbUser.user_metadata || {};
-        const loggedUser: User = {
-          id: sbUser.id,
-          email: sbUser.email || '',
-          name: userMeta.full_name || userMeta.name || sbUser.email?.split('@')[0] || 'Google User',
-          role: sbUser.email?.toLowerCase().includes('admin') ? 'admin' : 'customer',
-          avatar: userMeta.avatar_url || userMeta.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop',
-          createdAt: sbUser.created_at || new Date().toISOString()
-        };
-        setUser(loggedUser);
+      const nextUser = toAppUser(session?.user);
+      setUser(nextUser);
+
+      // Server Components rendered with the previous session need to re-render.
+      const nextId = nextUser?.id ?? null;
+      if (nextId !== lastUserId.current) {
+        lastUserId.current = nextId;
+        router.refresh();
       }
     });
 
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [router, supabase]);
 
-  // Sync to localStorage
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('owen_auth_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('owen_auth_user');
-    }
-  }, [user]);
+  const login = async (email: string, password: string): Promise<AuthResult> => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
-    // 1. Check Supabase Auth if available
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (!error && data.user) {
-        const loggedUser: User = {
-          id: data.user.id,
-          email: data.user.email || email,
-          name: data.user.user_metadata?.name || email.split('@')[0],
-          role: email.toLowerCase().includes('admin') ? 'admin' : 'customer',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop',
-          createdAt: new Date().toISOString()
-        };
-        setUser(loggedUser);
-        return { success: true, message: 'เข้าสู่ระบบสำเร็จ!' };
-      }
-    } catch {
-      // Fallthrough to local login
+    if (error) {
+      return { success: false, message: translateAuthError(error.message) };
     }
 
-    // 2. Demo fallback matching
-    if (email.toLowerCase().includes('admin') || password === '1234') {
-      const adminUser: User = {
-        id: 'admin-1',
-        email: email || 'admin@neotech.th',
-        name: 'ผู้ดูแลระบบ (Admin)',
-        role: 'admin',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
-        createdAt: new Date().toISOString()
-      };
-      setUser(adminUser);
-      return { success: true, message: 'เข้าสู่ระบบ Admin สำเร็จ!' };
-    } else {
-      const customerUser: User = {
-        id: `cust-${Date.now()}`,
-        email,
-        name: email.split('@')[0],
-        role: 'customer',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop',
-        createdAt: new Date().toISOString()
-      };
-      setUser(customerUser);
-      return { success: true, message: 'เข้าสู่ระบบลูกค้าสำเร็จ!' };
-    }
+    setUser(toAppUser(data.user));
+    return { success: true, message: 'เข้าสู่ระบบสำเร็จ' };
   };
 
-  const signup = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string }> => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { name }
-        }
-      });
-
-      if (error) {
-        // Fallback local registration
-      }
-    } catch {}
-
-    const newCustomer: User = {
-      id: `cust-${Date.now()}`,
+  const signup = async (name: string, email: string, password: string): Promise<AuthResult> => {
+    const { data, error } = await supabase.auth.signUp({
       email,
-      name: name || email.split('@')[0],
-      role: 'customer',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop',
-      createdAt: new Date().toISOString()
-    };
-    setUser(newCustomer);
-    return { success: true, message: 'ลงทะเบียนและเข้าสู่ระบบสำเร็จ!' };
-  };
+      password,
+      options: {
+        data: { full_name: name },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
 
-  const loginWithGoogle = async (): Promise<{ success: boolean; message: string }> => {
-    try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
-
-      if (error) {
-        return { success: false, message: error.message || 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้' };
-      }
-      return { success: true, message: 'กำลังนำท่านไปยังหน้า Google Login...' };
-    } catch (err: any) {
-      return { success: false, message: err?.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ Google OAuth' };
+    if (error) {
+      return { success: false, message: translateAuthError(error.message) };
     }
-  };
 
-  const loginAsAdmin = (passcode: string) => {
-    if (passcode === '1234' || passcode === 'admin') {
-      const adminUser: User = {
-        id: 'admin-1',
-        email: 'admin@neotech.th',
-        name: 'ผู้ดูแลระบบ (Admin)',
-        role: 'admin',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop',
-        createdAt: new Date().toISOString()
+    // With email confirmation enabled, signUp returns a user but no session.
+    if (!data.session) {
+      return {
+        success: true,
+        needsEmailConfirmation: true,
+        message: `ส่งลิงก์ยืนยันไปที่ ${email} แล้ว กรุณาเปิดอีเมลเพื่อยืนยันการสมัคร`,
       };
-      setUser(adminUser);
-      return { success: true, message: 'เข้าสู่ระบบผู้ดูแลระบบเรียบร้อยแล้ว' };
     }
-    return { success: false, message: 'รหัสผ่าน Admin (Passcode) ไม่ถูกต้อง (ลองใช้ 1234)' };
+
+    setUser(toAppUser(data.user));
+    return { success: true, message: 'สมัครสมาชิกและเข้าสู่ระบบสำเร็จ' };
   };
 
-  const loginAsDemoCustomer = () => {
-    const demoCust: User = {
-      id: 'cust-demo',
-      email: 'customer@example.com',
-      name: 'คุณสมชาย ใจดี',
-      role: 'customer',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop',
-      createdAt: new Date().toISOString()
-    };
-    setUser(demoCust);
-  };
+  const loginWithGoogle = async (next = '/'): Promise<AuthResult> => {
+    const redirectTo = new URL('/auth/callback', window.location.origin);
+    redirectTo.searchParams.set('next', next);
 
-  const loginAsDemoGoogleUser = () => {
-    const googleDemoUser: User = {
-      id: `google-user-${Date.now()}`,
-      email: 'somchai.google@gmail.com',
-      name: 'Somchai Jaidee (Google)',
-      role: 'customer',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop',
-      createdAt: new Date().toISOString(),
-    };
-    setUser(googleDemoUser);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectTo.toString(),
+        queryParams: {
+          // Ask Google for a refresh token so the session can be renewed.
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+
+    if (error) {
+      return { success: false, message: translateAuthError(error.message) };
+    }
+
+    return { success: true, message: 'กำลังนำท่านไปยังหน้าเข้าสู่ระบบของ Google...' };
   };
 
   const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {}
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('owen_auth_user');
+    lastUserId.current = null;
+    router.refresh();
+    router.push('/');
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        role: user?.role || null,
+        role: user?.role ?? null,
         isAuthenticated: Boolean(user),
         isAdmin: user?.role === 'admin',
         login,
         signup,
         loginWithGoogle,
-        loginAsAdmin,
-        loginAsDemoCustomer,
-        loginAsDemoGoogleUser,
-        logout
+        logout,
       }}
     >
       {children}

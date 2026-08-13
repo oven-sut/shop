@@ -1,52 +1,51 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getProductsStore, addProductStore } from '@/lib/apiStore';
+import { requireApiUser } from '@/lib/api-auth';
+import { serverError } from '@/lib/api-response';
+import { toProduct, toProductRow } from '@/lib/mappers';
+import { createRouteClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
+  const { response: unauthorized } = await requireApiUser();
+  if (unauthorized) return unauthorized;
+
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const featured = searchParams.get('featured');
-    const limit = searchParams.get('limit');
+    const limit = Number(searchParams.get('limit'));
 
-    let result = getProductsStore();
+    const supabase = await createRouteClient();
+    let query = supabase.from('products').select('*').order('created_at', { ascending: false });
 
-    if (category && category !== 'ทั้งหมด') {
-      result = result.filter((p) => p.category === category);
-    }
-
+    if (category && category !== 'ทั้งหมด') query = query.eq('category', category);
+    if (featured === 'true') query = query.eq('is_featured', true);
     if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q)
-      );
+      const term = `%${search}%`;
+      query = query.or(`name.ilike.${term},category.ilike.${term},description.ilike.${term}`);
     }
+    if (Number.isFinite(limit) && limit > 0) query = query.limit(limit);
 
-    if (featured === 'true') {
-      result = result.filter((p) => p.isFeatured || p.badge === 'HOT');
-    }
+    const { data, error } = await query;
 
-    if (limit && !isNaN(Number(limit))) {
-      result = result.slice(0, Number(limit));
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
 
     return NextResponse.json({
       success: true,
-      count: result.length,
-      data: result
+      count: data.length,
+      data: data.map(toProduct),
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return serverError(error);
   }
 }
 
 export async function POST(request: NextRequest) {
+  const { response: unauthorized } = await requireApiUser();
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await request.json();
 
@@ -57,27 +56,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newProduct = addProductStore({
-      name: body.name,
-      category: body.category || 'หูฟัง & แอคเซสซอรี',
-      price: Number(body.price),
-      originalPrice: body.originalPrice ? Number(body.originalPrice) : undefined,
-      stock: Number(body.stock),
-      description: body.description || '',
-      specs: body.specs || {},
-      image: body.image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=800&auto=format&fit=crop',
-      badge: body.badge,
-      isFeatured: body.isFeatured ?? true
-    });
+    // Only admins get past the products RLS policy; a customer's insert fails here.
+    const supabase = await createRouteClient();
+    const { data, error } = await supabase
+      .from('products')
+      .insert(toProductRow(body))
+      .select('*')
+      .single();
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 403 });
+    }
 
     return NextResponse.json(
-      { success: true, message: 'เพิ่มสินค้าสำเร็จ', data: newProduct },
+      { success: true, message: 'เพิ่มสินค้าสำเร็จ', data: toProduct(data) },
       { status: 201 }
     );
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return serverError(error);
   }
 }

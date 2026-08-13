@@ -1,96 +1,211 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { ShopProvider, useShop } from '../../context/ShopContext';
-import { AuthProvider, useAuth } from '../../context/AuthContext';
 import { AdminHeader } from '../../components/Admin/AdminHeader';
 import { AdminOverview } from '../../components/Admin/AdminOverview';
 import { AdminProductList } from '../../components/Admin/AdminProductList';
 import { AdminOrderList } from '../../components/Admin/AdminOrderList';
 import { AdminAnalytics } from '../../components/Admin/AdminAnalytics';
+import { AdminSupplier } from '../../components/Admin/AdminSupplier';
 import { ToastContainer } from '../../components/ToastContainer';
-import { Settings, Save, RefreshCw, ShieldAlert, KeyRound, ArrowRight } from 'lucide-react';
+import { Settings, Save, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { StoreSettings } from '../../lib/settings';
 
-function AdminContent() {
-  const { showToast } = useShop();
-  const { isAdmin, loginAsAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'analytics' | 'settings'>('overview');
+/**
+ * Rendered only once the settings row has loaded, so seeding the form from props
+ * at mount is enough — no effect needed to refill it later.
+ */
+function StoreSettingsPanel() {
+  const { settings, saveSettings, showToast } = useShop();
 
-  // Passcode gate state
-  const [passcode, setPasscode] = useState('');
+  const [form, setForm] = useState<StoreSettings>(settings);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Settings State
-  const [storeName, setStoreName] = useState('NEO TECH Store');
-  const [freeShipMin, setFreeShipMin] = useState(500);
-  const [taxRate, setTaxRate] = useState(7);
-  const [storeStatus, setStoreStatus] = useState(true);
+  const update = <K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    showToast('บันทึกการตั้งค่าร้านค้าสำเร็จแล้ว', 'success');
+    setIsSaving(true);
+    const result = await saveSettings(form);
+    setIsSaving(false);
+    showToast(result.message, result.success ? 'success' : 'warning');
   };
 
-  const handlePasscodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const res = loginAsAdmin(passcode);
-    if (res.success) {
-      showToast(res.message, 'success');
-    } else {
-      showToast(res.message, 'warning');
-    }
-  };
-
-  // Route Guard if not admin
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-center items-center p-4 font-sans">
-        <ToastContainer />
-        <Card className="max-w-md w-full bg-white border-slate-200 shadow-xl rounded-3xl p-6 text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 mx-auto flex items-center justify-center shadow">
-            <ShieldAlert className="w-8 h-8" />
-          </div>
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900">พื้นที่ผู้ดูแลระบบ (Admin Only)</h2>
-            <p className="text-xs text-slate-500 mt-1">
-              กรุณายืนยันรหัสผ่าน Passcode เพื่อเข้าสู่หน้าจัดการหลังบ้าน (ทดสอบกรอก <strong className="font-mono text-indigo-600">1234</strong>)
-            </p>
-          </div>
-
-          <form onSubmit={handlePasscodeSubmit} className="space-y-3 pt-2">
-            <div className="relative">
-              <Input
-                type="password"
-                required
-                placeholder="กรอก 1234"
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-                className="pl-9 bg-slate-50 border-slate-200 text-slate-900 text-xs font-mono text-center"
-              />
-              <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+  return (
+    <div className="bg-white border border-slate-200 p-6 rounded-2xl max-w-2xl mx-auto space-y-6 shadow-sm animate-in fade-in">
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+              <Settings className="w-6 h-6 text-indigo-600" />
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">ตั้งค่าระบบร้านค้า (Store Settings)</h2>
+                <p className="text-xs text-slate-500">ชื่อร้าน บัญชีรับเงินเติม และเงื่อนไขการสั่งซื้อ</p>
+              </div>
             </div>
 
-            <Button
-              type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 rounded-xl shadow-lg border-0 flex items-center justify-center gap-2"
-            >
-              <span>ยืนยันเข้าสู่ระบบ Admin</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </form>
+            <form onSubmit={handleSaveSettings} className="space-y-5 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">ชื่อร้านค้า</label>
+                <Input
+                  type="text"
+                  value={form.storeName}
+                  onChange={(e) => update('storeName', e.target.value)}
+                  className="w-full bg-slate-50 border-slate-200 text-slate-900"
+                />
+              </div>
 
-          <div className="pt-2 text-xs text-slate-400">
-            <Link href="/" className="hover:text-indigo-600 transition-colors">
-              ← ย้อนกลับสู่หน้าร้านค้า
-            </Link>
-          </div>
-        </Card>
-      </div>
-    );
-  }
+              {/* Top-up destination */}
+              <div className="p-4 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-indigo-600" />
+                  <span className="font-bold text-slate-900">บัญชีรับเงินเติม</span>
+                </div>
+                <p className="text-[11px] text-slate-500 -mt-1">
+                  ระบบจะเทียบผู้รับในสลิปกับค่านี้ก่อนเติมเงินให้ลูกค้า ถ้าเว้นว่างทั้งคู่จะเติมเงินไม่ได้เลย
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">ชื่อบัญชี</label>
+                    <Input
+                      type="text"
+                      placeholder="เช่น นายสมชาย ใจดี"
+                      value={form.topupReceiverName}
+                      onChange={(e) => update('topupReceiverName', e.target.value)}
+                      className="w-full bg-white border-slate-200 text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      เลขบัญชี / พร้อมเพย์
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="เช่น 012-3-45678-9"
+                      value={form.topupReceiverAccount}
+                      onChange={(e) => update('topupReceiverAccount', e.target.value)}
+                      className="w-full bg-white border-slate-200 text-slate-900 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">ธนาคาร</label>
+                    <Input
+                      type="text"
+                      placeholder="เช่น กสิกรไทย"
+                      value={form.topupBankName}
+                      onChange={(e) => update('topupBankName', e.target.value)}
+                      className="w-full bg-white border-slate-200 text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      สลิปเก่าได้ไม่เกิน (วัน)
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.topupMaxSlipAgeDays}
+                      onChange={(e) => update('topupMaxSlipAgeDays', Number(e.target.value))}
+                      className="w-full bg-white border-slate-200 text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">เติมขั้นต่ำ (฿)</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.topupMinAmount}
+                      onChange={(e) => update('topupMinAmount', Number(e.target.value))}
+                      className="w-full bg-white border-slate-200 text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">เติมสูงสุด (฿)</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.topupMaxAmount}
+                      onChange={(e) => update('topupMaxAmount', Number(e.target.value))}
+                      className="w-full bg-white border-slate-200 text-slate-900"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">ส่งฟรีเมื่อยอดถึง (฿)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.freeShippingMin}
+                    onChange={(e) => update('freeShippingMin', Number(e.target.value))}
+                    className="w-full bg-slate-50 border-slate-200 text-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">ค่าจัดส่ง (฿)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.shippingFee}
+                    onChange={(e) => update('shippingFee', Number(e.target.value))}
+                    className="w-full bg-slate-50 border-slate-200 text-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">VAT (%)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={form.taxRate}
+                    onChange={(e) => update('taxRate', Number(e.target.value))}
+                    className="w-full bg-slate-50 border-slate-200 text-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-slate-900 block">สถานะเปิด/ปิดรับคำสั่งซื้อ</span>
+                  <span className="text-slate-500 text-[11px]">
+                    ปิดแล้วลูกค้าจะสั่งซื้อไม่ได้ (ตรวจที่ฝั่งเซิร์ฟเวอร์)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => update('isOpen', !form.isOpen)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    form.isOpen ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+                  }`}
+                >
+                  {form.isOpen ? 'เปิดร้านปกติ' : 'ปิดปรับปรุง'}
+                </button>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100 flex justify-end">
+                <Button
+                  type="submit"
+                  disabled={isSaving}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 border-0 disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{isSaving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}</span>
+                </Button>
+              </div>
+      </form>
+    </div>
+  );
+}
+
+function AdminContent() {
+  const { isLoading } = useShop();
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'products' | 'supplier' | 'orders' | 'analytics' | 'settings'
+  >('overview');
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
@@ -98,8 +213,6 @@ function AdminContent() {
       <AdminHeader activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        
-        {/* Tab Switcher Content */}
         {activeTab === 'overview' && (
           <AdminOverview
             onNavigateToProducts={() => setActiveTab('products')}
@@ -109,94 +222,18 @@ function AdminContent() {
 
         {activeTab === 'products' && <AdminProductList />}
 
+        {activeTab === 'supplier' && <AdminSupplier />}
+
         {activeTab === 'orders' && <AdminOrderList />}
 
         {activeTab === 'analytics' && <AdminAnalytics />}
 
-        {activeTab === 'settings' && (
-          <div className="bg-white border border-slate-200 p-6 rounded-2xl max-w-2xl mx-auto space-y-6 shadow-sm animate-in fade-in">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <Settings className="w-6 h-6 text-indigo-600" />
-              <div>
-                <h2 className="text-lg font-bold text-slate-900">ตั้งค่าระบบร้านค้า (Store Settings)</h2>
-                <p className="text-xs text-slate-500">ปรับแต่งชื่อร้าน อัตราภาษี และเงื่อนไขการจัดส่ง</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleSaveSettings} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">ชื่อร้านค้า (Store Name)</label>
-                <Input
-                  type="text"
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  className="w-full bg-slate-50 border-slate-200 text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">ยอดขั้นต่ำสำหรับจัดส่งฟรี (฿)</label>
-                <Input
-                  type="number"
-                  value={freeShipMin}
-                  onChange={(e) => setFreeShipMin(Number(e.target.value))}
-                  className="w-full bg-slate-50 border-slate-200 text-slate-900"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">อัตราภาษีมูลค่าเพิ่ม VAT (%)</label>
-                <Input
-                  type="number"
-                  value={taxRate}
-                  onChange={(e) => setTaxRate(Number(e.target.value))}
-                  className="w-full bg-slate-50 border-slate-200 text-slate-900"
-                />
-              </div>
-
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-slate-900 block">สถานะเปิด/ปิดรับคำสั่งซื้อ</span>
-                  <span className="text-slate-500 text-[11px]">เปิดไว้เพื่อให้ลูกค้าทำการสั่งซื้อสินค้าหน้าร้านตามปกติ</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setStoreStatus(!storeStatus)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    storeStatus
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-red-600 text-white'
-                  }`}
-                >
-                  {storeStatus ? 'เปิดร้านปกติ' : 'ปิดปรับปรุง'}
-                </button>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.clear();
-                    window.location.reload();
-                  }}
-                  className="text-red-600 hover:text-red-700 font-semibold text-xs flex items-center gap-1"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>รีเซ็ตข้อมูลทั้งหมดกลับสู่ค่าเริ่มต้น</span>
-                </button>
-
-                <Button
-                  type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 border-0"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>บันทึกการตั้งค่า</span>
-                </Button>
-              </div>
-            </form>
-          </div>
-        )}
-
+        {activeTab === 'settings' &&
+          (isLoading ? (
+            <p className="text-center text-xs text-slate-400 py-16">กำลังโหลดการตั้งค่า...</p>
+          ) : (
+            <StoreSettingsPanel />
+          ))}
       </main>
     </div>
   );
@@ -204,10 +241,8 @@ function AdminContent() {
 
 export default function AdminPage() {
   return (
-    <AuthProvider>
-      <ShopProvider>
-        <AdminContent />
-      </ShopProvider>
-    </AuthProvider>
+    <ShopProvider>
+      <AdminContent />
+    </ShopProvider>
   );
 }
