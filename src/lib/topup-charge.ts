@@ -54,6 +54,14 @@ export async function settleCharge(
 
   const paidAt = typeof charge.raw.paid_at === 'string' ? charge.raw.paid_at : null;
 
+  // The history and the ledger must say which way the money actually came in —
+  // every gateway charge reading "PromptPay QR" would be untrue half the time.
+  const channel = charge.method === 'truemoney' ? 'TrueMoney Wallet' : 'PromptPay QR';
+  const note =
+    charge.method === 'truemoney'
+      ? 'เติมเงินด้วยทรูวอลเล็ต (ชำระผ่านระบบรับชำระเงิน)'
+      : 'เติมเงินด้วย QR (ชำระผ่านระบบรับชำระเงิน)';
+
   const admin = createAdminClient();
   const { data, error } = await admin.rpc('credit_topup', {
     p_user_id: charge.userId,
@@ -61,13 +69,13 @@ export async function settleCharge(
     // Namespaced like the voucher refs, so gateway ids and bank slip references
     // can never collide in the one unique column.
     p_trans_ref: `${gatewayName}:${charge.id}`,
-    p_sending_bank: 'PromptPay QR',
+    p_sending_bank: channel,
     p_receiving_bank: gatewayName,
     p_sender_name: null,
     p_receiver_name: null,
     p_transferred_at: paidAt,
     p_raw: charge.raw,
-    p_note: 'เติมเงินด้วย QR (ชำระผ่านระบบรับชำระเงิน)',
+    p_note: note,
   });
 
   if (error) {

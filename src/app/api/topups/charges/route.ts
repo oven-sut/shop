@@ -32,7 +32,10 @@ export async function GET() {
   if (unauthorized) return unauthorized;
 
   const gateway = activeGateway();
-  return NextResponse.json({ success: true, data: { gateway: gateway?.name ?? null } });
+  return NextResponse.json({
+    success: true,
+    data: { gateway: gateway?.name ?? null, methods: gateway?.methods ?? [] },
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -62,6 +65,20 @@ export async function POST(request: NextRequest) {
       return fail('กรุณาระบุจำนวนเงินที่จะเติม');
     }
 
+    const method = body.method === 'truemoney' ? 'truemoney' : 'promptpay';
+
+    if (!gateway.methods.includes(method)) {
+      return fail(`ระบบรับชำระเงินที่ตั้งไว้ไม่รองรับช่องทางนี้`, 400, 'method_not_supported');
+    }
+
+    // The customer's own wallet number — TrueMoney sends the OTP there. Checked
+    // here so a typo comes back as a form error instead of a gateway rejection.
+    const phone = typeof body.phone === 'string' ? body.phone.replace(/\D/g, '') : '';
+
+    if (method === 'truemoney' && !/^0\d{9}$/.test(phone)) {
+      return fail('กรุณากรอกเบอร์ทรูวอลเล็ตของคุณให้ครบ 10 หลัก');
+    }
+
     const supabase = await createRouteClient();
     const settings = await loadSettings(supabase);
 
@@ -74,7 +91,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const charge = await gateway.createCharge({ amount, userId: user.id });
+    // Where the customer lands after confirming with an OTP. Built from the site
+    // URL when it is set, since the gateway must be given an address that works
+    // from the customer's phone — not whatever host this request happened to use.
+    const returnUri = new URL('/wallet', process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin)
+      .toString();
+
+    const charge = await gateway.createCharge({
+      amount,
+      userId: user.id,
+      method,
+      phone,
+      returnUri,
+    });
 
     return NextResponse.json(
       {
@@ -83,10 +112,15 @@ export async function POST(request: NextRequest) {
           id: charge.id,
           amount: charge.amount,
           status: charge.status,
+          method: charge.method,
           expiresAt: charge.expiresAt ?? null,
           gateway: gateway.name,
           // Served through the shop so the browser never talks to the gateway.
-          qrPath: `/api/topups/charges/${encodeURIComponent(charge.id)}/qr`,
+          qrPath: charge.method === 'promptpay'
+            ? `/api/topups/charges/${encodeURIComponent(charge.id)}/qr`
+            : null,
+          // The one page the customer does have to open at the provider.
+          authorizeUri: charge.authorizeUri ?? null,
         },
       },
       { status: 201 }

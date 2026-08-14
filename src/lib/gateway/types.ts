@@ -14,12 +14,33 @@
 
 export type ChargeStatus = 'pending' | 'paid' | 'failed' | 'expired';
 
+/**
+ * ช่องทางจ่ายที่เปิดให้เลือก — ต่างกันที่ลูกค้าต้องทำอะไรต่อ
+ *
+ * `promptpay` ได้ QR มาสแกน, `truemoney` ได้ลิงก์ให้ไปยืนยันด้วย OTP ในหน้าของ
+ * ผู้ให้บริการ ทั้งสองแบบจบเหมือนกันคือเกตเวย์ยิง webhook กลับมาแล้วเงินเข้าเอง
+ */
+export type ChargeMethod = 'promptpay' | 'truemoney';
+
+export interface CreateChargeInput {
+  amount: number;
+  userId: string;
+  method: ChargeMethod;
+  /** เบอร์ทรูวอลเล็ตของลูกค้า — จำเป็นเฉพาะ method truemoney */
+  phone?: string;
+  /** หน้าที่จะพากลับมาหลังลูกค้ายืนยันจบ (redirect flow บังคับต้องมี) */
+  returnUri?: string;
+}
+
 export interface GatewayCharge {
   /** id ฝั่งเกตเวย์ — ใช้เป็น trans_ref กันเติมซ้ำ */
   id: string;
   /** บาท (แปลงจากสตางค์ให้แล้ว ถ้าเกตเวย์นั้นคิดเป็นสตางค์) */
   amount: number;
   status: ChargeStatus;
+  method: ChargeMethod;
+  /** หน้าที่ลูกค้าต้องไปยืนยัน (truemoney) — promptpay ไม่มี ใช้ QR แทน */
+  authorizeUri?: string;
   /**
    * เจ้าของรายการ อ่านจาก metadata ที่ฝากไว้ตอนสร้าง — ตัวนี้บอกว่าจะเติมเข้าใคร
    * ไม่ใช่คนที่ยิงมาถาม
@@ -36,7 +57,9 @@ export interface PaymentGateway {
   readonly name: string;
   /** ตั้งคีย์ครบหรือยัง — ถ้ายัง หน้ากระเป๋าเงินจะถอยไปใช้ QR + สลิปแบบเดิม */
   isConfigured(): boolean;
-  createCharge(input: { amount: number; userId: string }): Promise<GatewayCharge>;
+  /** ช่องทางที่เจ้านี้รองรับ */
+  readonly methods: readonly ChargeMethod[];
+  createCharge(input: CreateChargeInput): Promise<GatewayCharge>;
   /** ถามสถานะจาก API ของเกตเวย์ — แหล่งความจริงเดียวที่ใช้ตัดสินใจเติมเงิน */
   fetchCharge(id: string): Promise<GatewayCharge>;
   /** ดึงรูป QR มาให้เราส่งต่อ พร้อม content-type ที่เกตเวย์บอก */

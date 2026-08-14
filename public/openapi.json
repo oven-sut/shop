@@ -1415,6 +1415,17 @@
                           "nullable": true,
                           "description": "ชื่อเกตเวย์ที่ใช้อยู่ หรือ null ถ้ายังไม่ได้ตั้งคีย์",
                           "example": "omise"
+                        },
+                        "methods": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "promptpay",
+                              "truemoney"
+                            ]
+                          },
+                          "description": "ช่องทางที่เกตเวย์ที่ตั้งไว้รองรับ"
                         }
                       }
                     }
@@ -1449,6 +1460,20 @@
                     "type": "number",
                     "description": "ยอดที่จะเติม ต้องอยู่ในช่วง min/max ของร้าน",
                     "example": 500
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "promptpay",
+                      "truemoney"
+                    ],
+                    "default": "promptpay",
+                    "description": "promptpay = ได้ QR มาสแกน, truemoney = ได้ authorizeUri ไปยืนยัน OTP"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "เบอร์ทรูวอลเล็ตของลูกค้าเอง (10 หลัก) — จำเป็นเมื่อ method=truemoney",
+                    "example": "0812345678"
                   }
                 }
               }
@@ -2862,8 +2887,21 @@
           },
           "qrPath": {
             "type": "string",
-            "description": "path รูป QR ที่ร้านส่งต่อให้ (ไม่ใช่ URL ของเกตเวย์)",
-            "example": "/api/topups/charges/chrg_test_1/qr"
+            "description": "path รูป QR ที่ร้านส่งต่อให้ (promptpay เท่านั้น, truemoney = null)",
+            "example": "/api/topups/charges/chrg_test_1/qr",
+            "nullable": true
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "promptpay",
+              "truemoney"
+            ]
+          },
+          "authorizeUri": {
+            "type": "string",
+            "nullable": true,
+            "description": "หน้าที่ลูกค้าต้องไปยืนยัน OTP (truemoney) — null สำหรับ promptpay"
           }
         }
       },

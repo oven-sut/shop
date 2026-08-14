@@ -8,7 +8,7 @@ import { Footer } from '../../components/Footer';
 import { ToastContainer } from '../../components/ToastContainer';
 import { CartDrawer } from '../../components/CartDrawer';
 import { Topup } from '../../types/ecommerce';
-import { ArrowDownRight, ArrowUpRight, Banknote, Gift, QrCode } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Banknote, Gift, QrCode, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton, SkeletonRegion } from '@/components/ui/skeleton';
@@ -32,13 +32,16 @@ interface PromptPayQr {
   bankName: string;
 }
 
-/** A gateway charge from `/api/topups/charges` — the QR that credits by itself. */
+/** A gateway charge from `/api/topups/charges` — credits by itself once paid. */
 interface Charge {
   id: string;
   amount: number;
   status: 'pending' | 'paid' | 'failed' | 'expired';
+  /** promptpay = สแกน QR, truemoney = ไปยืนยัน OTP ที่ authorizeUri */
+  method: 'promptpay' | 'truemoney';
   expiresAt: string | null;
-  qrPath: string;
+  qrPath: string | null;
+  authorizeUri: string | null;
 }
 
 function WalletContent() {
@@ -67,9 +70,11 @@ function WalletContent() {
   const [isRedeeming, setIsRedeeming] = useState(false);
 
   const [gateway, setGateway] = useState<string | null>(null);
+  const [gatewayMethods, setGatewayMethods] = useState<string[]>([]);
   const [charge, setCharge] = useState<Charge | null>(null);
   const [chargeError, setChargeError] = useState('');
   const [isChargeLoading, setIsChargeLoading] = useState(false);
+  const [walletPhone, setWalletPhone] = useState('');
 
   const loadHistory = async () => {
     const response = await fetch('/api/topups');
@@ -87,7 +92,9 @@ function WalletContent() {
     fetch('/api/topups/charges')
       .then((response) => response.json())
       .then((body) => {
-        if (body.success) setGateway(body.data.gateway as string | null);
+        if (!body.success) return;
+        setGateway(body.data.gateway as string | null);
+        setGatewayMethods((body.data.methods ?? []) as string[]);
       })
       .catch(() => setGateway(null));
   }, []);
@@ -150,10 +157,15 @@ function WalletContent() {
     }
   };
 
-  const openCharge = async () => {
+  const openCharge = async (method: 'promptpay' | 'truemoney' = 'promptpay') => {
     const value = Number(amount);
     if (!Number.isFinite(value) || value <= 0) {
-      showToast('กรอกจำนวนเงินก่อน แล้วจึงสร้าง QR', 'warning');
+      showToast('กรอกจำนวนเงินก่อน', 'warning');
+      return;
+    }
+
+    if (method === 'truemoney' && !/^0\d{9}$/.test(walletPhone.replace(/\D/g, ''))) {
+      showToast('กรอกเบอร์ทรูวอลเล็ตของคุณให้ครบ 10 หลัก', 'warning');
       return;
     }
 
@@ -163,7 +175,7 @@ function WalletContent() {
     const response = await fetch('/api/topups/charges', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: value }),
+      body: JSON.stringify({ amount: value, method, phone: walletPhone }),
     });
     const body = await response.json().catch(() => ({}));
 
@@ -450,7 +462,7 @@ function WalletContent() {
 
                     <Button
                       type="button"
-                      onClick={openCharge}
+                      onClick={() => openCharge('promptpay')}
                       disabled={isChargeLoading || Boolean(charge)}
                       className="w-full h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md border-0 disabled:opacity-40"
                     >
@@ -464,7 +476,7 @@ function WalletContent() {
                       </p>
                     )}
 
-                    {charge && (
+                    {charge?.method === 'promptpay' && charge.qrPath && (
                       <div className="border border-neutral-200 rounded-md p-4 flex flex-col items-center gap-2">
                         {/* Served by our own route, not the gateway's host. */}
                         <img
@@ -555,10 +567,98 @@ function WalletContent() {
                 )}
               </TabsContent>
 
-              {/* ── 3. ซองอังเปา — ไถ่แล้วเข้าทันที ไม่ต้องมีสลิป ─────────── */}
+              {/* ── 3. ทรูวอลเล็ต — จ่ายผ่านเกตเวย์ หรือส่งซองอังเปา ─────── */}
               <TabsContent value="truemoney" className="space-y-4">
+                {/* จ่ายจากวอลเล็ตโดยตรง: เกตเวย์ถือความสัมพันธ์กับทรูให้ จึงไม่ต้อง
+                    ยิง endpoint ที่ทรูไม่ได้เปิดให้ใครเรียก */}
+                {gatewayMethods.includes('truemoney') && (
+                  <div className="border border-neutral-200 rounded-md p-4 space-y-3">
+                    <div>
+                      <span className="text-xs font-semibold text-neutral-900 block">
+                        จ่ายจากทรูวอลเล็ตโดยตรง
+                      </span>
+                      <span className="text-[11px] text-neutral-400">
+                        ยืนยันด้วย OTP ในหน้าของผู้ให้บริการ แล้วเงินเข้ากระเป๋าอัตโนมัติ
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                        จำนวนเงิน (บาท)
+                      </label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={settings.topupMinAmount}
+                          max={settings.topupMaxAmount}
+                          placeholder="เช่น 500"
+                          value={amount}
+                          onChange={(e) => handleAmountChange(e.target.value)}
+                          className="h-11 pl-10 bg-white border-neutral-300 rounded-md text-neutral-900 text-sm"
+                        />
+                        <Banknote className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                        เบอร์ทรูวอลเล็ตของคุณ
+                      </label>
+                      <div className="relative">
+                        <Input
+                          type="tel"
+                          inputMode="numeric"
+                          placeholder="08xxxxxxxx"
+                          value={walletPhone}
+                          onChange={(e) => setWalletPhone(e.target.value)}
+                          className="h-11 pl-10 bg-white border-neutral-300 rounded-md text-neutral-900 text-sm font-mono"
+                        />
+                        <Wallet className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      </div>
+                      <p className="text-[11px] text-neutral-400 mt-1.5">
+                        OTP จะส่งไปที่เบอร์นี้ — เป็นเบอร์ของคุณเอง ไม่ใช่เบอร์ร้าน
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      onClick={() => openCharge('truemoney')}
+                      disabled={isChargeLoading || Boolean(charge)}
+                      className="w-full h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md border-0 disabled:opacity-40"
+                    >
+                      {isChargeLoading && <Spinner className="mr-2" />}
+                      {isChargeLoading ? 'กำลังสร้างรายการ...' : 'จ่ายด้วยทรูวอลเล็ต'}
+                    </Button>
+
+                    {charge?.method === 'truemoney' && charge.authorizeUri && (
+                      <div className="border border-neutral-200 rounded-md p-4 space-y-2 text-center">
+                        <p className="text-sm font-semibold text-neutral-900">
+                          {money(charge.amount)}
+                        </p>
+                        {/* เปิดแท็บใหม่ ไม่พาออกจากหน้านี้ หน้านี้ยังเฝ้าสถานะอยู่ */}
+                        <a
+                          href={charge.authorizeUri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center h-11 px-5 rounded-md bg-neutral-900 text-white text-sm font-semibold"
+                        >
+                          เปิดหน้ายืนยัน OTP
+                        </a>
+                        <p className="text-[11px] text-neutral-500 flex items-center justify-center gap-1.5">
+                          <Spinner className="size-3" />
+                          ยืนยันเสร็จแล้วกลับมาหน้านี้ ระบบจะเติมให้เอง
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {voucherSupported ? (
                   <>
+                    <p className="text-xs font-semibold text-neutral-900 pt-1">
+                      หรือส่งเป็นซองอังเปา
+                    </p>
                     <p className="text-xs text-neutral-500 leading-relaxed">
                       ส่งซองอังเปาจากแอปทรูวอลเล็ตมาที่{' '}
                       <span className="font-mono font-semibold text-neutral-900">
@@ -594,13 +694,17 @@ function WalletContent() {
                     </form>
                   </>
                 ) : (
-                  <p className="border-l-2 border-neutral-900 pl-3 text-xs text-neutral-600 leading-relaxed">
-                    ร้านยังไม่ได้ตั้งเบอร์ทรูวอลเล็ต — ผู้ดูแลระบบต้องกรอกที่{' '}
-                    <Link href="/admin" className="underline underline-offset-2 font-medium text-neutral-900">
-                      หน้าแอดมิน → ตั้งค่าร้านค้า
-                    </Link>{' '}
-                    ก่อนจึงจะเติมด้วยซองอังเปาได้
-                  </p>
+                  // Only worth saying when there is no other way in on this tab —
+                  // with the gateway available, the voucher is a bonus, not a gap.
+                  !gatewayMethods.includes('truemoney') && (
+                    <p className="border-l-2 border-neutral-900 pl-3 text-xs text-neutral-600 leading-relaxed">
+                      ร้านยังไม่ได้เปิดช่องทางทรูวอลเล็ต — ผู้ดูแลระบบต้องต่อระบบรับชำระเงิน
+                      หรือกรอกเบอร์ทรูวอลเล็ตที่{' '}
+                      <Link href="/admin" className="underline underline-offset-2 font-medium text-neutral-900">
+                        หน้าแอดมิน → ตั้งค่าร้านค้า
+                      </Link>
+                    </p>
+                  )
                 )}
               </TabsContent>
             </Tabs>

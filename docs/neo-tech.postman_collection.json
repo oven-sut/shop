@@ -658,6 +658,34 @@
           }
         },
         {
+          "name": "Open a charge (TrueMoney Wallet)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 300,\n  \"method\": \"truemoney\",\n  \"phone\": \"0812345678\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topups/charges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "topups",
+                "charges"
+              ]
+            },
+            "description": "รับเงินจากทรูวอลเล็ตอย่างเป็นทางการผ่านเกตเวย์ — phone คือเบอร์ของลูกค้าเอง (ที่รับ OTP) ไม่ใช่เบอร์ร้าน คืน authorizeUri ให้ลูกค้าไปยืนยัน แล้วเงินเข้ากระเป๋าอัตโนมัติผ่าน webhook"
+          }
+        },
+        {
           "name": "Charge status (credits if paid)",
           "request": {
             "method": "GET",

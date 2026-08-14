@@ -1,4 +1,5 @@
 import {
+  ChargeMethod,
   ChargeStatus,
   GATEWAY_TIMEOUT_MS,
   GatewayCharge,
@@ -8,13 +9,18 @@ import {
 } from './types';
 
 /**
- * Omise / Opn Payments — PromptPay QR
+ * Omise / Opn Payments — PromptPay QR และ TrueMoney Wallet
  * https://docs.opn.ooo/api  (charges, sources)
  *
- * Flow: create a `promptpay` source for the amount, charge it, and the charge
- * comes back `pending` with a scannable QR. The customer pays it in their banking
- * app and the charge turns `successful` — reported both by webhook and by asking
- * for the charge again, which is what this shop actually trusts.
+ * Flow: create a source of the chosen type, charge it, and the charge comes back
+ * `pending` with something for the customer to act on — a scannable QR for
+ * PromptPay, an `authorize_uri` to confirm with an OTP for TrueMoney Wallet.
+ * Either way it turns `successful` once the money moves, reported both by webhook
+ * and by asking for the charge again, which is what this shop actually trusts.
+ *
+ * TrueMoney here is the sanctioned route: the gateway holds the merchant
+ * relationship, so there is no unofficial endpoint to reach and nothing for
+ * TrueMoney's bot protection to refuse.
  */
 const DEFAULT_BASE_URL = 'https://api.omise.co';
 
@@ -88,15 +94,29 @@ function readQrUrl(charge: Record<string, unknown>): string | undefined {
   return uri.startsWith('https://') || uri.startsWith(`${baseUrl()}/`) ? uri : undefined;
 }
 
+/** ชนิดของ source บอกว่าลูกค้าต้องทำอะไรต่อ — อ่านกลับมาแทนที่จะเดา */
+function readMethod(charge: Record<string, unknown>): ChargeMethod {
+  const source = isRecord(charge.source) ? charge.source : undefined;
+  return source?.type === 'truemoney' ? 'truemoney' : 'promptpay';
+}
+
 function toCharge(charge: Record<string, unknown>): GatewayCharge {
   const metadata = isRecord(charge.metadata) ? charge.metadata : {};
   const amount = typeof charge.amount === 'number' ? toBaht(charge.amount) : 0;
+  const authorizeUri = charge.authorize_uri;
 
   return {
     // Only a string id is usable — it goes into a URL path and into trans_ref.
     id: typeof charge.id === 'string' ? charge.id : '',
     amount,
     status: toStatus(charge),
+    method: readMethod(charge),
+    // Same rule as the QR URL: this comes from outside and the customer is sent
+    // to it, so anything but https is dropped rather than followed.
+    authorizeUri:
+      typeof authorizeUri === 'string' && authorizeUri.startsWith('https://')
+        ? authorizeUri
+        : undefined,
     userId: typeof metadata.userId === 'string' ? metadata.userId : undefined,
     expiresAt: typeof charge.expires_at === 'string' ? charge.expires_at : undefined,
     qrUrl: readQrUrl(charge),
@@ -111,12 +131,21 @@ export const omiseGateway: PaymentGateway = {
     return Boolean(process.env.OMISE_SECRET_KEY);
   },
 
-  async createCharge({ amount, userId }) {
+  methods: ['promptpay', 'truemoney'],
+
+  async createCharge({ amount, userId, method, phone, returnUri }) {
     const satang = toSatang(amount);
 
     const source = await call('/sources', {
       method: 'POST',
-      body: JSON.stringify({ type: 'promptpay', amount: satang, currency: 'thb' }),
+      body: JSON.stringify({
+        type: method,
+        amount: satang,
+        currency: 'thb',
+        // TrueMoney sends the OTP to this number, so it is the customer's own
+        // wallet number — nothing to do with the shop's receiving accounts.
+        ...(method === 'truemoney' ? { phone_number: phone } : {}),
+      }),
     });
 
     const charge = await call('/charges', {
@@ -125,6 +154,8 @@ export const omiseGateway: PaymentGateway = {
         amount: satang,
         currency: 'thb',
         source: source.id,
+        // Required by the redirect flow: where the customer lands after the OTP.
+        ...(returnUri ? { return_uri: returnUri } : {}),
         // The only place the owner is recorded. It comes back on every later read
         // of this charge, so a webhook — which carries no session — still knows
         // exactly whose wallet to credit.
@@ -134,10 +165,23 @@ export const omiseGateway: PaymentGateway = {
 
     const result = toCharge(charge);
 
-    if (!result.id || !result.qrUrl) {
+    if (!result.id) {
+      throw new GatewayError('omise_no_charge', 'ระบบรับชำระเงินไม่ได้ส่งรายการกลับมา กรุณาลองใหม่');
+    }
+
+    // Each method has one thing the customer must be handed. Without it the page
+    // would show a charge nobody can pay, so it fails here instead.
+    if (method === 'promptpay' && !result.qrUrl) {
       throw new GatewayError(
         'omise_no_qr',
         'ระบบรับชำระเงินไม่ได้ส่ง QR กลับมา กรุณาลองใหม่หรือใช้วิธีอัปโหลดสลิป'
+      );
+    }
+
+    if (method === 'truemoney' && !result.authorizeUri) {
+      throw new GatewayError(
+        'omise_no_authorize_uri',
+        'ระบบรับชำระเงินไม่ได้ส่งลิงก์ยืนยันกลับมา กรุณาลองใหม่'
       );
     }
 
