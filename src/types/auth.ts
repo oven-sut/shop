@@ -8,9 +8,3 @@ export interface User {
   avatar?: string;
   createdAt?: string;
 }
-
-export interface AuthSession {
-  user: User | null;
-  isAuthenticated: boolean;
-  role: UserRole | null;
-}
