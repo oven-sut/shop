@@ -12,7 +12,23 @@ import { updateSession } from '@/lib/supabase/proxy';
  */
 // Policy pages stay open: people must be able to read the terms they are asked
 // to accept before they have an account.
-const PUBLIC_PATHS = ['/login', '/auth', '/terms', '/privacy', '/cookies'];
+//
+// The last four are what a crawler or a chat app asks for before it has any
+// session at all — the sitemap, robots.txt, and the card image rendered when
+// the URL is pasted somewhere. Gated, they answer a redirect to /login, and the
+// link preview comes back blank. None of them expose anything: the sitemap
+// lists the public pages only, and the image is drawn from static text.
+const PUBLIC_PATHS = [
+  '/login',
+  '/auth',
+  '/terms',
+  '/privacy',
+  '/cookies',
+  '/sitemap.xml',
+  '/robots.txt',
+  '/opengraph-image',
+  '/twitter-image',
+];
 
 /**
  * The API reference and its spec map out every endpoint, so they are kept to

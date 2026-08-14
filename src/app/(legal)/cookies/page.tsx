@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'นโยบายคุกกี้ - NEO APP' };
+export const metadata: Metadata = {
+  title: 'นโยบายคุกกี้',
+  description:
+    'NEO APP ใช้คุกกี้และพื้นที่เก็บข้อมูลในเบราว์เซอร์อย่างไรบ้าง และตั้งค่าความยินยอมได้ที่ไหน',
+  alternates: { canonical: '/cookies' },
+};
 
 const UPDATED = '14 สิงหาคม 2569';
 

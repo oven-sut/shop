@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sarabun } from "next/font/google";
 import { AuthProvider } from "../context/AuthContext";
 import { CookieConsent } from "../components/CookieConsent";
+import { siteOrigin } from "../lib/auth";
 import { getSessionUser } from "../lib/supabase/session";
 import "./globals.css";
 
@@ -17,16 +18,52 @@ const sarabun = Sarabun({
   display: "swap",
 });
 
+const DESCRIPTION =
+  "ร้านขายแอปพลิเคชันและบริการดิจิทัล เติมเงินเข้ากระเป๋าแล้วซื้อได้ทันที " +
+  "ตรวจสลิปโอนกับธนาคารอัตโนมัติ ส่งมอบสินค้าให้ทันทีตลอด 24 ชั่วโมง";
+
 export const metadata: Metadata = {
-  title: "NEO APP - ร้านขายแอปพลิเคชัน พร้อมระบบเติมเงินและหลังบ้าน",
-  description: "ร้านขายแอปพลิเคชัน เติมเงินด้วยสลิปโอน ตรวจสอบกับธนาคารอัตโนมัติ พร้อมระบบจัดการหลังบ้าน",
-  icons: { icon: "/logo-mark.png", apple: "/logo-mark.png" },
+  // Without this, every relative URL below — the share image included —
+  // resolves against localhost:3000, and previews point at a machine nobody
+  // else can reach.
+  metadataBase: new URL(siteOrigin("http://localhost:3000")),
+  // `template` lets each page name only itself; the brand is appended here.
+  title: {
+    default: "NEO APP — ร้านขายแอปพลิเคชันและบริการดิจิทัล",
+    template: "%s · NEO APP",
+  },
+  description: DESCRIPTION,
+  applicationName: "NEO APP",
+  keywords: [
+    "ร้านขายแอป",
+    "เติมเงินด้วยสลิป",
+    "ตรวจสลิปอัตโนมัติ",
+    "ไอดีเกม",
+    "ไอดีเช่า",
+    "บริการดิจิทัล",
+  ],
+  // The icons come from src/app/icon.png and src/app/apple-icon.png — Next
+  // fingerprints those, which the old hand-written paths to a 300 KB logo in
+  // /public did not get.
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "NEO APP",
-    description: "ร้านขายแอปพลิเคชัน เติมเงินเข้ากระเป๋าแล้วซื้อได้ทันที",
-    // The mark, not the full lockup: its "NEO APP" wordmark is white and would
-    // disappear on the light background social platforms composite onto.
-    images: ["/logo-mark.png"],
+    type: "website",
+    siteName: "NEO APP",
+    locale: "th_TH",
+    title: "NEO APP — ร้านขายแอปพลิเคชันและบริการดิจิทัล",
+    description: DESCRIPTION,
+    // The image itself is src/app/opengraph-image.tsx; Next wires up the tags,
+    // including width, height and the absolute URL.
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "NEO APP — ร้านขายแอปพลิเคชันและบริการดิจิทัล",
+    description: DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
 };
 

@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'นโยบายความเป็นส่วนตัว - NEO APP' };
+export const metadata: Metadata = {
+  title: 'นโยบายความเป็นส่วนตัว',
+  description:
+    'นโยบายความเป็นส่วนตัวของ NEO APP — ข้อมูลที่เก็บ วิธีใช้งาน ระยะเวลาจัดเก็บ และสิทธิของเจ้าของข้อมูล',
+  alternates: { canonical: '/privacy' },
+};
 
 const UPDATED = '14 สิงหาคม 2569';
 

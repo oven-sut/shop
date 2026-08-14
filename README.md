@@ -31,6 +31,41 @@ login เสร็จแล้วไปโผล่ที่ `localhost:3000` �
 ฝั่ง Google Cloud Console ไม่ต้องแก้ เพราะ redirect URI ของ OAuth ชี้ไปที่
 `https://<project>.supabase.co/auth/v1/callback` ไม่ได้ชี้มาที่โดเมนร้าน
 
+## ชั้นความปลอดภัย
+
+ตัวคุมสิทธิ์จริงคือ RLS ในฐานข้อมูล ส่วนโค้ดฝั่ง route เป็นด่านที่สอง ตั้งใจให้ซ้ำกัน
+เพราะสองด่านพังคนละแบบ — RLS ปฏิเสธ update จะหน้าตาเหมือน "ไม่มีแถวนี้" และ route
+ที่ถูกเปลี่ยนไปใช้ service key เมื่อไหร่จะเหลือด่านเดียวโดยไม่มีใครรู้
+
+| เรื่อง | อยู่ที่ |
+| --- | --- |
+| ตรวจ JWT ทุก request (cookie หรือ `Authorization: Bearer`) | `src/lib/api-auth.ts` |
+| `requireAdmin()` สำหรับ route ที่แอดมินเท่านั้น | `src/lib/api-auth.ts` |
+| ไม่คืนข้อความ error ดิบให้ client — log ไว้ฝั่งเซิร์ฟเวอร์แล้วคืนรหัสอ้างอิงแทน | `src/lib/api-response.ts` |
+| จำกัดอัตราเรียกของ endpoint ที่เสียเงิน/โควตาจริง | `src/lib/rate-limit.ts` |
+| Security headers (CSP, HSTS, X-Frame-Options, ฯลฯ) | `next.config.ts` |
+| RLS policy + `revoke execute` ของฟังก์ชัน security definer | `supabase/schema.sql` |
+
+**ข้อจำกัดที่ต้องรู้** — ตัวนับ rate limit เก็บในหน่วยความจำของโปรเซส รีเซ็ตทุกครั้งที่
+deploy และถ้ารันหลาย instance แต่ละตัวจะนับแยกกัน มันมีไว้กันบัญชีเดียวยิงรัวจนโควตา
+ผู้ให้บริการหมด ไม่ใช่เกราะกัน DDoS ถ้าย้ายไปรันหลาย instance ให้ย้ายตัวนับไปไว้ที่
+Postgres หรือ Redis โดยแก้แค่ `hit()` ที่เดียว จุดเรียกใช้ไม่ต้องแก้
+
+## SEO และรูปตอนแชร์ลิงก์
+
+ทั้งร้านอยู่หลัง login ยกเว้น `/login` กับหน้านโยบาย — sitemap จึงมีแค่ 4 URL นั้น
+ใส่หน้าอื่นไปก็ได้แค่ redirect ไป `/login` แล้วขึ้นเป็น error ใน Search Console
+
+| ไฟล์ | ได้อะไร |
+| --- | --- |
+| `src/app/sitemap.ts` | `/sitemap.xml` |
+| `src/app/robots.ts` | `/robots.txt` — กัน crawler ออกจาก `/api`, `/admin`, `/docs` |
+| `src/app/opengraph-image.tsx` | รูปการ์ด 1200×630 ตอนแปะลิงก์ใน LINE/Facebook/X/Discord |
+| `src/app/icon.png`, `src/app/apple-icon.png` | favicon และไอคอนบน iOS |
+
+สี่เส้นทางแรกต้องอยู่ใน `PUBLIC_PATHS` ของ `src/proxy.ts` ด้วย ไม่งั้น crawler กับ
+ตัวสร้าง preview ที่ยังไม่มี session จะโดนเด้งไปหน้า login แล้วการ์ดขึ้นเป็นหน้าว่าง
+
 ## ระบบตรวจสลิป (สำรองหลายเจ้า)
 
 `/api/topups` ตรวจสลิปผ่าน `src/lib/slip` ซึ่งไล่ผู้ให้บริการทีละเจ้าจนกว่าจะมีเจ้าไหนตอบได้

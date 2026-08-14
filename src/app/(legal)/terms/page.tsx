@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = { title: 'ข้อกำหนดการใช้งาน - NEO APP' };
+export const metadata: Metadata = {
+  title: 'ข้อกำหนดการใช้งาน',
+  description:
+    'ข้อกำหนดการใช้งาน NEO APP — เงื่อนไขการสั่งซื้อ การเติมเงินเข้ากระเป๋า การส่งมอบสินค้าดิจิทัล และการคืนเงิน',
+  alternates: { canonical: '/terms' },
+};
 
 const UPDATED = '14 สิงหาคม 2569';
 
