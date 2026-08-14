@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
 import { serverError } from '@/lib/api-response';
 import { toTopup } from '@/lib/mappers';
-import { SlipDetails, SlipVerifyError, verifySlip } from '@/lib/rdcw';
+import { SlipDetails, SlipVerifyError, verifySlip } from '@/lib/slip';
 import { loadSettings, StoreSettings } from '@/lib/settings';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createRouteClient } from '@/lib/supabase/server';

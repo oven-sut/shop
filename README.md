@@ -11,6 +11,46 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ทุกหน้าและทุก API ต้องเข้าสู่ระบบก่อน ยกเว้น `/login` และ `/auth/*`
 
+## ระบบตรวจสลิป (สำรองหลายเจ้า)
+
+`/api/topups` ตรวจสลิปผ่าน `src/lib/slip` ซึ่งไล่ผู้ให้บริการทีละเจ้าจนกว่าจะมีเจ้าไหนตอบได้
+ตั้งคีย์ของเจ้าไหนไว้ เจ้านั้นก็เข้าคิวเอง เจ้าที่ไม่ได้ตั้งคีย์จะถูกข้ามโดยไม่ยิงเน็ต
+
+```env
+# ลำดับที่จะลอง (ไม่ใส่ = ใช้ทุกเจ้าที่ตั้งคีย์ไว้)
+SLIP_PROVIDERS=rdcw,slipok,thunder,easyslip
+
+RDCW_CLIENT_ID=        # https://slip.rdcw.co.th
+RDCW_CLIENT_SECRET=
+RDCW_AMOUNT_UNIT=baht  # baht | satang
+
+SLIPOK_BRANCH_ID=      # https://slipok.com
+SLIPOK_API_KEY=
+
+THUNDER_API_KEY=       # https://document.thunder.in.th/th/v2/
+
+EASYSLIP_TOKEN=        # https://document.easyslip.com
+```
+
+ทุกเจ้ามี `*_BASE_URL` และ `*_AMOUNT_UNIT` ให้ override ได้ เผื่อผู้ให้บริการย้าย endpoint
+หรือคืนยอดเป็นสตางค์
+
+**กติกาการสลับเจ้า** — อยู่ที่ `SlipVerifyError.retryable`:
+
+| สถานการณ์ | ทำอะไรต่อ |
+| --- | --- |
+| โควตาหมด / คีย์ผิด / โดน rate limit / เจ้านั้นล่ม (5xx) | ลองเจ้าถัดไป |
+| อ่าน QR หรือยอดจากรูปไม่ออก | ลองเจ้าถัดไป (ตัวอ่านแต่ละเจ้าไม่เท่ากัน) |
+| ธนาคารตอบว่าสลิปใบนี้ไม่ถูกต้อง | **หยุดทันที** |
+
+ข้อสุดท้ายตั้งใจให้หยุด เพราะทุกเจ้าถามธนาคารกลางเดียวกัน ไล่ต่อไปก็ได้คำตอบเดิม
+แต่เสียโควตาเจ้าอื่นฟรี ๆ ถ้าล้มครบทุกเจ้า ข้อความ error จะบอกว่าลองเจ้าไหนไปบ้าง
+และติดรหัสอะไร เพื่อให้รู้ทันทีว่าต้องไปเติมโควตาเจ้าไหน
+
+จะเพิ่มเจ้าใหม่ก็เขียนไฟล์ที่ทำตาม interface `SlipProvider` แล้วใส่ใน `ALL`
+ที่ `src/lib/slip/index.ts` — ถ้าเจ้านั้นใช้ `Bearer` + `/verify/bank` แบบเดียวกับ
+Thunder/EasySlip ใช้ `createBearerProvider()` ได้เลย ไม่ต้องเขียนใหม่
+
 ## Getting Started
 
 First, run the development server:
