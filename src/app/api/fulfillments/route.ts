@@ -27,7 +27,7 @@ export async function GET() {
       supabase
         .from('order_fulfillments')
         .select(
-          'id, order_id, game_title, account_username, account_password, code_requests_used, code_requests_max, status, error_message, created_at'
+          'id, order_id, supplier, game_title, account_username, account_password, code_requests_used, code_requests_max, status, error_message, created_at'
         )
         .order('created_at', { ascending: false })
         .limit(200),
@@ -59,6 +59,10 @@ export async function GET() {
         used: typeof row.code_requests_used === 'number' ? row.code_requests_used : 0,
         max: typeof row.code_requests_max === 'number' ? row.code_requests_max : 3,
       },
+      // Codes the shop stocked itself have no supplier behind them, so there is
+      // no Steam Guard round to ask for — the client needs to know which card
+      // to draw.
+      source: str(row.supplier) === 'manual' ? ('manual' as const) : ('supplier' as const),
       status: str(row.status, 'delivered'),
       errorMessage: str(row.error_message) || undefined,
       createdAt: str(row.created_at),
@@ -81,6 +85,7 @@ export async function GET() {
           username: '',
           password: '',
           codeRequests: { used: 0, max: 0 },
+          source: 'supplier' as const,
           status: 'no_account' as const,
           errorMessage: undefined,
           createdAt: str(order.created_at),

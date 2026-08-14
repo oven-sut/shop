@@ -446,6 +446,228 @@
         }
       }
     },
+    "/api/products/{id}/codes": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          },
+          "example": "prod-1"
+        }
+      ],
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "คลังรหัสของสินค้า (แอดมิน)",
+        "description": "รหัสทั้งหมดของสินค้าชิ้นนี้ ทั้งที่ยังขายได้และที่ขายไปแล้ว\n\nลูกค้าอ่านตารางนี้ไม่ได้เลย — ของที่ซื้อไปแล้วดูได้ที่ `/api/fulfillments`",
+        "operationId": "listProductCodes",
+        "responses": {
+          "200": {
+            "description": "คลังรหัสของสินค้าชิ้นนี้",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "codes": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/ProductCode"
+                          }
+                        },
+                        "available": {
+                          "type": "integer",
+                          "example": 12
+                        },
+                        "sold": {
+                          "type": "integer",
+                          "example": 3
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "ไม่ใช่แอดมิน",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "เติมรหัสเข้าคลัง (แอดมิน)",
+        "description": "หนึ่งบรรทัดคือของหนึ่งชิ้นที่ขายได้หนึ่งครั้ง รูปแบบ `ชื่อผู้ใช้|รหัสผ่าน` หรือใส่รหัสอย่างเดียวก็ได้ รหัสที่มีอยู่แล้วในสินค้าชิ้นนี้จะถูกข้าม ไม่ทำให้ทั้งชุดล้ม\n\nไม่ต้องอัปเดต `stock` เอง — ทริกเกอร์ในฐานข้อมูลตั้งให้เท่ากับจำนวนรหัสที่ยังไม่ถูกขาย",
+        "operationId": "addProductCodes",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "ข้อความหลายบรรทัด บรรทัดละหนึ่งรหัส",
+                    "example": "player001|s3cret\nplayer002|hunter2"
+                  },
+                  "codes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "หรือส่งเป็น array ก็ได้ ใช้แทน text"
+                  },
+                  "note": {
+                    "type": "string",
+                    "description": "บันทึกภายในของแอดมิน ลูกค้าไม่เห็น"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "เพิ่มรหัสเข้าคลังแล้ว",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "added": {
+                          "type": "integer",
+                          "example": 2
+                        },
+                        "skipped": {
+                          "type": "integer",
+                          "example": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "ไม่ใช่แอดมิน",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "ลบรหัสที่ยังไม่ถูกขาย (แอดมิน)",
+        "description": "รหัสที่ขายไปแล้วลบไม่ได้ เพราะเป็นหลักฐานว่าของชิ้นไหนไปอยู่กับคำสั่งซื้อไหน และเป็นสิ่งที่ลูกค้ายังเห็นอยู่ในประวัติการซื้อ",
+        "operationId": "deleteProductCode",
+        "parameters": [
+          {
+            "name": "codeId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "id ของแถวในคลังรหัส"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ลบรหัสออกจากคลังแล้ว",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "ไม่ใช่แอดมิน",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
     "/api/orders": {
       "get": {
         "tags": [
@@ -2019,6 +2241,37 @@
           },
           "taxRate": {
             "type": "number"
+          }
+        }
+      },
+      "ProductCode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "example": "XXXX-YYYY-ZZZZ"
+          },
+          "label": {
+            "type": "string",
+            "example": "player001"
+          },
+          "note": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string",
+            "example": "ORD-260814-A1B2C"
+          },
+          "claimedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

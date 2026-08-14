@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Product } from '../../types/ecommerce';
 import { useShop } from '../../context/ShopContext';
 import { X, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AdminProductCodes } from './AdminProductCodes';
 
 interface AdminProductModalProps {
   isOpen: boolean;
@@ -52,6 +53,19 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // ตั้งค่าโดยแผงคลังรหัสด้านล่าง: พอสินค้ามีรหัสอยู่ในคลัง สต็อกจะถูกคำนวณจาก
+  // จำนวนรหัสที่ยังไม่ถูกขาย การให้กรอกทับได้จะทำให้สองตัวเลขนี้ขัดกันทันที
+  const [codeStock, setCodeStock] = useState<{ available: number; managed: boolean }>({
+    available: 0,
+    managed: false,
+  });
+
+  // useCallback เพราะแผงคลังรหัสใช้ค่านี้เป็น dependency ของ effect ที่โหลดข้อมูล
+  const handleStockChange = useCallback(
+    (info: { available: number; managed: boolean }) => setCodeStock(info),
+    []
+  );
+
   if (!isOpen) return null;
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,7 +98,8 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       category: category.trim(),
       price: Number(price),
       originalPrice: originalPrice !== '' ? Number(originalPrice) : undefined,
-      stock: Number(stock),
+      // สินค้าที่ขายจากคลังรหัสไม่ส่ง stock ไป ปล่อยให้ฐานข้อมูลคำนวณเอง
+      stock: codeStock.managed ? undefined : Number(stock),
       description,
       image,
       badge,
@@ -204,12 +219,18 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
               </label>
               <Input
                 type="number"
-                required
+                required={!codeStock.managed}
+                disabled={codeStock.managed}
                 min={0}
-                value={stock}
+                value={codeStock.managed ? codeStock.available : stock}
                 onChange={(e) => setStock(e.target.value ? Number(e.target.value) : '')}
-                className="w-full bg-neutral-50 border-neutral-200 text-neutral-900"
+                className="w-full bg-neutral-50 border-neutral-200 text-neutral-900 disabled:opacity-60"
               />
+              {codeStock.managed && (
+                <p className="mt-1 text-[11px] text-neutral-400">
+                  นับจากรหัสที่ยังไม่ถูกขายในคลังด้านล่าง
+                </p>
+              )}
             </div>
           </div>
 
@@ -332,6 +353,17 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
               ))}
             </div>
           </div>
+
+          {/*
+            มีได้เฉพาะตอนแก้ไข เพราะรหัสต้องผูกกับ product id ที่มีอยู่จริง
+            สินค้าใหม่จึงต้องกดบันทึกก่อนแล้วเปิดกลับเข้ามาเติมรหัส
+          */}
+          {editingProduct && (
+            <AdminProductCodes
+              productId={editingProduct.id}
+              onStockChange={handleStockChange}
+            />
+          )}
 
           <div className="pt-4 border-t border-neutral-100 flex justify-end gap-3">
             <Button

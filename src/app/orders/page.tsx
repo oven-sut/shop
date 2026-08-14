@@ -17,6 +17,8 @@ interface Fulfillment {
   username: string;
   password: string;
   codeRequests: { used: number; max: number };
+  /** `manual` = รหัสจากคลังของร้าน ไม่มีซัพพลายเออร์ให้ขอรหัส Steam Guard ต่อ */
+  source: 'supplier' | 'manual';
   /** `no_account` = ซื้อสำเร็จแต่เป็นสินค้าที่ไม่ต้องผูกบัญชีเกม */
   status: 'delivered' | 'failed' | 'no_account';
   errorMessage?: string;
@@ -28,6 +30,53 @@ interface GuardCode {
   validForSec: number;
   expiresInSec: number;
   codeRequests: { used: number; max: number };
+}
+
+/** A value the buyer is meant to copy out — one box, one copy button. */
+function SecretField({
+  label,
+  value,
+  onCopy,
+}: {
+  label: string;
+  value: string;
+  onCopy: (label: string, value: string) => void;
+}) {
+  return (
+    <div className="border border-neutral-200 rounded-md p-3">
+      <span className="block text-[11px] text-neutral-400 mb-1">{label}</span>
+      <div className="flex items-center gap-2">
+        <code className="flex-1 font-mono text-neutral-900 truncate">{value || '—'}</code>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onCopy(label, value)}
+            className="p-1.5 rounded-md text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors"
+            aria-label={`คัดลอก${label}`}
+          >
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Shared heading: what was bought, which order, and how it went. */
+function CardHeader({ item }: { item: Fulfillment }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h3 className="font-semibold text-neutral-900 truncate">{item.gameTitle}</h3>
+        <p className="text-[11px] text-neutral-400">
+          คำสั่งซื้อ #{item.orderId} · {new Date(item.createdAt).toLocaleString('th-TH')}
+        </p>
+      </div>
+      <span className="text-[10px] font-semibold tracking-[0.15em] uppercase px-2 py-1 bg-neutral-900 text-white shrink-0">
+        ส่งมอบแล้ว
+      </span>
+    </div>
+  );
 }
 
 function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => void }) {
@@ -98,46 +147,36 @@ function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => 
     );
   }
 
+  /*
+   * รหัสจากคลังของร้าน — ส่งมอบครบตั้งแต่ตอนกดซื้อ ไม่มีซัพพลายเออร์อยู่เบื้องหลัง
+   * จึงไม่มีปุ่มขอรหัส Steam Guard ให้กดค้างไว้แล้วไม่เกิดอะไรขึ้น
+   */
+  if (item.source === 'manual') {
+    return (
+      <div className="bg-white border border-neutral-200 rounded-md p-5 space-y-4">
+        <CardHeader item={item} />
+
+        <div
+          className={`grid grid-cols-1 gap-3 text-xs ${item.username ? 'sm:grid-cols-2' : ''}`}
+        >
+          {item.username && (
+            <SecretField label="ชื่อผู้ใช้" value={item.username} onCopy={copy} />
+          )}
+          <SecretField label="รหัส" value={item.password} onCopy={copy} />
+        </div>
+      </div>
+    );
+  }
+
   const remaining = item.codeRequests.max - item.codeRequests.used;
 
   return (
     <div className="bg-white border border-neutral-200 rounded-md p-5 space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="font-semibold text-neutral-900 truncate">{item.gameTitle}</h3>
-          <p className="text-[11px] text-neutral-400">
-            คำสั่งซื้อ #{item.orderId} · {new Date(item.createdAt).toLocaleString('th-TH')}
-          </p>
-        </div>
-        <span className="text-[10px] font-semibold tracking-[0.15em] uppercase px-2 py-1 bg-neutral-900 text-white shrink-0">
-          ส่งมอบแล้ว
-        </span>
-      </div>
+      <CardHeader item={item} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-        {[
-          { label: 'ชื่อผู้ใช้', value: item.username },
-          { label: 'รหัสผ่าน', value: item.password },
-        ].map((field) => (
-          <div key={field.label} className="border border-neutral-200 rounded-md p-3">
-            <span className="block text-[11px] text-neutral-400 mb-1">{field.label}</span>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 font-mono text-neutral-900 truncate">
-                {field.value || '—'}
-              </code>
-              {field.value && (
-                <button
-                  type="button"
-                  onClick={() => copy(field.label, field.value)}
-                  className="p-1.5 rounded-md text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors"
-                  aria-label={`คัดลอก${field.label}`}
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+        <SecretField label="ชื่อผู้ใช้" value={item.username} onCopy={copy} />
+        <SecretField label="รหัสผ่าน" value={item.password} onCopy={copy} />
       </div>
 
       <div className="border-t border-neutral-100 pt-4 space-y-3">
@@ -205,10 +244,10 @@ function OrdersContent() {
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
         <div className="border-b border-neutral-200 pb-4">
-          <h1 className="text-xl font-bold tracking-tight">บัญชีเกมที่ซื้อไว้</h1>
+          <h1 className="text-xl font-bold tracking-tight">ประวัติการซื้อ</h1>
           <p className="text-xs text-neutral-500 mt-1">
-            คำสั่งซื้อทั้งหมดของคุณ พร้อมชื่อผู้ใช้ รหัสผ่าน และรหัส Steam Guard
-            สำหรับรายการที่เป็นบัญชีเกม
+            คำสั่งซื้อทั้งหมดของคุณ พร้อมรหัสที่ได้รับ — ไอดีเกมจะมีชื่อผู้ใช้ รหัสผ่าน
+            และขอรหัส Steam Guard ได้ ส่วนสินค้าที่เป็นรหัสจะแสดงรหัสให้คัดลอกได้ทันที
           </p>
         </div>
 

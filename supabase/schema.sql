@@ -347,6 +347,7 @@ declare
   v_order public.orders;
   v_order_id text;
   v_settings public.store_settings;
+  v_claimed integer;
 begin
   if v_user is null then
     raise exception 'not_authenticated' using errcode = '28000';
@@ -443,6 +444,52 @@ begin
 
   insert into public.wallet_transactions (user_id, kind, amount, balance_after, reference, note)
   values (v_user, 'purchase', -v_total, v_balance, v_order_id, 'ชำระค่าสินค้า');
+
+  -- ── ส่งมอบรหัสจากคลังของร้าน ──────────────────────────────────────────
+  -- สินค้าที่ขายจากคลังรหัส (public.product_codes) จองรหัสในทรานแซกชันเดียว
+  -- กับที่ตัดเงิน ลูกค้าจึงไม่มีทางจ่ายแล้วไม่ได้รหัส และรหัสใบเดียวขายซ้ำไม่ได้
+  --
+  -- ต้องอยู่หลัง insert orders เพราะ product_codes.order_id อ้างถึงแถวนั้น
+  for v_item in select * from jsonb_array_elements(v_items) loop
+    v_quantity := (v_item ->> 'quantity')::integer;
+
+    -- สินค้าที่ไม่เคยมีรหัสในคลังเลย = ขายแบบอื่น (ซัพพลายเออร์ หรือไม่ต้องส่งมอบ)
+    if exists (
+      select 1 from public.product_codes
+      where product_id = (v_item ->> 'product_id')::uuid
+    ) then
+      with claimed as (
+        update public.product_codes
+        set order_id = v_order_id, user_id = v_user, claimed_at = now()
+        where id in (
+          select id
+          from public.product_codes
+          where product_id = (v_item ->> 'product_id')::uuid
+            and claimed_at is null
+          -- เก่าก่อน กันรหัสค้างคลังจนหมดอายุ
+          order by created_at
+          limit v_quantity
+          for update skip locked
+        )
+        returning id, code, label
+      )
+      insert into public.order_fulfillments (
+        order_id, user_id, supplier, supplier_ref, game_title,
+        account_username, account_password, code_requests_max, status
+      )
+      select
+        v_order_id, v_user, 'manual', 'manual-' || claimed.id::text,
+        v_item ->> 'name', claimed.label, claimed.code, 0, 'delivered'
+      from claimed;
+
+      get diagnostics v_claimed = row_count;
+
+      -- ได้ไม่ครบ = สต็อกกับคลังรหัสไม่ตรงกัน ยกเลิกทั้งคำสั่งซื้อดีกว่าส่งของขาด
+      if v_claimed < v_quantity then
+        raise exception 'out_of_stock:%', v_item ->> 'name' using errcode = '22023';
+      end if;
+    end if;
+  end loop;
 
   return v_order;
 end;
@@ -659,6 +706,91 @@ create policy order_fulfillments_select_own on public.order_fulfillments
 grant select on public.order_fulfillments to authenticated;
 
 -- ============================================================================
+-- คลังรหัสของร้าน — สำหรับสินค้าที่ร้านลงรหัส/ไอดีเองโดยไม่ผ่านซัพพลายเออร์
+--
+-- หนึ่งแถวคือของหนึ่งชิ้นที่ขายได้หนึ่งครั้ง `claimed_at` เป็นตัวบอกว่าถูกขายไปแล้ว
+-- แทนที่จะลบทิ้ง เพราะต้องสืบย้อนได้ว่ารหัสใบไหนไปอยู่กับคำสั่งซื้อไหน
+-- ============================================================================
+create table if not exists public.product_codes (
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references public.products (id) on delete cascade,
+  -- ตัวรหัสจริงที่ลูกค้าได้รับ (คีย์เกม, รหัสผ่าน, หรืออะไรก็ตามที่ร้านขาย)
+  code text not null,
+  -- ป้ายกำกับที่แสดงคู่กัน เช่นชื่อผู้ใช้ของไอดีนั้น เว้นว่างได้
+  label text,
+  -- บันทึกภายในของแอดมิน ลูกค้าไม่เห็น
+  note text,
+  order_id text references public.orders (id) on delete set null,
+  user_id uuid references auth.users (id) on delete set null,
+  claimed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- รหัสซ้ำในสินค้าเดียวกันคือความผิดพลาดเสมอ — เท่ากับขายของชิ้นเดิมสองรอบ
+create unique index if not exists product_codes_unique_idx
+  on public.product_codes (product_id, code);
+
+-- คิวของที่ยังขายได้ ใช้ตอนจองรหัสใน place_order
+create index if not exists product_codes_available_idx
+  on public.product_codes (product_id, created_at)
+  where claimed_at is null;
+
+create index if not exists product_codes_order_idx on public.product_codes (order_id);
+
+/*
+ * สต็อกของสินค้าที่ขายจากคลังรหัส = จำนวนรหัสที่ยังไม่ถูกขาย
+ *
+ * ให้ทริกเกอร์คำนวณให้เสมอ ไม่ปล่อยให้แอดมินกรอกเอง เพราะสองตัวเลขนี้แยกกัน
+ * เมื่อไหร่ ก็ขายเกินของที่มีจริงเมื่อนั้น (place_order ยังกันซ้ำอีกชั้น
+ * ด้วยการนับรหัสที่จองได้จริงก่อนยอมให้จบคำสั่งซื้อ)
+ */
+create or replace function private.sync_code_stock()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_product uuid;
+begin
+  -- แยกด้วย if ไม่ใช่ coalesce(new.…, old.…): ใน trigger ของ DELETE ตัวแปร new
+  -- ไม่ถูกกำหนดค่า แค่เอ่ยถึงฟิลด์ของมันก็ error แล้ว ไม่ได้คืน null มาให้
+  if tg_op = 'DELETE' then
+    v_product := old.product_id;
+  else
+    v_product := new.product_id;
+  end if;
+
+  update public.products
+  set stock = (
+    select count(*)
+    from public.product_codes
+    where product_id = v_product and claimed_at is null
+  )
+  where id = v_product;
+
+  return null;
+end;
+$$;
+
+drop trigger if exists product_codes_sync_stock on public.product_codes;
+create trigger product_codes_sync_stock
+  after insert or update or delete on public.product_codes
+  for each row execute function private.sync_code_stock();
+
+alter table public.product_codes enable row level security;
+
+-- รหัสที่ยังไม่ถูกขายคือสินค้าคงคลัง ลูกค้าไม่ต้องเห็นเลยแม้แต่แถวเดียว
+-- ของที่ซื้อไปแล้วอ่านได้จาก order_fulfillments ซึ่งมี policy ของตัวเอง
+drop policy if exists product_codes_admin_all on public.product_codes;
+create policy product_codes_admin_all on public.product_codes
+  for all to authenticated
+  using ((select private.is_admin()))
+  with check ((select private.is_admin()));
+
+grant select, insert, update, delete on public.product_codes to authenticated;
+
+-- ============================================================================
 -- คืนเงินเมื่อส่งมอบไม่สำเร็จ
 -- ตัดเงินกับสั่งซื้อกับซัพพลายเออร์อยู่คนละระบบ จึงต้องมีทางถอยเมื่อขั้นที่สองล้ม
 -- ============================================================================
@@ -689,6 +821,18 @@ begin
     set stock = stock + coalesce((v_item ->> 'quantity')::integer, 0)
     where id = (v_item ->> 'product_id')::uuid;
   end loop;
+
+  -- คืนรหัสเข้าคลังให้ขายใหม่ได้ ต้องอยู่หลังลูปคืนสต็อกด้านบน เพราะทริกเกอร์
+  -- sync_code_stock จะคำนวณสต็อกของสินค้าที่ขายด้วยรหัสใหม่ทั้งหมด ทับตัวเลข
+  -- ที่บวกไปข้างบน — ไม่งั้นสินค้าที่ขายด้วยรหัสจะถูกคืนสต็อกซ้ำสองเด้ง
+  update public.product_codes
+  set order_id = null, user_id = null, claimed_at = null
+  where order_id = p_order_id;
+
+  -- บัญชีที่ส่งมอบไปแล้วต้องหายจากประวัติของลูกค้าด้วย ไม่งั้นยังเห็นรหัสที่
+  -- ถูกคืนเข้าคลังไปขายต่อให้คนอื่นแล้ว
+  delete from public.order_fulfillments
+  where order_id = p_order_id and supplier = 'manual';
 
   update public.wallets
   set balance = balance + v_order.total_amount, updated_at = now()
