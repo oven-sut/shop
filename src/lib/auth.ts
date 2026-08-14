@@ -80,6 +80,26 @@ export function isAdminClaims(claims: AuthClaims | null | undefined): boolean {
   return Boolean(claims?.sub) && roleFromAppMetadata(claims?.app_metadata) === 'admin';
 }
 
+/**
+ * The origin every auth redirect should come back to.
+ *
+ * `window.location.origin` is not enough on its own: behind a proxy the browser
+ * may sit on the public domain while the app answers on an internal host, and
+ * Supabase rejects a `redirectTo` that is not on its allow list, silently
+ * falling back to the project's Site URL — which is how a production login
+ * lands on localhost:3000. Setting NEXT_PUBLIC_SITE_URL pins the value in both
+ * the browser bundle and the callback route, so the two never disagree.
+ *
+ * Unset, it falls back to whatever the current request came in on, which is the
+ * right answer for `next dev` and preview deploys.
+ */
+export function siteOrigin(fallback?: string): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configured) return configured.replace(/\/+$/, '');
+  if (fallback) return fallback;
+  return typeof window === 'undefined' ? '' : window.location.origin;
+}
+
 /** Only allow same-origin, absolute paths as post-login redirect targets. */
 export function safeRedirectPath(next: string | null | undefined, fallback = '/'): string {
   if (!next || !next.startsWith('/') || next.startsWith('//')) return fallback;

@@ -11,6 +11,26 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ทุกหน้าและทุก API ต้องเข้าสู่ระบบก่อน ยกเว้น `/login` และ `/auth/*`
 
+## โดเมนที่ใช้ตอน login กลับ
+
+```env
+NEXT_PUBLIC_SITE_URL=https://www.neo.owenx.shop   # โปรดักชันเท่านั้น — ตอน dev ไม่ต้องตั้ง
+```
+
+ถ้าไม่ตั้ง ระบบจะใช้โดเมนของคำขอที่วิ่งเข้ามา ซึ่งถูกสำหรับ `next dev` และ preview
+แต่พออยู่หลัง proxy เบราว์เซอร์อยู่โดเมนจริงส่วนแอปตอบอยู่โฮสต์ภายใน สองฝั่งจะไม่ตรงกัน
+
+**ต้องตั้งใน Supabase ด้วย** ไม่งั้นแก้ที่โค้ดอย่างเดียวไม่พอ — Supabase จะปฏิเสธ
+`redirectTo` ที่ไม่อยู่ในลิสต์แล้วเด้งไป Site URL แทนแบบเงียบ ๆ ซึ่งเป็นสาเหตุที่
+login เสร็จแล้วไปโผล่ที่ `localhost:3000` ที่ Dashboard → Authentication → URL Configuration:
+
+- **Site URL**: `https://www.neo.owenx.shop`
+- **Redirect URLs**: `https://www.neo.owenx.shop/auth/callback` และ
+  `http://localhost:3000/auth/callback` (เผื่อ dev)
+
+ฝั่ง Google Cloud Console ไม่ต้องแก้ เพราะ redirect URI ของ OAuth ชี้ไปที่
+`https://<project>.supabase.co/auth/v1/callback` ไม่ได้ชี้มาที่โดเมนร้าน
+
 ## ระบบตรวจสลิป (สำรองหลายเจ้า)
 
 `/api/topups` ตรวจสลิปผ่าน `src/lib/slip` ซึ่งไล่ผู้ให้บริการทีละเจ้าจนกว่าจะมีเจ้าไหนตอบได้

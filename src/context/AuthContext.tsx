@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User, UserRole } from '../types/auth';
-import { toAppUser } from '../lib/auth';
+import { siteOrigin, toAppUser } from '../lib/auth';
 import { createClient } from '../lib/supabase/client';
 
 export interface AuthResult {
@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<{
       password,
       options: {
         data: { full_name: name },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${siteOrigin()}/auth/callback`,
       },
     });
 
@@ -116,7 +116,7 @@ export const AuthProvider: React.FC<{
   };
 
   const loginWithGoogle = async (next = '/'): Promise<AuthResult> => {
-    const redirectTo = new URL('/auth/callback', window.location.origin);
+    const redirectTo = new URL('/auth/callback', siteOrigin());
     redirectTo.searchParams.set('next', next);
 
     const { error } = await supabase.auth.signInWithOAuth({

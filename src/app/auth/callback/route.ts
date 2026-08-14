@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { safeRedirectPath } from '@/lib/auth';
+import { safeRedirectPath, siteOrigin } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -17,11 +17,15 @@ export async function GET(request: Request) {
   // The provider (or Supabase) can bounce back with an error instead of a code.
   const providerError = searchParams.get('error_description') || searchParams.get('error');
 
-  const redirectBase = (() => {
-    const forwardedHost = request.headers.get('x-forwarded-host');
-    if (process.env.NODE_ENV === 'development' || !forwardedHost) return origin;
-    return `https://${forwardedHost}`;
-  })();
+  // NEXT_PUBLIC_SITE_URL wins when set, so the browser is sent to the public
+  // domain even though the request arrived on whatever host the proxy used.
+  const redirectBase = siteOrigin(
+    (() => {
+      const forwardedHost = request.headers.get('x-forwarded-host');
+      if (process.env.NODE_ENV === 'development' || !forwardedHost) return origin;
+      return `https://${forwardedHost}`;
+    })()
+  );
 
   if (!providerError && code) {
     const supabase = await createClient();
