@@ -21,7 +21,10 @@ const connectionString = process.argv[2] || process.env.DATABASE_URL;
 if (!connectionString) {
   console.error(
     'ต้องระบุ connection string\n' +
-      '  node scripts/apply-schema.mjs "postgresql://postgres:SZfPzyQAB3dWMkF3@db.pfvzcuefnyevybbstlnt.supabase.co:5432/postgres"'
+      '  node scripts/apply-schema.mjs "postgresql://postgres.<ref>:PASSWORD@aws-0-<region>.pooler.supabase.com:5432/postgres"\n' +
+      '\n' +
+      'หรือใส่ DATABASE_URL ใน .env แล้วเรียก node --env-file=.env scripts/apply-schema.mjs\n' +
+      'ซึ่งดีกว่าตรงที่รหัสผ่านไม่ค้างอยู่ใน shell history'
   );
   process.exit(1);
 }
