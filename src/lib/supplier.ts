@@ -134,9 +134,17 @@ async function call<T = Record<string, unknown>>(
     const error = isRecord(body) && isRecord(body.error) ? body.error : {};
     const code = str(error.code, `HTTP_${response.status}`);
 
+    // MIN_TOPUP_REQUIRED บล็อกทุก endpoint รวมถึง /me จึงเป็นสถานะที่แอดมินต้อง
+    // เห็นตัวเลขจริงเพื่อรู้ว่าต้องเติมอีกเท่าไร ไม่ใช่แค่ข้อความกว้าง ๆ
+    const detail =
+      code === 'MIN_TOPUP_REQUIRED' && error.min_topup !== undefined
+        ? `ต้องเติมเงินกับซัพพลายเออร์ให้ครบ ฿${num(error.min_topup).toLocaleString()}` +
+          ` ก่อนใช้งาน API (ยอดสะสมปัจจุบัน ฿${num(error.current_topup).toLocaleString()})`
+        : null;
+
     throw new SupplierError(
       code,
-      FRIENDLY[code] ?? str(error.message, 'ระบบซัพพลายเออร์ตอบกลับผิดพลาด'),
+      detail ?? FRIENDLY[code] ?? str(error.message, 'ระบบซัพพลายเออร์ตอบกลับผิดพลาด'),
       response.status === 429 ? 429 : 502
     );
   }

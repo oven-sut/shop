@@ -44,6 +44,7 @@ export const AdminSupplier: React.FC = () => {
   const [items, setItems] = useState<SupplierCatalogueItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const [importing, setImporting] = useState<string | null>(null);
 
   const load = async () => {
@@ -54,10 +55,15 @@ export const AdminSupplier: React.FC = () => {
 
     if (!body.success) {
       setError(body.message || 'โหลดแคตตาล็อกไม่สำเร็จ');
+      // โค้ดจากซัพพลายเออร์บอกได้ว่าเป็นปัญหาที่แอดมินแก้เองได้หรือต้องรอปลายทาง
+      setErrorCode(typeof body.error === 'string' ? body.error : '');
+      setAccount(null);
+      setItems([]);
       return;
     }
 
     setError('');
+    setErrorCode('');
     setAccount(body.data.account as SupplierAccount);
     setItems(body.data.products as SupplierCatalogueItem[]);
   };
@@ -139,8 +145,27 @@ export const AdminSupplier: React.FC = () => {
       </Card>
 
       {error && (
-        <Card className="bg-neutral-50 border-neutral-400 rounded-md p-4 text-xs text-neutral-700">
-          {error}
+        <Card className="bg-neutral-50 border-neutral-400 rounded-md p-4 text-xs text-neutral-700 space-y-2">
+          <p className="font-semibold text-neutral-900">{error}</p>
+
+          {/* คีย์ live ที่ยังไม่ผ่านเกณฑ์ยอดเติมจะถูกบล็อกทุก endpoint รวมถึง /me
+              แคตตาล็อกจึงว่างเปล่าโดยที่ไม่ได้เป็นความผิดของโค้ด */}
+          {errorCode === 'MIN_TOPUP_REQUIRED' && (
+            <ul className="list-disc pl-4 space-y-1 text-neutral-600">
+              <li>ระหว่างนี้แคตตาล็อกจะว่าง และสินค้าที่ผูกกับซัพพลายเออร์จะสั่งซื้อไม่ได้</li>
+              <li>ถ้าลูกค้ากดซื้อ ระบบจะคืนเงินเข้ากระเป๋าให้อัตโนมัติ ไม่มีใครเสียเงินฟรี</li>
+              <li>
+                อยากทดสอบระบบต่อระหว่างรอ ให้สลับ <span className="font-mono">SUPPLIER_499K_API_KEY</span>{' '}
+                ใน <span className="font-mono">.env</span> กลับเป็นคีย์ <span className="font-mono">499k_test_</span>
+              </li>
+            </ul>
+          )}
+
+          {errorCode === 'CLIENT_NOT_APPROVED' && (
+            <p className="text-neutral-600">
+              บัญชีตัวแทนยังรออนุมัติจาก 499K Network — ติดต่อทางร้านซัพพลายเออร์เพื่อเร่งอนุมัติ
+            </p>
+          )}
         </Card>
       )}
 
