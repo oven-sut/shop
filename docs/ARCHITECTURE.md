@@ -15,6 +15,7 @@ Tailwind CSS 4, Base UI/shadcn, Supabase (Auth + Postgres + Storage) และ R
    │     • ยังไม่ล็อกอิน → page เด้งไป /login  |  /api/* ตอบ 401
    │     • /docs และ /openapi.json → 404 ถ้าไม่ใช่แอดมิน
    │     • /login /auth/* /terms /privacy /cookies เปิดสาธารณะ
+│     • /api/topups/webhook/* เปิดสาธารณะ (เกตเวย์ไม่มีบัญชีในร้าน — body ไม่ถูกเชื่อถือ)
    │
    ├─ Pages (Server Components + Client Components)
    │     • src/app/layout.tsx อ่าน user จาก cookie แล้วส่งเข้า AuthProvider
@@ -75,6 +76,9 @@ src/
 │     ├─ topups                GET ประวัติ | POST เติมเงินด้วยสลิป
 │     ├─ topups/qr             GET  QR พร้อมเพย์ของบัญชีร้าน (ใส่ยอดให้)
 │     ├─ topups/truemoney      POST ไถ่ซองอังเปาทรูมันนี่ → เติมทันที
+│     ├─ topups/charges        GET มีเกตเวย์ไหม | POST เปิดรายการ QR
+│     │  └─ [id]               GET สถานะ + เติมถ้าจ่ายแล้ว | [id]/qr รูป QR
+│     ├─ topups/webhook/[secret] POST เกตเวย์แจ้งว่าจ่ายแล้ว (เปิดสาธารณะ)
 │     ├─ settings              GET อ่าน | PATCH แก้ (แอดมิน)
 │     └─ uploads               POST อัปโหลดรูปสินค้า (แอดมิน)
 │
@@ -87,6 +91,8 @@ src/
 │  ├─ promptpay-id.ts          ← กฎว่าเลขแบบไหนเป็นพร้อมเพย์ (ใช้ได้ทั้งสองฝั่ง)
 │  ├─ promptpay.ts             ← สร้าง payload + รูป QR (เซิร์ฟเวอร์เท่านั้น)
 │  ├─ truemoney.ts             ← ไถ่ซองอังเปา + แยก error ว่าซองถูกใช้ไปหรือยัง
+│  ├─ topup-charge.ts          ← เติมเงินจาก charge ที่เกตเวย์ยืนยันแล้ว (ใช้ร่วม 2 ทาง)
+│  ├─ gateway/                 ← เกตเวย์รับชำระเงิน: types.ts, omise.ts, index.ts
 │  ├─ rdcw.ts                  ← เรียก RDCW Slip Verify และ normalise ผลลัพธ์
 │  └─ supabase/
 │     ├─ env.ts, client.ts, server.ts, proxy.ts, session.ts
@@ -154,6 +160,24 @@ API ทุกเส้นต้องยืนยันตัวตน ราย
    ↓
 credit_topup() — service key เท่านั้น: ล็อกแถว wallet, insert topup, บวกยอด, บันทึก ledger
 ```
+
+### ขั้นตอนเติมด้วย QR อัตโนมัติ (เกตเวย์ + webhook)
+
+```
+POST /api/topups/charges {amount}  → เช็ค min/max ก่อน แล้วเปิด charge ที่เกตเวย์
+   ↓ metadata.userId = คนที่กด (webhook ไม่มี session จึงต้องฝากไว้ที่นี่)
+แสดง QR ผ่าน /api/topups/charges/[id]/qr (ร้านดึงรูปมาส่งต่อ ไม่ให้เบราว์เซอร์ยิงตรง)
+   ↓ ลูกค้าสแกนจ่าย
+เกตเวย์ยิง POST /api/topups/webhook/<secret>     หน้าเว็บพอลลิง GET .../charges/[id]
+   ↓ อ่านจาก body แค่ charge id                        ↓ ทุก 4 วินาที
+   └──────────→ settleCharge(): ถาม API เกตเวย์ด้วยคีย์ร้าน ← ยอด/สถานะ/เจ้าของ
+                     ↓ paid เท่านั้น
+        credit_topup(trans_ref = '<gateway>:<charge_id>')
+                     ↓ ใครถึงก่อนได้ไป อีกทางชน unique แล้วกลายเป็น no-op
+```
+
+สองทางนั้นทำงานเหมือนกันโดยตั้งใจ: webhook คือทางหลัก ส่วนพอลลิงคือกันเหนียวเวลา
+webhook ตั้ง URL ผิดหรือส่งไม่ถึง ลูกค้าที่จ่ายแล้วจะไม่ต้องมาเปิดเรื่องกับแอดมิน
 
 ### ขั้นตอนเติมด้วยซองอังเปา (`POST /api/topups/truemoney`)
 

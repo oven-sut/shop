@@ -13,9 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton, SkeletonRegion } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { pickPromptPayTarget } from '@/lib/promptpay-id';
 
 const money = (value: number) => `฿${value.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
+
+/** How often the page asks the gateway whether the QR has been paid. */
+const POLL_MS = 4_000;
 
 /** What `/api/topups/qr` answers with. */
 interface PromptPayQr {
@@ -26,6 +30,15 @@ interface PromptPayQr {
   account: string;
   receiverName: string;
   bankName: string;
+}
+
+/** A gateway charge from `/api/topups/charges` — the QR that credits by itself. */
+interface Charge {
+  id: string;
+  amount: number;
+  status: 'pending' | 'paid' | 'failed' | 'expired';
+  expiresAt: string | null;
+  qrPath: string;
 }
 
 function WalletContent() {
@@ -53,6 +66,11 @@ function WalletContent() {
   const [voucher, setVoucher] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
 
+  const [gateway, setGateway] = useState<string | null>(null);
+  const [charge, setCharge] = useState<Charge | null>(null);
+  const [chargeError, setChargeError] = useState('');
+  const [isChargeLoading, setIsChargeLoading] = useState(false);
+
   const loadHistory = async () => {
     const response = await fetch('/api/topups');
     const body = await response.json().catch(() => ({}));
@@ -60,11 +78,18 @@ function WalletContent() {
     setIsHistoryLoading(false);
   };
 
-  // Top-up history is only needed on this page, so it is fetched here on mount
-  // rather than being carried in the shop context.
+  // Top-up history and the gateway probe are only needed on this page, so they
+  // are fetched here on mount rather than being carried in the shop context.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadHistory();
+
+    fetch('/api/topups/charges')
+      .then((response) => response.json())
+      .then((body) => {
+        if (body.success) setGateway(body.data.gateway as string | null);
+      })
+      .catch(() => setGateway(null));
   }, []);
 
   const receiverConfigured = Boolean(
@@ -94,6 +119,12 @@ function WalletContent() {
     setAmount(value);
     setQr(null);
     setQrError('');
+
+    // Same reasoning for the gateway charge, with one difference: a charge that
+    // was already paid is still credited by the webhook, so dropping it here only
+    // stops this page from watching it — never the money.
+    setCharge(null);
+    setChargeError('');
   };
 
   const loadQr = async () => {
@@ -118,6 +149,78 @@ function WalletContent() {
       setQrError(body.message || 'สร้าง QR ไม่สำเร็จ');
     }
   };
+
+  const openCharge = async () => {
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) {
+      showToast('กรอกจำนวนเงินก่อน แล้วจึงสร้าง QR', 'warning');
+      return;
+    }
+
+    setIsChargeLoading(true);
+    setChargeError('');
+
+    const response = await fetch('/api/topups/charges', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: value }),
+    });
+    const body = await response.json().catch(() => ({}));
+
+    setIsChargeLoading(false);
+
+    if (body.success) {
+      setCharge(body.data as Charge);
+    } else {
+      setCharge(null);
+      setChargeError(body.message || 'สร้าง QR ไม่สำเร็จ');
+    }
+  };
+
+  /**
+   * Watches an open charge until the money lands.
+   *
+   * The webhook is what normally credits the top-up; this poll exists so the
+   * customer sees it happen, and so a webhook that never arrives — wrong URL,
+   * gateway hiccup — still ends with the wallet credited rather than a support
+   * message. Both paths run the same server-side settle step, so whichever gets
+   * there first wins and the other is a no-op.
+   */
+  useEffect(() => {
+    if (!charge) return;
+
+    let stopped = false;
+
+    const check = async () => {
+      const response = await fetch(`/api/topups/charges/${encodeURIComponent(charge.id)}`);
+      const body = await response.json().catch(() => ({}));
+      if (stopped || !body.success) return;
+
+      const status = body.data.status as Charge['status'];
+      if (status === 'pending') return;
+
+      setCharge(null);
+
+      if (status === 'paid') {
+        showToast(`เติมเงิน ${money(body.data.amount)} สำเร็จ`, 'success');
+        await Promise.all([refreshWallet(), loadHistory()]);
+      } else {
+        setChargeError(
+          status === 'expired'
+            ? 'QR หมดอายุแล้ว กรุณาสร้างใหม่'
+            : 'การชำระเงินไม่สำเร็จ กรุณาลองใหม่'
+        );
+      }
+    };
+
+    const timer = setInterval(check, POLL_MS);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+    // Deliberately not depending on loadHistory: it is redefined every render, so
+    // including it would tear down and restart the poll on each one.
+  }, [charge, refreshWallet, showToast]);
 
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,55 +288,25 @@ function WalletContent() {
           )}
         </div>
 
-        {/* TrueMoney voucher — the only channel that credits inside the request,
-            so it sits above the slip form rather than beside it. */}
-        {voucherSupported && (
-          <section className="border border-neutral-200 rounded-md p-6 space-y-4">
-            <div className="flex items-start justify-between gap-3 border-b border-neutral-100 pb-3">
-              <h2 className="text-base font-semibold">เติมเงินด้วยซองอังเปาทรูมันนี่</h2>
-              <span className="text-[11px] text-neutral-400 shrink-0 pt-1">เงินเข้าทันที</span>
-            </div>
-
-            <p className="text-xs text-neutral-500 leading-relaxed">
-              ส่งซองอังเปาจากแอปทรูวอลเล็ตมาที่{' '}
-              <span className="font-mono font-semibold text-neutral-900">
-                {settings.topupTruemoneyPhone}
-              </span>{' '}
-              แล้ววางลิงก์ซองที่ได้ลงช่องนี้ ระบบจะรับซองแล้วเติมยอดตามที่อยู่ในซองให้ทันที
-              ไม่ต้องแนบสลิป — ซองหนึ่งใบใช้ได้ครั้งเดียว
-            </p>
-
-            <form onSubmit={handleRedeem} className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Input
-                  type="text"
-                  required
-                  placeholder="https://gift.truemoney.com/campaign/?v=..."
-                  value={voucher}
-                  onChange={(e) => setVoucher(e.target.value)}
-                  className="h-11 pl-10 bg-white border-neutral-300 rounded-md text-neutral-900 text-sm font-mono"
-                />
-                <Gift className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              </div>
-              <Button
-                type="submit"
-                disabled={isRedeeming}
-                className="h-11 px-6 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md border-0 disabled:opacity-40"
-              >
-                {isRedeeming && <Spinner className="mr-2" />}
-                {isRedeeming ? 'กำลังรับซอง...' : 'รับซอง'}
-              </Button>
-            </form>
-          </section>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top up */}
+          {/* Top up — one section, three ways in. They differ in what proves the
+              money arrived, which is what the copy in each tab has to say. */}
           <section className="border border-neutral-200 rounded-md p-6 space-y-5">
-            <h2 className="text-base font-semibold border-b border-neutral-100 pb-3">
-              เติมเงินด้วยสลิปโอน
-            </h2>
+            <Tabs defaultValue="slip" className="gap-5">
+              <TabsList variant="line" className="w-full gap-5 h-auto! p-0 border-b border-neutral-100">
+                <TabsTrigger value="slip" className="flex-none h-auto px-0 pb-3 text-xs">
+                  สลิปโอนเงิน
+                </TabsTrigger>
+                <TabsTrigger value="qr" className="flex-none h-auto px-0 pb-3 text-xs">
+                  QR {gateway ? 'อัตโนมัติ' : 'พร้อมเพย์'}
+                </TabsTrigger>
+                <TabsTrigger value="truemoney" className="flex-none h-auto px-0 pb-3 text-xs">
+                  ทรูวอลเล็ต
+                </TabsTrigger>
+              </TabsList>
 
+              {/* ── 1. โอนแล้วส่งสลิป — ตรวจกับธนาคารก่อนเติม ─────────────── */}
+              <TabsContent value="slip" className="space-y-5">
             {receiverConfigured ? (
               <dl className="border border-neutral-200 rounded-md p-4 text-xs space-y-2">
                 <span className="font-semibold text-neutral-900 block">
@@ -314,65 +387,6 @@ function WalletContent() {
                 </p>
               </div>
 
-              {/* PromptPay — scan, pay, then upload the slip below to be credited. */}
-              {promptpaySupported && (
-                <div className="border border-neutral-200 rounded-md p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <span className="text-xs font-semibold text-neutral-900 block">
-                        สแกนจ่ายด้วยพร้อมเพย์
-                      </span>
-                      <span className="text-[11px] text-neutral-400">
-                        QR ใส่ยอดมาให้แล้ว จ่ายเสร็จอัปโหลดสลิปด้านล่างเพื่อรับเงินเข้ากระเป๋า
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={loadQr}
-                      disabled={isQrLoading}
-                      className="h-9 px-3 shrink-0 rounded-md border-neutral-300 text-xs font-medium"
-                    >
-                      {isQrLoading ? <Spinner className="mr-1.5" /> : <QrCode className="mr-1.5" />}
-                      {qr ? 'สร้างใหม่' : 'สร้าง QR'}
-                    </Button>
-                  </div>
-
-                  {qrError && (
-                    <p className="border-l-2 border-neutral-900 pl-3 text-[11px] text-neutral-600 leading-relaxed">
-                      {qrError}
-                    </p>
-                  )}
-
-                  {qr && (
-                    <div className="flex flex-col items-center gap-2 pt-1">
-                      <img
-                        src={qr.image}
-                        alt={`QR พร้อมเพย์ ยอด ${money(qr.amount ?? 0)}`}
-                        width={224}
-                        height={224}
-                        className="w-56 h-56 rounded-md border border-neutral-200"
-                      />
-                      <p className="text-sm font-semibold text-neutral-900">
-                        {money(qr.amount ?? 0)}
-                      </p>
-                      <p className="text-[11px] text-neutral-400 text-center">
-                        {qr.receiverName || qr.account}
-                        {' · '}
-                        {qr.kindLabel} {qr.account}
-                      </p>
-                      <a
-                        href={qr.image}
-                        download={`promptpay-${qr.amount ?? 'static'}.png`}
-                        className="text-[11px] text-neutral-500 underline underline-offset-2"
-                      >
-                        บันทึกรูป QR
-                      </a>
-                    </div>
-                  )}
-                </div>
-              )}
-
               <div>
                 <label className="block text-xs font-medium text-neutral-700 mb-1.5">
                   รูปสลิปโอนเงิน
@@ -400,6 +414,196 @@ function WalletContent() {
                 </p>
               )}
             </form>
+              </TabsContent>
+
+              {/* ── 2. QR — เข้าเองเมื่อจ่าย ถ้าร้านต่อเกตเวย์ไว้ ─────────── */}
+              <TabsContent value="qr" className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    จำนวนเงินที่จะเติม (บาท)
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={settings.topupMinAmount}
+                      max={settings.topupMaxAmount}
+                      placeholder="เช่น 500"
+                      value={amount}
+                      onChange={(e) => handleAmountChange(e.target.value)}
+                      className="h-11 pl-10 bg-white border-neutral-300 rounded-md text-neutral-900 text-sm"
+                    />
+                    <Banknote className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  </div>
+                  <p className="text-[11px] text-neutral-400 mt-1.5">
+                    เติมได้ครั้งละ {money(settings.topupMinAmount)} –{' '}
+                    {money(settings.topupMaxAmount)}
+                  </p>
+                </div>
+
+                {gateway ? (
+                  <>
+                    <p className="text-xs text-neutral-500 leading-relaxed">
+                      สแกน QR นี้จ่ายด้วยแอปธนาคารไหนก็ได้ ระบบรับชำระเงินจะแจ้งกลับมาเอง
+                      แล้วเงินเข้ากระเป๋าให้อัตโนมัติ — <span className="font-semibold text-neutral-900">ไม่ต้องอัปโหลดสลิป</span>
+                    </p>
+
+                    <Button
+                      type="button"
+                      onClick={openCharge}
+                      disabled={isChargeLoading || Boolean(charge)}
+                      className="w-full h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md border-0 disabled:opacity-40"
+                    >
+                      {isChargeLoading ? <Spinner className="mr-2" /> : <QrCode className="mr-2" />}
+                      {isChargeLoading ? 'กำลังสร้าง QR...' : 'สร้าง QR สำหรับจ่าย'}
+                    </Button>
+
+                    {chargeError && (
+                      <p className="border-l-2 border-neutral-900 pl-3 text-xs text-neutral-600 leading-relaxed">
+                        {chargeError}
+                      </p>
+                    )}
+
+                    {charge && (
+                      <div className="border border-neutral-200 rounded-md p-4 flex flex-col items-center gap-2">
+                        {/* Served by our own route, not the gateway's host. */}
+                        <img
+                          src={charge.qrPath}
+                          alt={`QR ชำระเงิน ${money(charge.amount)}`}
+                          width={224}
+                          height={224}
+                          className="w-56 h-56 rounded-md border border-neutral-200 bg-white"
+                        />
+                        <p className="text-sm font-semibold text-neutral-900">
+                          {money(charge.amount)}
+                        </p>
+                        <p className="text-[11px] text-neutral-500 flex items-center gap-1.5">
+                          <Spinner className="size-3" />
+                          รอการชำระเงิน — หน้านี้จะอัปเดตให้เองเมื่อเงินเข้า
+                        </p>
+                        {charge.expiresAt && (
+                          <p className="text-[11px] text-neutral-400">
+                            QR หมดอายุ {new Date(charge.expiresAt).toLocaleString('th-TH')}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* No gateway: the shop can still hand out a QR, but nothing
+                        tells it the money arrived — so this one needs the slip. */}
+                    <p className="border-l-2 border-neutral-900 pl-3 text-xs text-neutral-600 leading-relaxed">
+                      ร้านยังไม่ได้ต่อระบบรับชำระเงิน จึงยังเติมอัตโนมัติไม่ได้ — สแกน QR
+                      พร้อมเพย์ด้านล่างจ่ายได้ตามปกติ แล้วอัปโหลดสลิปที่แท็บ{' '}
+                      <span className="font-medium text-neutral-900">สลิปโอนเงิน</span>{' '}
+                      เพื่อรับเงินเข้ากระเป๋า
+                    </p>
+
+                    {promptpaySupported ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={loadQr}
+                          disabled={isQrLoading}
+                          className="w-full h-11 rounded-md border-neutral-300 text-sm font-medium"
+                        >
+                          {isQrLoading ? <Spinner className="mr-2" /> : <QrCode className="mr-2" />}
+                          {qr ? 'สร้าง QR ใหม่' : 'สร้าง QR พร้อมเพย์'}
+                        </Button>
+
+                        {qrError && (
+                          <p className="border-l-2 border-neutral-900 pl-3 text-xs text-neutral-600 leading-relaxed">
+                            {qrError}
+                          </p>
+                        )}
+
+                        {qr && (
+                          <div className="border border-neutral-200 rounded-md p-4 flex flex-col items-center gap-2">
+                            <img
+                              src={qr.image}
+                              alt={`QR พร้อมเพย์ ยอด ${money(qr.amount ?? 0)}`}
+                              width={224}
+                              height={224}
+                              className="w-56 h-56 rounded-md border border-neutral-200"
+                            />
+                            <p className="text-sm font-semibold text-neutral-900">
+                              {money(qr.amount ?? 0)}
+                            </p>
+                            <p className="text-[11px] text-neutral-400 text-center">
+                              {qr.receiverName || qr.account}
+                              {' · '}
+                              {qr.kindLabel} {qr.account}
+                            </p>
+                            <a
+                              href={qr.image}
+                              download={`promptpay-${qr.amount ?? 'static'}.png`}
+                              className="text-[11px] text-neutral-500 underline underline-offset-2"
+                            >
+                              บันทึกรูป QR
+                            </a>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-xs text-neutral-400">
+                        ร้านยังไม่ได้ตั้งพร้อมเพย์ไว้ จึงยังสร้าง QR ให้ไม่ได้
+                      </p>
+                    )}
+                  </>
+                )}
+              </TabsContent>
+
+              {/* ── 3. ซองอังเปา — ไถ่แล้วเข้าทันที ไม่ต้องมีสลิป ─────────── */}
+              <TabsContent value="truemoney" className="space-y-4">
+                {voucherSupported ? (
+                  <>
+                    <p className="text-xs text-neutral-500 leading-relaxed">
+                      ส่งซองอังเปาจากแอปทรูวอลเล็ตมาที่{' '}
+                      <span className="font-mono font-semibold text-neutral-900">
+                        {settings.topupTruemoneyPhone}
+                      </span>{' '}
+                      แล้ววางลิงก์ซองที่ได้ลงช่องนี้ — ถ้าลิงก์ถูกต้อง ระบบจะรับซองแล้วเติมยอด
+                      ตามที่อยู่ในซองให้ทันที ไม่ต้องแนบสลิป ซองหนึ่งใบใช้ได้ครั้งเดียว
+                    </p>
+
+                    <form onSubmit={handleRedeem} className="space-y-3">
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          required
+                          placeholder="https://gift.truemoney.com/campaign/?v=..."
+                          value={voucher}
+                          onChange={(e) => setVoucher(e.target.value)}
+                          className="h-11 pl-10 bg-white border-neutral-300 rounded-md text-neutral-900 text-sm font-mono"
+                        />
+                        <Gift className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={isRedeeming}
+                        className="w-full h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md border-0 disabled:opacity-40"
+                      >
+                        {isRedeeming && <Spinner className="mr-2" />}
+                        {isRedeeming ? 'กำลังรับซอง...' : 'รับซองแล้วเติมเงิน'}
+                      </Button>
+                      <p className="text-[11px] text-neutral-400">
+                        ยอดจากซองเข้าตามจริง ไม่ถูกจำกัดด้วยขั้นต่ำ/ขั้นสูงของร้าน
+                      </p>
+                    </form>
+                  </>
+                ) : (
+                  <p className="border-l-2 border-neutral-900 pl-3 text-xs text-neutral-600 leading-relaxed">
+                    ร้านยังไม่ได้ตั้งเบอร์ทรูวอลเล็ต — ผู้ดูแลระบบต้องกรอกที่{' '}
+                    <Link href="/admin" className="underline underline-offset-2 font-medium text-neutral-900">
+                      หน้าแอดมิน → ตั้งค่าร้านค้า
+                    </Link>{' '}
+                    ก่อนจึงจะเติมด้วยซองอังเปาได้
+                  </p>
+                )}
+              </TabsContent>
+            </Tabs>
           </section>
 
           {/* Movements */}

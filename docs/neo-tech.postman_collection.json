@@ -46,6 +46,10 @@
     {
       "key": "orderId",
       "value": "ORD-1001"
+    },
+    {
+      "key": "topupWebhookSecret",
+      "value": ""
     }
   ],
   "item": [
@@ -604,6 +608,105 @@
               ]
             },
             "description": "คืน payload EMV QRCPS + รูป PNG (data URL) ของบัญชีร้าน ใช้ได้เมื่อ topup_receiver_account เป็นพร้อมเพย์ (10/13/15 หลัก) — QR ไม่เติมเงินเอง ต้องอัปโหลดสลิปต่อ"
+          }
+        },
+        {
+          "name": "Gateway configured?",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/topups/charges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "topups",
+                "charges"
+              ]
+            },
+            "description": "คืน {gateway: \"omise\"} ถ้าตั้งคีย์เกตเวย์ไว้ หรือ {gateway: null} ถ้ายัง"
+          }
+        },
+        {
+          "name": "Open a charge (auto-credit QR)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topups/charges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "topups",
+                "charges"
+              ]
+            },
+            "description": "เปิดรายการชำระเงินกับเกตเวย์ แล้วเอา qrPath ไปแสดงเป็นรูป QR — เงินเข้ากระเป๋าอัตโนมัติเมื่อจ่าย ไม่ต้องอัปสลิป"
+          }
+        },
+        {
+          "name": "Charge status (credits if paid)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/topups/charges/chrg_xxx",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "topups",
+                "charges",
+                "chrg_xxx"
+              ]
+            },
+            "description": "อ่านสถานะจาก API ของเกตเวย์ และเติมเงินให้เลยถ้าจ่ายแล้ว (ทางสำรองของ webhook) — ดูได้เฉพาะรายการของตัวเอง"
+          }
+        },
+        {
+          "name": "Gateway webhook (no auth)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"object\": \"event\",\n  \"key\": \"charge.complete\",\n  \"data\": { \"object\": \"charge\", \"id\": \"chrg_xxx\" }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topups/webhook/{{topupWebhookSecret}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "topups",
+                "webhook",
+                "{{topupWebhookSecret}}"
+              ]
+            },
+            "description": "สิ่งที่เกตเวย์ยิงมา อ่านจาก body แค่ charge id แล้วไปถามยอด/สถานะกับ API ของเกตเวย์เอง จึงยัดยอดปลอมมาไม่ได้ secret ต้องตรงกับ TOPUP_WEBHOOK_SECRET ไม่ตรง = 404"
           }
         },
         {

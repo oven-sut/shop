@@ -18,6 +18,12 @@ import { updateSession } from '@/lib/supabase/proxy';
 // the URL is pasted somewhere. Gated, they answer a redirect to /login, and the
 // link preview comes back blank. None of them expose anything: the sitemap
 // lists the public pages only, and the image is drawn from static text.
+//
+// `/api/topups/webhook` is the one API path open to anonymous callers: a payment
+// gateway telling the shop a QR was paid has no session and never will. It is
+// safe to open because the handler treats the body as a hint only — it re-reads
+// the charge from the gateway with the shop's own key before crediting anything,
+// so a forged post can achieve nothing beyond a wasted lookup.
 const PUBLIC_PATHS = [
   '/login',
   '/auth',
@@ -28,6 +34,7 @@ const PUBLIC_PATHS = [
   '/robots.txt',
   '/opengraph-image',
   '/twitter-image',
+  '/api/topups/webhook',
 ];
 
 /**

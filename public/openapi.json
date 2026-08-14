@@ -1388,6 +1388,386 @@
         }
       }
     },
+    "/api/topups/charges": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "ร้านต่อเกตเวย์รับชำระเงินไว้ไหม",
+        "description": "หน้ากระเป๋าเงินถามก่อนวาดแท็บ QR: มีเกตเวย์ = QR ที่จ่ายแล้วเงินเข้าเอง, ไม่มี = QR พร้อมเพย์ที่ยังต้องอัปสลิป",
+        "operationId": "getTopupGateway",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "gateway": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "ชื่อเกตเวย์ที่ใช้อยู่ หรือ null ถ้ายังไม่ได้ตั้งคีย์",
+                          "example": "omise"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "เปิดรายการชำระเงิน (QR ที่เติมเงินให้เอง)",
+        "description": "ขอ QR จากเกตเวย์สำหรับยอดที่ระบุ ลูกค้าสแกนจ่ายแล้วเงินเข้ากระเป๋าอัตโนมัติผ่าน webhook ไม่ต้องอัปโหลดสลิป\n\nendpoint นี้ไม่เติมเงินเอง — ตัวที่เติมคือ `/api/topups/webhook/{secret}` และการพอลลิง `/api/topups/charges/{id}` ซึ่งอ่านสถานะจาก API ของเกตเวย์ก่อนทุกครั้ง",
+        "operationId": "createTopupCharge",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "amount"
+                ],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "description": "ยอดที่จะเติม ต้องอยู่ในช่วง min/max ของร้าน",
+                    "example": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "เปิดรายการแล้ว",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/TopupCharge"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ยอดไม่ถูกต้อง หรืออยู่นอกช่วงที่ร้านกำหนด",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "เปิดรายการถี่เกินไป (20 ครั้ง/นาที ต่อผู้ใช้)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "502": {
+            "description": "ติดต่อเกตเวย์ไม่ได้ หรือเกตเวย์ไม่ส่ง QR กลับมา",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ร้านยังไม่ได้ต่อเกตเวย์ (`gateway_not_configured`) หรือคีย์ใช้ไม่ได้",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topups/charges/{id}": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "สถานะรายการชำระเงิน (และเติมเงินให้ถ้าจ่ายแล้ว)",
+        "description": "อ่านสถานะจาก API ของเกตเวย์ ไม่ใช่จากฐานข้อมูลร้าน ถ้าจ่ายแล้วจะเติมเข้ากระเป๋าให้ทันทีเหมือนที่ webhook ทำ — ตั้งใจให้ซ้ำกัน เพื่อให้ลูกค้าที่จ่ายแล้วไม่ค้างเมื่อ webhook ส่งไม่ถึง\n\nดูได้เฉพาะรายการของตัวเอง (ตัดสินจาก `metadata.userId` ของ charge) รายการของคนอื่นตอบ 404",
+        "operationId": "getTopupCharge",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "charge id ฝั่งเกตเวย์",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "paid",
+                            "failed",
+                            "expired"
+                          ]
+                        },
+                        "amount": {
+                          "type": "number"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "balance": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "ยอดคงเหลือหลังเติม — null ตอนยังไม่จ่าย และตอนที่ webhook เติมไปก่อนแล้ว"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "ไม่พบรายการ หรือเป็นรายการของผู้ใช้อื่น",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "พอลลิงถี่เกินไป (40 ครั้ง/นาที ต่อผู้ใช้)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "503": {
+            "description": "ร้านยังไม่ได้ต่อเกตเวย์",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/topups/charges/{id}/qr": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "รูป QR ของรายการชำระเงิน",
+        "description": "ร้านดึงรูปจากเกตเวย์ด้วยคีย์ของตัวเองแล้วส่งต่อ เบราว์เซอร์จึงไม่เคยคุยกับโฮสต์ของเกตเวย์",
+        "operationId": "getTopupChargeQr",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "รูป QR",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "description": "ไม่พบรายการ, เป็นของผู้ใช้อื่น, หรือรายการไม่มีรูป QR แล้ว",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/topups/webhook/{secret}": {
+      "post": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "เกตเวย์แจ้งว่าจ่ายแล้ว (ไม่ต้องล็อกอิน)",
+        "description": "path เดียวใน /api/* ที่เปิดให้เรียกโดยไม่มี session เพราะเกตเวย์ไม่มีบัญชีในร้าน\n\nปลอดภัยได้เพราะ handler อ่านจาก body แค่ charge id แล้วไปถามยอด/สถานะ/เจ้าของกับ API ของเกตเวย์ด้วยคีย์ของร้านเอง body ปลอมจึงทำได้แค่สั่งให้ร้านไปเช็ค charge จริงซ้ำ ส่วน secret ใน path มีไว้กันคนยิงถี่ ๆ ไม่ใช่ตัวที่ทำให้ปลอดภัย\n\nตั้งค่าที่แดชบอร์ดเกตเวย์เป็น `https://<โดเมนร้าน>/api/topups/webhook/<TOPUP_WEBHOOK_SECRET>`",
+        "operationId": "topupGatewayWebhook",
+        "security": [],
+        "parameters": [
+          {
+            "name": "secret",
+            "in": "path",
+            "required": true,
+            "description": "ค่าเดียวกับ TOPUP_WEBHOOK_SECRET ใน .env",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "event ของเกตเวย์ — อ่านเฉพาะ charge id",
+                "example": {
+                  "object": "event",
+                  "key": "charge.complete",
+                  "data": {
+                    "object": "charge",
+                    "id": "chrg_test_1"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "รับเรื่องแล้ว (`ignored: true` = event ที่ไม่เกี่ยวกับ charge)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "paid",
+                        "failed",
+                        "expired"
+                      ]
+                    },
+                    "ignored": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "secret ไม่ตรง หรือร้านไม่ได้ต่อเกตเวย์ — ตอบเหมือนกันทุกกรณี ไม่บอกว่าอะไรผิด"
+          },
+          "429": {
+            "description": "ยิงถี่เกินไป (240 ครั้ง/นาที รวมทุกผู้เรียก)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "เติมเงินไม่สำเร็จ — ตอบ 5xx เพื่อให้เกตเวย์ส่ง event นี้มาใหม่",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/topups/truemoney": {
       "post": {
         "tags": [
@@ -2450,6 +2830,43 @@
           }
         }
       },
+      "TopupCharge": {
+        "type": "object",
+        "description": "รายการชำระเงินที่เปิดไว้กับเกตเวย์ (QR ที่เติมเงินให้เอง)",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "charge id ฝั่งเกตเวย์ — ใช้เป็น trans_ref กันเติมซ้ำ",
+            "example": "chrg_test_1"
+          },
+          "amount": {
+            "type": "number",
+            "example": 500
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "failed",
+              "expired"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "gateway": {
+            "type": "string",
+            "example": "omise"
+          },
+          "qrPath": {
+            "type": "string",
+            "description": "path รูป QR ที่ร้านส่งต่อให้ (ไม่ใช่ URL ของเกตเวย์)",
+            "example": "/api/topups/charges/chrg_test_1/qr"
+          }
+        }
+      },
       "StoreSettings": {
         "type": "object",
         "properties": {
@@ -2471,7 +2888,7 @@
           },
           "topupPromptpayId": {
             "type": "string",
-            "description": "พร้อมเพย์ — ช่องเดียวที่เอาไปสร้าง QR ได้ (10/13/15 หลัก)"
+            "description": "พร้อมเพย์ — ช่องเดียวที่เอาไปสร้าง QR ของร้านเองได้ (10/13/15 หลัก)"
           },
           "topupTruemoneyPhone": {
             "type": "string",
