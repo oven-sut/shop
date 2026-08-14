@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { requireAdmin, requireApiUser } from '@/lib/api-auth';
+import { badRequest, dbError, serverError } from '@/lib/api-response';
 import { toProduct, toProductRow } from '@/lib/mappers';
 import { createRouteClient } from '@/lib/supabase/server';
 
@@ -24,9 +24,7 @@ export async function GET(
       .eq('id', id)
       .maybeSingle();
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
+    if (error) return dbError(error);
     if (!data) return notFound(id);
 
     return NextResponse.json({ success: true, data: toProduct(data) });
@@ -39,15 +37,15 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { response: unauthorized } = await requireApiUser();
-  if (unauthorized) return unauthorized;
+  const { response: denied } = await requireAdmin();
+  if (denied) return denied;
 
   try {
     const { id } = await params;
     const patch = toProductRow(await request.json());
 
     if (!Object.keys(patch).length) {
-      return NextResponse.json({ success: false, error: 'ไม่มีข้อมูลที่จะแก้ไข' }, { status: 400 });
+      return badRequest('ไม่มีข้อมูลที่จะแก้ไข');
     }
 
     const supabase = await createRouteClient();
@@ -60,9 +58,7 @@ export async function PATCH(
       .select('*, product_reviews(*)')
       .maybeSingle();
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 403 });
-    }
+    if (error) return dbError(error, 403);
     // RLS makes a forbidden update look like "no rows matched", so it lands here.
     if (!data) return notFound(id);
 
@@ -80,8 +76,8 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { response: unauthorized } = await requireApiUser();
-  if (unauthorized) return unauthorized;
+  const { response: denied } = await requireAdmin();
+  if (denied) return denied;
 
   try {
     const { id } = await params;
@@ -94,9 +90,7 @@ export async function DELETE(
       .select('id')
       .maybeSingle();
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 403 });
-    }
+    if (error) return dbError(error, 403);
     if (!data) return notFound(id);
 
     return NextResponse.json({ success: true, message: `ลบสินค้า ID: ${id} สำเร็จ` });

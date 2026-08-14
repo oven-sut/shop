@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { dbError, serverError } from '@/lib/api-response';
 import { createRouteClient } from '@/lib/supabase/server';
 
 const LOW_STOCK_THRESHOLD = 5;
@@ -25,9 +25,7 @@ export async function GET() {
         .lte('stock', LOW_STOCK_THRESHOLD),
     ]);
 
-    if (orders.error) {
-      return NextResponse.json({ success: false, error: orders.error.message }, { status: 400 });
-    }
+    if (orders.error) return dbError(orders.error);
 
     const rows = orders.data ?? [];
     const totalRevenue = rows

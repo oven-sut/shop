@@ -1,8 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { badRequest, dbError, serverError } from '@/lib/api-response';
 import { toReview } from '@/lib/mappers';
+import { enforceRateLimit } from '@/lib/rate-limit';
 import { createRouteClient } from '@/lib/supabase/server';
+
+const REVIEW_LIMIT = { name: 'review-post', limit: 15, windowMs: 60_000 };
+
+/** Room for a real opinion, not for a payload someone wants stored for free. */
+const MAX_COMMENT_LENGTH = 2000;
 
 export async function POST(
   request: NextRequest,
@@ -11,16 +17,21 @@ export async function POST(
   const { user, response: unauthorized } = await requireApiUser();
   if (unauthorized) return unauthorized;
 
+  const limited = enforceRateLimit(REVIEW_LIMIT, user.id);
+  if (limited) return limited;
+
   try {
     const { id } = await params;
     const body = await request.json();
     const rating = Number(body.rating);
+    const comment = typeof body.comment === 'string' ? body.comment.trim() : '';
 
-    if (!body.comment || !Number.isFinite(rating) || rating < 1 || rating > 5) {
-      return NextResponse.json(
-        { success: false, error: 'กรุณาระบุ rating (1-5) และ comment' },
-        { status: 400 }
-      );
+    if (!comment || !Number.isFinite(rating) || rating < 1 || rating > 5) {
+      return badRequest('กรุณาระบุ rating (1-5) และ comment');
+    }
+
+    if (comment.length > MAX_COMMENT_LENGTH) {
+      return badRequest(`ความคิดเห็นต้องยาวไม่เกิน ${MAX_COMMENT_LENGTH} ตัวอักษร`);
     }
 
     const supabase = await createRouteClient();
@@ -35,7 +46,7 @@ export async function POST(
           // Attributed to the signed-in account, never to a client-supplied name.
           user_name: user.name,
           rating: Math.trunc(rating),
-          comment: String(body.comment),
+          comment,
         },
         { onConflict: 'product_id,user_id' }
       )
@@ -44,9 +55,13 @@ export async function POST(
 
     if (error) {
       // 23503 = the product id does not exist
-      const status = error.code === '23503' ? 404 : 400;
-      const message = status === 404 ? `ไม่พบสินค้า ID: ${id}` : error.message;
-      return NextResponse.json({ success: false, error: message }, { status });
+      if (error.code === '23503') {
+        return NextResponse.json(
+          { success: false, error: 'not_found', message: `ไม่พบสินค้า ID: ${id}` },
+          { status: 404 }
+        );
+      }
+      return dbError(error);
     }
 
     return NextResponse.json(

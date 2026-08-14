@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { User } from '../types/auth';
-import { unauthorized } from './api-response';
+import { forbidden, unauthorized } from './api-response';
 import { getBearerUser, getSessionUser } from './supabase/session';
 
 export type ApiAuth =
@@ -26,4 +26,25 @@ export async function requireApiUser(): Promise<ApiAuth> {
   }
 
   return { user, response: null };
+}
+
+/**
+ * Same gate, restricted to admins.
+ *
+ * The RLS policies already refuse a customer's write, so this is deliberately a
+ * second lock rather than the only one. It matters because the two fail in
+ * different ways: RLS refusing an update is indistinguishable from "no such
+ * row", and a handler that is later switched to the service-role client — which
+ * bypasses RLS entirely — would silently lose its only check. Stating the rule
+ * in the handler keeps the intent visible where the route is read.
+ */
+export async function requireAdmin(): Promise<ApiAuth> {
+  const auth = await requireApiUser();
+  if (auth.response) return auth;
+
+  if (auth.user.role !== 'admin') {
+    return { user: null, response: forbidden() };
+  }
+
+  return auth;
 }

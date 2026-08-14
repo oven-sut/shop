@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { dbError, serverError } from '@/lib/api-response';
 import { createRouteClient } from '@/lib/supabase/server';
 
 type Row = Record<string, unknown>;
@@ -39,9 +39,7 @@ export async function GET() {
     ]);
 
     const error = fulfilments.error ?? orders.error;
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
+    if (error) return dbError(error);
 
     const byOrder = new Map<string, Row[]>();
     for (const row of (fulfilments.data ?? []) as Row[]) {

@@ -1,21 +1,14 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { requireAdmin } from '@/lib/api-auth';
+import { badRequest, dbError, serverError } from '@/lib/api-response';
 import { toProduct } from '@/lib/mappers';
 import { fetchSupplierAccount, fetchSupplierProducts, SupplierError } from '@/lib/supplier';
 import { createRouteClient } from '@/lib/supabase/server';
 
-const forbidden = () =>
-  NextResponse.json(
-    { success: false, error: 'forbidden', message: 'เฉพาะผู้ดูแลระบบเท่านั้น' },
-    { status: 403 }
-  );
-
 /** แคตตาล็อกของซัพพลายเออร์ พร้อมบอกว่าชิ้นไหนนำเข้ามาในร้านแล้ว */
 export async function GET() {
-  const { user, response: unauthorized } = await requireApiUser();
-  if (unauthorized) return unauthorized;
-  if (user.role !== 'admin') return forbidden();
+  const { response: denied } = await requireAdmin();
+  if (denied) return denied;
 
   try {
     const supabase = await createRouteClient();
@@ -58,23 +51,19 @@ export async function GET() {
  * เก็บต้นทุนไว้เพื่อดูกำไร นำเข้าซ้ำจะอัปเดตของเดิมด้วย unique index
  */
 export async function POST(request: NextRequest) {
-  const { user, response: unauthorized } = await requireApiUser();
-  if (unauthorized) return unauthorized;
-  if (user.role !== 'admin') return forbidden();
+  const { response: denied } = await requireAdmin();
+  if (denied) return denied;
 
   try {
     const body = await request.json();
     const productIds: string[] = Array.isArray(body.productIds)
-      ? body.productIds.map(String)
+      ? body.productIds.slice(0, 200).map(String)
       : body.productId
         ? [String(body.productId)]
         : [];
 
     if (!productIds.length) {
-      return NextResponse.json(
-        { success: false, error: 'กรุณาระบุ productId ที่ต้องการนำเข้า' },
-        { status: 400 }
-      );
+      return badRequest('กรุณาระบุ productId ที่ต้องการนำเข้า');
     }
 
     const catalogue = await fetchSupplierProducts();
@@ -116,9 +105,7 @@ export async function POST(request: NextRequest) {
       .upsert(rows, { onConflict: 'supplier,supplier_product_id' })
       .select('*');
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 403 });
-    }
+    if (error) return dbError(error, 403);
 
     return NextResponse.json(
       {

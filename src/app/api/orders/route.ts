@@ -1,11 +1,49 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { badRequest, dbError, quoteFilterValue, serverError } from '@/lib/api-response';
 import { fulfillOrder, recordFailure } from '@/lib/fulfillment';
 import { toOrder } from '@/lib/mappers';
+import { enforceRateLimit } from '@/lib/rate-limit';
 import { SupplierError } from '@/lib/supplier';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createRouteClient } from '@/lib/supabase/server';
+
+/** Each accepted order can place a real supplier order, so cap the rate. */
+const ORDER_LIMIT = { name: 'order-create', limit: 10, windowMs: 60_000 };
+
+const MAX_SEARCH_LENGTH = 100;
+const MAX_ITEMS = 50;
+
+/**
+ * `customer` lands in a jsonb column, so whatever is posted is what gets stored
+ * and later rendered in the admin order list. Keep the known fields, cap their
+ * length, and drop everything else — the browser has no business writing
+ * arbitrary keys into the order record.
+ */
+const CUSTOMER_FIELDS = ['name', 'phone', 'email', 'address', 'note'] as const;
+
+const trimmedString = (...values: unknown[]): string | null => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim().slice(0, 100);
+  }
+  return null;
+};
+
+function sanitiseCustomer(input: unknown): Record<string, string> | null {
+  if (typeof input !== 'object' || input === null) return null;
+
+  const source = input as Record<string, unknown>;
+  const customer: Record<string, string> = {};
+
+  for (const field of CUSTOMER_FIELDS) {
+    const value = source[field];
+    if (typeof value === 'string' && value.trim()) {
+      customer[field] = value.trim().slice(0, 500);
+    }
+  }
+
+  return customer.name ? customer : null;
+}
 
 export async function GET(request: NextRequest) {
   const { response: unauthorized } = await requireApiUser();
@@ -22,15 +60,14 @@ export async function GET(request: NextRequest) {
 
     if (status && status !== 'ทั้งหมด') query = query.eq('status', status);
     if (search) {
-      const term = `%${search}%`;
+      // Quoted so the term cannot close the filter and append its own.
+      const term = quoteFilterValue(`%${search.slice(0, MAX_SEARCH_LENGTH)}%`);
       query = query.or(`id.ilike.${term},customer->>name.ilike.${term},customer->>phone.ilike.${term}`);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.limit(500);
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
+    if (error) return dbError(error);
 
     return NextResponse.json({ success: true, count: data.length, data: data.map(toOrder) });
   } catch (error) {
@@ -49,30 +86,41 @@ export async function POST(request: NextRequest) {
   const { user, response: unauthorized } = await requireApiUser();
   if (unauthorized) return unauthorized;
 
+  const limited = enforceRateLimit(ORDER_LIMIT, user.id);
+  if (limited) return limited;
+
   try {
     const body = await request.json();
+    const customer = sanitiseCustomer(body.customer);
 
-    if (!body.customer || !Array.isArray(body.items) || body.items.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'ข้อมูลคำสั่งซื้อไม่สมบูรณ์ (ต้องมี customer และ items)' },
-        { status: 400 }
-      );
+    if (!customer || !Array.isArray(body.items) || body.items.length === 0) {
+      return badRequest('ข้อมูลคำสั่งซื้อไม่สมบูรณ์ (ต้องมี customer และ items)');
     }
 
+    if (body.items.length > MAX_ITEMS) {
+      return badRequest(`สั่งซื้อได้ครั้งละไม่เกิน ${MAX_ITEMS} รายการ`);
+    }
+
+    // Quantities are clamped to a sane integer range here as well as in
+    // place_order — a negative or fractional quantity must never reach the
+    // pricing arithmetic.
     const items = body.items.map((item: Record<string, unknown>) => ({
       product_id: item.productId ?? item.product_id,
-      quantity: Number(item.quantity) || 0,
-      selected_color: item.selectedColor ?? item.selected_color ?? null,
+      quantity: Math.min(Math.max(Math.trunc(Number(item.quantity) || 0), 0), 100),
+      selected_color: trimmedString(item.selectedColor, item.selected_color),
     }));
 
     const supabase = await createRouteClient();
     const { data, error } = await supabase.rpc('place_order', {
-      p_customer: body.customer,
+      p_customer: customer,
       p_items: items,
-      p_coupon_code: body.couponCode ?? null,
+      p_coupon_code:
+        typeof body.couponCode === 'string' ? body.couponCode.trim().slice(0, 64) : null,
     });
 
     if (error) {
+      // describe() only ever echoes the function's own tagged exceptions, which
+      // are written to be read by the shopper.
       return NextResponse.json(
         { success: false, error: 'order_failed', message: describe(error.message) },
         { status: 400 }
@@ -159,5 +207,9 @@ function describe(message: string): string {
   if (message.includes('product_not_found')) return 'มีสินค้าในตะกร้าที่ถูกลบไปแล้ว กรุณาตรวจสอบตะกร้าอีกครั้ง';
   if (message.includes('store_closed')) return 'ขณะนี้ร้านปิดรับคำสั่งซื้อชั่วคราว';
   if (message.includes('empty_cart')) return 'ตะกร้าว่าง';
-  return message;
+
+  // Anything else is a Postgres error rather than one of the function's own
+  // tagged exceptions, and quoting it would describe the schema to the caller.
+  console.error('[place_order]', message);
+  return 'สั่งซื้อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
 }

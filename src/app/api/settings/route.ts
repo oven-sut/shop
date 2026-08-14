@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { requireAdmin, requireApiUser } from '@/lib/api-auth';
+import { badRequest, dbError, serverError } from '@/lib/api-response';
 import { loadSettings, toSettings, toSettingsRow } from '@/lib/settings';
 import { createRouteClient } from '@/lib/supabase/server';
 
@@ -17,24 +17,14 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  const { user, response: unauthorized } = await requireApiUser();
-  if (unauthorized) return unauthorized;
-
-  if (user.role !== 'admin') {
-    return NextResponse.json(
-      { success: false, error: 'forbidden', message: 'เฉพาะผู้ดูแลระบบเท่านั้น' },
-      { status: 403 }
-    );
-  }
+  const { response: denied } = await requireAdmin();
+  if (denied) return denied;
 
   try {
     const patch = toSettingsRow(await request.json());
 
     if (!Object.keys(patch).length) {
-      return NextResponse.json(
-        { success: false, error: 'ไม่มีข้อมูลที่จะบันทึก' },
-        { status: 400 }
-      );
+      return badRequest('ไม่มีข้อมูลที่จะบันทึก');
     }
 
     const supabase = await createRouteClient();
@@ -45,9 +35,7 @@ export async function PATCH(request: NextRequest) {
       .select('*')
       .single();
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
+    if (error) return dbError(error);
 
     return NextResponse.json({
       success: true,

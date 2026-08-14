@@ -11,6 +11,7 @@ import {
   WalletTransaction,
 } from '../types/ecommerce';
 import { DEFAULT_SETTINGS, StoreSettings } from '../lib/settings';
+import { useAuth } from './AuthContext';
 
 interface Toast {
   id: string;
@@ -119,6 +120,8 @@ const readStored = <T,>(key: string, fallback: T): T => {
 };
 
 export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAdmin } = useAuth();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -189,10 +192,13 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let active = true;
 
     const load = async () => {
+      // The coupon list is admin-only — it is the full set of live discount
+      // codes, and only the admin dashboard renders it. Asking as a customer
+      // would just collect a 403.
       const [productList, orderList, couponList, storeSettings] = await Promise.all([
         callApi<Product[]>('/api/products'),
         callApi<Order[]>('/api/orders'),
-        callApi<Coupon[]>('/api/coupons'),
+        isAdmin ? callApi<Coupon[]>('/api/coupons') : Promise.resolve({ ok: true, data: [] }),
         callApi<StoreSettings>('/api/settings'),
       ]);
 
@@ -211,7 +217,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       active = false;
     };
-  }, [refreshWallet]);
+  }, [refreshWallet, isAdmin]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {

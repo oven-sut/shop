@@ -1,9 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { dbError, serverError } from '@/lib/api-response';
+import { enforceRateLimit } from '@/lib/rate-limit';
 import { requestSupplierCode, SupplierError } from '@/lib/supplier';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createRouteClient } from '@/lib/supabase/server';
+
+/**
+ * The supplier allows three code rounds per order and each one calls out to
+ * them. Capping the requests here keeps a stuck client from spending those
+ * rounds — and the shop's API quota — in a retry loop.
+ */
+const CODE_LIMIT = { name: 'guard-code', limit: 10, windowMs: 60_000 };
 
 /**
  * ขอรหัส Steam Guard ของบัญชีที่ซื้อไป
@@ -17,6 +25,9 @@ export async function POST(
 ) {
   const { user, response: unauthorized } = await requireApiUser();
   if (unauthorized) return unauthorized;
+
+  const limited = enforceRateLimit(CODE_LIMIT, user.id);
+  if (limited) return limited;
 
   try {
     const { id } = await params;
@@ -33,9 +44,7 @@ export async function POST(
       .limit(1)
       .maybeSingle();
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
+    if (error) return dbError(error);
 
     if (!fulfillment?.supplier_order_no) {
       return NextResponse.json(
@@ -46,7 +55,9 @@ export async function POST(
 
     const result = await requestSupplierCode(
       fulfillment.supplier_order_no,
-      typeof body.reason === 'string' && body.reason.trim() ? body.reason.trim() : undefined
+      typeof body.reason === 'string' && body.reason.trim()
+        ? body.reason.trim().slice(0, 200)
+        : undefined
     );
 
     // จำนวนครั้งที่ใช้ไปมาจากซัพพลายเออร์ เก็บไว้เพื่อแสดงผลเท่านั้น

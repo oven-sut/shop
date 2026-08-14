@@ -1,11 +1,26 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { dbError, serverError } from '@/lib/api-response';
 import { toTopup } from '@/lib/mappers';
+import { enforceRateLimit } from '@/lib/rate-limit';
 import { SlipDetails, SlipVerifyError, verifySlip } from '@/lib/slip';
 import { loadSettings, StoreSettings } from '@/lib/settings';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createRouteClient } from '@/lib/supabase/server';
+
+/**
+ * Every attempt spends one call of a paid slip-verification quota, whether or
+ * not the slip turns out to be valid, so the endpoint is capped per account.
+ * Ten a minute is far above what topping up honestly takes.
+ */
+const TOPUP_LIMIT = { name: 'topup-verify', limit: 10, windowMs: 60_000 };
+
+/** The providers reject anything larger anyway; refuse it before reading it. */
+const MAX_SLIP_BYTES = 5 * 1024 * 1024;
+const SLIP_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
+
+/** A QR payload is a short string; anything longer is not one. */
+const MAX_PAYLOAD_LENGTH = 512;
 
 const digitsOnly = (value: string) => value.replace(/\D/g, '');
 
@@ -55,9 +70,7 @@ export async function GET() {
       .order('created_at', { ascending: false })
       .limit(50);
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
+    if (error) return dbError(error);
 
     return NextResponse.json({
       success: true,
@@ -76,6 +89,9 @@ export async function POST(request: NextRequest) {
   const fail = (message: string, status = 400, code = 'topup_failed') =>
     NextResponse.json({ success: false, error: code, message }, { status });
 
+  const limited = enforceRateLimit(TOPUP_LIMIT, user.id);
+  if (limited) return limited;
+
   try {
     // ── อ่านคำขอ: อัปโหลดรูปสลิป หรือส่งข้อความ QR มาก็ได้ ──────────────────
     let declaredAmount = NaN;
@@ -88,13 +104,24 @@ export async function POST(request: NextRequest) {
       const file = form.get('slip');
       const payload = form.get('payload');
 
-      if (file instanceof File && file.size > 0) slipInput = { file };
-      else if (typeof payload === 'string' && payload.trim()) slipInput = { payload: payload.trim() };
+      if (file instanceof File && file.size > 0) {
+        // Checked here rather than left to the provider: an unbounded upload is
+        // read into memory and forwarded before anyone rejects it.
+        if (!SLIP_TYPES.includes(file.type)) {
+          return fail('รองรับเฉพาะรูปสลิปแบบ JPG, PNG, WebP, AVIF และ GIF');
+        }
+        if (file.size > MAX_SLIP_BYTES) {
+          return fail('รูปสลิปต้องไม่เกิน 5 MB');
+        }
+        slipInput = { file };
+      } else if (typeof payload === 'string' && payload.trim()) {
+        slipInput = { payload: payload.trim().slice(0, MAX_PAYLOAD_LENGTH) };
+      }
     } else {
       const body = await request.json();
       declaredAmount = Number(body.amount);
       if (typeof body.payload === 'string' && body.payload.trim()) {
-        slipInput = { payload: body.payload.trim() };
+        slipInput = { payload: body.payload.trim().slice(0, MAX_PAYLOAD_LENGTH) };
       }
     }
 
@@ -170,7 +197,7 @@ export async function POST(request: NextRequest) {
       if (error.code === '23505') {
         return fail('สลิปนี้ถูกใช้เติมเงินไปแล้ว', 409, 'slip_already_used');
       }
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+      return dbError(error);
     }
 
     const balance = Number((data as { balance: string | number } | null)?.balance ?? 0);

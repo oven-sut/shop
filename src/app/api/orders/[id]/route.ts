@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { requireAdmin, requireApiUser } from '@/lib/api-auth';
+import { badRequest, dbError, serverError } from '@/lib/api-response';
 import { toOrder } from '@/lib/mappers';
 import { createRouteClient } from '@/lib/supabase/server';
 
@@ -22,9 +22,7 @@ export async function GET(
 
     const { data, error } = await supabase.from('orders').select('*').eq('id', id).maybeSingle();
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
+    if (error) return dbError(error);
     // Someone else's order is invisible under RLS, so it reads as not found.
     if (!data) return notFound(id);
 
@@ -38,22 +36,27 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { response: unauthorized } = await requireApiUser();
-  if (unauthorized) return unauthorized;
+  // Moving an order's status is an admin action, and the orders RLS policy
+  // agrees — but a handler that states its own rule cannot be opened up by an
+  // unrelated change to the policies.
+  const { response: denied } = await requireAdmin();
+  if (denied) return denied;
 
   try {
     const { id } = await params;
     const body = await request.json();
 
     if (!body.status || !ORDER_STATUSES.includes(body.status)) {
-      return NextResponse.json(
-        { success: false, error: `status ต้องเป็นหนึ่งใน: ${ORDER_STATUSES.join(', ')}` },
-        { status: 400 }
-      );
+      return badRequest(`status ต้องเป็นหนึ่งใน: ${ORDER_STATUSES.join(', ')}`);
     }
 
     const patch: Record<string, unknown> = { status: body.status };
-    if (body.trackingNumber !== undefined) patch.tracking_number = body.trackingNumber || null;
+    if (body.trackingNumber !== undefined) {
+      patch.tracking_number =
+        typeof body.trackingNumber === 'string' && body.trackingNumber.trim()
+          ? body.trackingNumber.trim().slice(0, 100)
+          : null;
+    }
 
     const supabase = await createRouteClient();
     const { data, error } = await supabase
@@ -63,9 +66,7 @@ export async function PATCH(
       .select('*')
       .maybeSingle();
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 403 });
-    }
+    if (error) return dbError(error, 403);
     if (!data) return notFound(id);
 
     return NextResponse.json({

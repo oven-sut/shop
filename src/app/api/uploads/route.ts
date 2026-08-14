@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { requireAdmin } from '@/lib/api-auth';
+import { badRequest, dbError, serverError } from '@/lib/api-response';
 import { createRouteClient } from '@/lib/supabase/server';
 
 const BUCKET = process.env.NEXT_PUBLIC_SUPABASE_PRODUCT_BUCKET || 'product-images';
@@ -11,33 +11,23 @@ const extensionOf = (type: string) => (type === 'image/jpeg' ? 'jpg' : type.spli
 
 /** Uploads a product image to Supabase Storage and returns its public URL. */
 export async function POST(request: NextRequest) {
-  const { user, response: unauthorized } = await requireApiUser();
-  if (unauthorized) return unauthorized;
-
-  if (user.role !== 'admin') {
-    return NextResponse.json(
-      { success: false, error: 'forbidden', message: 'เฉพาะผู้ดูแลระบบเท่านั้น' },
-      { status: 403 }
-    );
-  }
+  const { response: denied } = await requireAdmin();
+  if (denied) return denied;
 
   try {
     const form = await request.formData();
     const file = form.get('file');
 
     if (!(file instanceof File) || file.size === 0) {
-      return NextResponse.json({ success: false, error: 'กรุณาเลือกไฟล์รูป' }, { status: 400 });
+      return badRequest('กรุณาเลือกไฟล์รูป');
     }
 
     if (!ALLOWED.includes(file.type)) {
-      return NextResponse.json(
-        { success: false, error: 'รองรับเฉพาะไฟล์ JPG, PNG, WebP, AVIF และ GIF' },
-        { status: 400 }
-      );
+      return badRequest('รองรับเฉพาะไฟล์ JPG, PNG, WebP, AVIF และ GIF');
     }
 
     if (file.size > MAX_BYTES) {
-      return NextResponse.json({ success: false, error: 'ไฟล์ต้องไม่เกิน 5 MB' }, { status: 400 });
+      return badRequest('ไฟล์ต้องไม่เกิน 5 MB');
     }
 
     // The upload runs as the signed-in admin, so the storage policy is what
@@ -51,9 +41,7 @@ export async function POST(request: NextRequest) {
       upsert: false,
     });
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
+    if (error) return dbError(error);
 
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
 

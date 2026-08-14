@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
-import { serverError } from '@/lib/api-response';
+import { dbError, serverError } from '@/lib/api-response';
 import { toWalletTransaction } from '@/lib/mappers';
 import { createRouteClient } from '@/lib/supabase/server';
 
@@ -21,9 +21,7 @@ export async function GET() {
         .limit(30),
     ]);
 
-    if (wallet.error) {
-      return NextResponse.json({ success: false, error: wallet.error.message }, { status: 400 });
-    }
+    if (wallet.error) return dbError(wallet.error);
 
     return NextResponse.json({
       success: true,
