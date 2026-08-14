@@ -4,9 +4,10 @@ import React from 'react';
 import Link from 'next/link';
 import { useShop } from '../context/ShopContext';
 import { ArrowRight } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const HeroBanner: React.FC = () => {
-  const { products, setSelectedCategory, setQuickViewProduct } = useShop();
+  const { products, isLoading, setSelectedCategory, setQuickViewProduct } = useShop();
 
   const featured = products.find((p) => p.isFeatured) ?? products[0] ?? null;
   const categoryCount = new Set(products.map((p) => p.category).filter(Boolean)).size;
@@ -67,7 +68,15 @@ export const HeroBanner: React.FC = () => {
               <div key={metric.label}>
                 <dt className="sr-only">{metric.label}</dt>
                 <dd>
-                  <span className="block text-2xl font-bold text-neutral-900">{metric.value}</span>
+                  {/* A hard "0" while the catalogue is still in flight reads as
+                      an empty shop rather than as a pending number. */}
+                  {isLoading ? (
+                    <Skeleton className="h-7 w-10" />
+                  ) : (
+                    <span className="block text-2xl font-bold text-neutral-900">
+                      {metric.value}
+                    </span>
+                  )}
                   <span className="text-xs text-neutral-400">{metric.label}</span>
                 </dd>
               </div>
@@ -78,7 +87,21 @@ export const HeroBanner: React.FC = () => {
         {/* Right Column — whichever product the shop is actually featuring */}
         <div className="lg:col-span-5">
           <div className="relative w-full max-w-md mx-auto aspect-square overflow-hidden border border-neutral-200 rounded-md bg-neutral-50 group">
-            {featured ? (
+            {isLoading ? (
+              /* Same panel, no content yet — not "the shop is empty", which is
+                 what this said before while the request was still open. */
+              <div className="w-full h-full">
+                <Skeleton className="w-full h-full rounded-none" />
+                <div className="absolute bottom-0 inset-x-0 bg-white border-t border-neutral-200 p-4 space-y-3">
+                  <Skeleton className="h-2.5 w-20" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <div className="flex items-center justify-between pt-1">
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                </div>
+              </div>
+            ) : featured ? (
               <>
                 {featured.image && (
                   // eslint-disable-next-line @next/next/no-img-element

@@ -11,21 +11,26 @@ import { Topup } from '../../types/ecommerce';
 import { ArrowDownRight, ArrowUpRight, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton, SkeletonRegion } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 
 const money = (value: number) => `฿${value.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
 
 function WalletContent() {
-  const { balance, walletTransactions, settings, topUp, refreshWallet, showToast } = useShop();
+  const { balance, walletTransactions, settings, isLoading, topUp, refreshWallet, showToast } =
+    useShop();
 
   const [amount, setAmount] = useState('');
   const [slip, setSlip] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [history, setHistory] = useState<Topup[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
 
   const loadHistory = async () => {
     const response = await fetch('/api/topups');
     const body = await response.json().catch(() => ({}));
     if (body.success) setHistory(body.data as Topup[]);
+    setIsHistoryLoading(false);
   };
 
   // Top-up history is only needed on this page, so it is fetched here on mount
@@ -76,7 +81,12 @@ function WalletContent() {
           <span className="text-[11px] uppercase tracking-[0.25em] text-neutral-400">
             ยอดเงินคงเหลือ
           </span>
-          <p className="text-4xl font-extrabold tracking-tight mt-2">{money(balance)}</p>
+          {/* ฿0.00 and "not loaded yet" must not look the same on a wallet. */}
+          {isLoading ? (
+            <Skeleton className="h-10 w-48 mt-2 bg-neutral-700" />
+          ) : (
+            <p className="text-4xl font-extrabold tracking-tight mt-2">{money(balance)}</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -168,8 +178,14 @@ function WalletContent() {
                 disabled={isSubmitting || !receiverConfigured}
                 className="w-full h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md border-0 disabled:opacity-40"
               >
+                {isSubmitting && <Spinner className="mr-2" />}
                 {isSubmitting ? 'กำลังตรวจสอบสลิป...' : 'ยืนยันการเติมเงิน'}
               </Button>
+              {isSubmitting && (
+                <p className="text-[11px] text-neutral-400 text-center">
+                  ส่งสลิปไปตรวจกับธนาคาร อาจใช้เวลาสักครู่ กรุณาอย่าปิดหน้านี้
+                </p>
+              )}
             </form>
           </section>
 
@@ -179,7 +195,25 @@ function WalletContent() {
               ความเคลื่อนไหวล่าสุด
             </h2>
 
-            {walletTransactions.length === 0 ? (
+            {/* This list comes from the shop context alongside the balance, so it
+                follows the context's flag — not the top-up table's own fetch. */}
+            {isLoading ? (
+              <SkeletonRegion label="กำลังโหลดความเคลื่อนไหว" className="divide-y divide-neutral-100">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div key={index} className="py-3 flex items-center gap-3">
+                    <Skeleton className="size-4 shrink-0 rounded-sm" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-3 w-2/5" />
+                      <Skeleton className="h-2.5 w-3/5" />
+                    </div>
+                    <div className="space-y-1.5 items-end flex flex-col">
+                      <Skeleton className="h-3 w-16" />
+                      <Skeleton className="h-2.5 w-20" />
+                    </div>
+                  </div>
+                ))}
+              </SkeletonRegion>
+            ) : walletTransactions.length === 0 ? (
               <p className="text-xs text-neutral-400 py-10 text-center">ยังไม่มีรายการ</p>
             ) : (
               <ul className="divide-y divide-neutral-100">
@@ -228,7 +262,13 @@ function WalletContent() {
             ประวัติการเติมเงิน
           </h2>
 
-          {history.length === 0 ? (
+          {isHistoryLoading ? (
+            <SkeletonRegion label="กำลังโหลดประวัติการเติมเงิน" className="space-y-3 py-2">
+              {Array.from({ length: 3 }, (_, index) => (
+                <Skeleton key={index} className="h-4 w-full" />
+              ))}
+            </SkeletonRegion>
+          ) : history.length === 0 ? (
             <p className="text-xs text-neutral-400 py-6 text-center">ยังไม่มีการเติมเงิน</p>
           ) : (
             <div className="overflow-x-auto">

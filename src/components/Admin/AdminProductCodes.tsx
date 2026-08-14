@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useShop } from '../../context/ShopContext';
 import { Button } from '@/components/ui/button';
+import { Skeleton, SkeletonRegion } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 
 interface ProductCode {
   id: string;
@@ -144,13 +146,22 @@ export const AdminProductCodes: React.FC<Props> = ({ productId, onStockChange })
             disabled={isSaving || !input.trim()}
             className="h-9 bg-neutral-900 hover:bg-neutral-700 text-white font-medium text-xs px-4 rounded-md border-0 disabled:opacity-40"
           >
+            {isSaving && <Spinner className="mr-1.5" />}
             {isSaving ? 'กำลังเพิ่ม...' : 'เพิ่มเข้าคลัง'}
           </Button>
         </div>
       </div>
 
       <div className="max-h-52 overflow-y-auto border border-neutral-200 rounded-md divide-y divide-neutral-100">
-        {isLoading && <p className="p-3 text-[11px] text-neutral-400">กำลังโหลด...</p>}
+        {isLoading && (
+          <SkeletonRegion label="กำลังโหลดคลังรหัส" className="divide-y divide-neutral-100">
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={index} className="p-2.5">
+                <Skeleton className="h-3.5 w-1/2" />
+              </div>
+            ))}
+          </SkeletonRegion>
+        )}
 
         {!isLoading && visible.length === 0 && (
           <p className="p-3 text-[11px] text-neutral-400">

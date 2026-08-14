@@ -8,6 +8,7 @@ import { Order } from '../types/ecommerce';
 import { X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 
 /**
  * ยืนยันคำสั่งซื้อ
@@ -142,6 +143,7 @@ export const CheckoutModal: React.FC = () => {
                 disabled={!canAfford || isPlacing || cart.length === 0}
                 className="h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm px-6 rounded-md transition-colors border-0 disabled:opacity-40 shrink-0"
               >
+                {isPlacing && <Spinner className="mr-2" />}
                 {isPlacing ? 'กำลังดำเนินการ...' : `ยืนยันและจ่าย ฿${cartTotal.toLocaleString()}`}
               </Button>
             </div>

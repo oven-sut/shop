@@ -6,6 +6,7 @@ import { useShop } from '../../context/ShopContext';
 import { X, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { AdminProductCodes } from './AdminProductCodes';
 
 interface AdminProductModalProps {
@@ -285,7 +286,8 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                   onChange={(e) => setImage(e.target.value)}
                   className="w-full bg-neutral-50 border-neutral-200 text-neutral-900"
                 />
-                <p className="text-[11px] text-neutral-400">
+                <p className="text-[11px] text-neutral-400 flex items-center gap-1.5">
+                  {isUploading && <Spinner className="size-3 text-neutral-900" />}
                   {isUploading ? 'กำลังอัปโหลด...' : 'อัปโหลดเก็บที่ Supabase Storage · ไม่เกิน 5 MB'}
                 </p>
               </div>
@@ -379,6 +381,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
               disabled={isSaving || isUploading}
               className="bg-neutral-900 hover:bg-neutral-700 text-white px-6 py-2.5 rounded-md font-bold transition-all border-0 disabled:opacity-50"
             >
+              {(isSaving || isUploading) && <Spinner className="mr-2" />}
               {isSaving ? 'กำลังบันทึก...' : editingProduct ? 'บันทึกการแก้ไข' : 'ยืนยันเพิ่มสินค้า'}
             </Button>
           </div>

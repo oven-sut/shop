@@ -7,9 +7,10 @@ import { Search, X, FileText, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const AdminOrderList: React.FC = () => {
-  const { orders, updateOrderStatus } = useShop();
+  const { orders, isLoading, updateOrderStatus } = useShop();
 
   const [statusFilter, setStatusFilter] = useState<string>('ทั้งหมด');
   const [search, setSearch] = useState('');
@@ -81,7 +82,17 @@ export const AdminOrderList: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-neutral-100">
-              {filteredOrders.length === 0 ? (
+              {isLoading ? (
+                Array.from({ length: 5 }, (_, index) => (
+                  <TableRow key={index} className="border-b border-neutral-100">
+                    {Array.from({ length: 8 }, (_, cell) => (
+                      <TableCell key={cell} className="p-3.5">
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : filteredOrders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="p-8 text-center text-neutral-400">
                     ไม่พบข้อมูลคำสั่งซื้อที่ค้นหา

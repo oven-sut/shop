@@ -12,6 +12,7 @@ import { ToastContainer } from '../../components/ToastContainer';
 import { Settings, Save, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { LoadingBlock, Spinner } from '@/components/ui/spinner';
 import { StoreSettings } from '../../lib/settings';
 
 /**
@@ -170,7 +171,7 @@ function StoreSettingsPanel() {
                   disabled={isSaving}
                   className="bg-neutral-900 hover:bg-neutral-700 text-white font-bold text-xs px-6 py-3 rounded-md transition-all flex items-center gap-2 border-0 disabled:opacity-50"
                 >
-                  <Save className="w-4 h-4" />
+                  {isSaving ? <Spinner /> : <Save className="w-4 h-4" />}
                   <span>{isSaving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}</span>
                 </Button>
               </div>
@@ -208,7 +209,7 @@ function AdminContent() {
 
         {activeTab === 'settings' &&
           (isLoading ? (
-            <p className="text-center text-xs text-neutral-400 py-16">กำลังโหลดการตั้งค่า...</p>
+            <LoadingBlock label="กำลังโหลดการตั้งค่า..." />
           ) : (
             <StoreSettingsPanel />
           ))}

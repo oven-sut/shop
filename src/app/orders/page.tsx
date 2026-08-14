@@ -9,6 +9,34 @@ import { ToastContainer } from '../../components/ToastContainer';
 import { CartDrawer } from '../../components/CartDrawer';
 import { Copy, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Skeleton, SkeletonRegion } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+
+/** Traces AccountCard: title, order line, two secret boxes, the code row. */
+function AccountCardSkeleton() {
+  return (
+    <div className="bg-white border border-neutral-200 rounded-md p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-2 min-w-0 flex-1">
+          <Skeleton className="h-4 w-2/5" />
+          <Skeleton className="h-2.5 w-3/5" />
+        </div>
+        <Skeleton className="h-6 w-24 rounded-none" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Skeleton className="h-16" />
+        <Skeleton className="h-16" />
+      </div>
+      <div className="border-t border-neutral-100 pt-4 flex items-center justify-between gap-3">
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-2.5 w-40" />
+        </div>
+        <Skeleton className="h-10 w-28 rounded-md" />
+      </div>
+    </div>
+  );
+}
 
 interface Fulfillment {
   id: string;
@@ -193,7 +221,11 @@ function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => 
             disabled={isLoading || remaining <= 0}
             className="h-10 bg-neutral-900 hover:bg-neutral-700 text-white font-medium text-xs px-4 rounded-md border-0 disabled:opacity-40"
           >
-            <KeyRound className="w-4 h-4 mr-1.5" />
+            {isLoading ? (
+              <Spinner className="mr-1.5" />
+            ) : (
+              <KeyRound className="w-4 h-4 mr-1.5" />
+            )}
             {isLoading ? 'กำลังขอ...' : code ? 'ขอรหัสใหม่' : 'ขอรหัส'}
           </Button>
         </div>
@@ -252,7 +284,10 @@ function OrdersContent() {
         </div>
 
         {isLoading ? (
-          <p className="text-xs text-neutral-400 py-16 text-center">กำลังโหลด...</p>
+          <SkeletonRegion label="กำลังโหลดประวัติการซื้อ" className="space-y-4">
+            <AccountCardSkeleton />
+            <AccountCardSkeleton />
+          </SkeletonRegion>
         ) : items.length === 0 ? (
           <div className="border border-neutral-200 rounded-md p-16 text-center space-y-4">
             <p className="text-sm text-neutral-500">ยังไม่มีคำสั่งซื้อ</p>

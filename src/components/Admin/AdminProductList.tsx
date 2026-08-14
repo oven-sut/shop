@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const AdminProductList: React.FC = () => {
-  const { products, deleteProduct, updateProduct } = useShop();
+  const { products, isLoading, deleteProduct, updateProduct } = useShop();
 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ทั้งหมด');
@@ -91,7 +92,19 @@ export const AdminProductList: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-neutral-100">
-              {filteredProducts.length === 0 ? (
+              {/* Loading first — otherwise an admin opening the tab is told the
+                  search found nothing while the catalogue is still in flight. */}
+              {isLoading ? (
+                Array.from({ length: 5 }, (_, index) => (
+                  <TableRow key={index} className="border-b border-neutral-100">
+                    {Array.from({ length: 7 }, (_, cell) => (
+                      <TableCell key={cell} className="p-3.5">
+                        <Skeleton className="h-4 w-full" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : filteredProducts.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="p-8 text-center text-neutral-400">
                     ไม่พบรายการสินค้าที่ค้นหา

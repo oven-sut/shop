@@ -6,6 +6,8 @@ import { Boxes, Download, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton, SkeletonRegion } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 
 interface SupplierCatalogueItem {
   productId: string;
@@ -102,7 +104,10 @@ export const AdminSupplier: React.FC = () => {
                   <span className="font-mono text-[11px]">{account.keyPrefix}</span>
                 </p>
               ) : (
-                <p className="text-xs text-neutral-400">กำลังเชื่อมต่อ...</p>
+                <span className="flex items-center gap-2 text-xs text-neutral-400">
+                  <Spinner className="size-3.5 text-neutral-900" />
+                  กำลังเชื่อมต่อ...
+                </span>
               )}
             </div>
           </div>
@@ -140,7 +145,21 @@ export const AdminSupplier: React.FC = () => {
       )}
 
       {isLoading && !items.length ? (
-        <p className="text-xs text-neutral-400 py-16 text-center">กำลังโหลดแคตตาล็อก...</p>
+        <SkeletonRegion
+          label="กำลังโหลดแคตตาล็อกของซัพพลายเออร์"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          {Array.from({ length: 6 }, (_, index) => (
+            <div key={index} className="border border-neutral-200 rounded-md overflow-hidden">
+              <Skeleton className="aspect-video rounded-none" />
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-3.5 w-4/5" />
+                <Skeleton className="h-2.5 w-2/5" />
+                <Skeleton className="h-9 w-full rounded-md" />
+              </div>
+            </div>
+          ))}
+        </SkeletonRegion>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((item) => (
@@ -203,7 +222,11 @@ export const AdminSupplier: React.FC = () => {
                         : 'w-full bg-neutral-900 hover:bg-neutral-700 text-white text-xs font-bold rounded-md border-0'
                     }
                   >
-                    <Download className="w-4 h-4 mr-1.5" />
+                    {importing === item.productId ? (
+                      <Spinner className="mr-1.5" />
+                    ) : (
+                      <Download className="w-4 h-4 mr-1.5" />
+                    )}
                     {importing === item.productId
                       ? 'กำลังนำเข้า...'
                       : item.imported

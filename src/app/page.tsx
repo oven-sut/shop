@@ -6,15 +6,17 @@ import { Navbar } from '../components/Navbar';
 import { HeroBanner } from '../components/HeroBanner';
 import { FeatureBar } from '../components/FeatureBar';
 import { ProductCard } from '../components/ProductCard';
+import { ProductGridSkeleton } from '../components/ProductCardSkeleton';
 import { ProductQuickViewModal } from '../components/ProductQuickViewModal';
 import { CartDrawer } from '../components/CartDrawer';
 import { CheckoutModal } from '../components/CheckoutModal';
 import { ToastContainer } from '../components/ToastContainer';
 import { Footer } from '../components/Footer';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function StorefrontContent() {
-  const { products, searchQuery, selectedCategory, setSelectedCategory } = useShop();
+  const { products, isLoading, searchQuery, selectedCategory, setSelectedCategory } = useShop();
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
@@ -47,7 +49,17 @@ function StorefrontContent() {
         <FeatureBar />
 
         {/* Hot / Featured Products Showcase */}
-        {!searchQuery && selectedCategory === 'ทั้งหมด' && featuredProducts.length > 0 && (
+        {isLoading && (
+          <section className="pt-16 space-y-6">
+            <div className="border-b border-neutral-200 pb-4 space-y-2">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-3 w-72" />
+            </div>
+            <ProductGridSkeleton count={4} />
+          </section>
+        )}
+
+        {!isLoading && !searchQuery && selectedCategory === 'ทั้งหมด' && featuredProducts.length > 0 && (
           <section className="pt-16 space-y-6">
             <div className="flex items-end justify-between gap-4 border-b border-neutral-200 pb-4">
               <div>
@@ -83,7 +95,7 @@ function StorefrontContent() {
                 <strong className="font-semibold text-neutral-900">
                   &quot;{selectedCategory}&quot;
                 </strong>{' '}
-                · {filteredProducts.length} รายการ
+                · {isLoading ? 'กำลังโหลด...' : `${filteredProducts.length} รายการ`}
               </p>
             </div>
             <span className="text-[11px] tracking-[0.2em] uppercase text-neutral-400 shrink-0 hidden sm:block">
@@ -91,8 +103,15 @@ function StorefrontContent() {
             </span>
           </div>
 
-          {/* Product Grid */}
-          {filteredProducts.length === 0 ? (
+          {/*
+            Product Grid — the loading branch has to come first. Before the
+            catalogue arrives `filteredProducts` is empty, and without this the
+            page confidently told every first-time visitor that their search
+            matched nothing.
+          */}
+          {isLoading ? (
+            <ProductGridSkeleton />
+          ) : filteredProducts.length === 0 ? (
             <div className="border border-neutral-200 rounded-md p-16 text-center space-y-4">
               <h3 className="text-base font-semibold text-neutral-900">ไม่พบสินค้าที่คุณค้นหา</h3>
               <p className="text-xs text-neutral-500 max-w-sm mx-auto">

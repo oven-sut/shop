@@ -11,6 +11,7 @@ import { safeRedirectPath } from '../../lib/auth';
 import { Mail, Lock, User as UserIcon, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 /** Google's mark, drawn in a single ink so it sits inside the monochrome palette. */
@@ -170,7 +171,7 @@ function LoginContent() {
                 onClick={handleGoogleLogin}
                 className="w-full h-11 bg-white hover:bg-neutral-100 text-neutral-900 border-neutral-300 font-medium text-sm rounded-md flex items-center justify-center gap-2.5"
               >
-                <GoogleIcon />
+                {isGoogleLoading ? <Spinner /> : <GoogleIcon />}
                 <span>{isGoogleLoading ? 'กำลังเชื่อมต่อ Google...' : 'เข้าสู่ระบบด้วย Google'}</span>
               </Button>
 
@@ -221,8 +222,10 @@ function LoginContent() {
                   disabled={isSubmitting}
                   className="w-full h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md transition-colors border-0 flex items-center justify-center gap-2 disabled:opacity-40"
                 >
-                  <span>เข้าสู่ระบบ</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {/* เดิมปุ่มแค่จางลงตอนกด ไม่มีอะไรบอกว่ากำลังทำงานอยู่ */}
+                  {isSubmitting && <Spinner />}
+                  <span>{isSubmitting ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}</span>
+                  {!isSubmitting && <ArrowRight className="w-4 h-4" />}
                 </Button>
               </form>
             </TabsContent>
@@ -237,8 +240,8 @@ function LoginContent() {
                 onClick={handleGoogleLogin}
                 className="w-full h-11 bg-white hover:bg-neutral-100 text-neutral-900 border-neutral-300 font-medium text-sm rounded-md flex items-center justify-center gap-2.5"
               >
-                <GoogleIcon />
-                <span>สมัครสมาชิกด้วย Google</span>
+                {isGoogleLoading ? <Spinner /> : <GoogleIcon />}
+                <span>{isGoogleLoading ? 'กำลังเชื่อมต่อ Google...' : 'สมัครสมาชิกด้วย Google'}</span>
               </Button>
 
               <div className="relative my-5">
@@ -334,8 +337,9 @@ function LoginContent() {
                   disabled={isSubmitting || !acceptedTerms}
                   className="w-full h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md transition-colors border-0 flex items-center justify-center gap-2 disabled:opacity-40"
                 >
-                  <span>ยืนยันสมัครสมาชิก</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {isSubmitting && <Spinner />}
+                  <span>{isSubmitting ? 'กำลังสมัครสมาชิก...' : 'ยืนยันสมัครสมาชิก'}</span>
+                  {!isSubmitting && <ArrowRight className="w-4 h-4" />}
                 </Button>
               </form>
             </TabsContent>
