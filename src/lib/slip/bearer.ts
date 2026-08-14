@@ -1,4 +1,12 @@
-import { failure, isRecord, normalise, retryableStatus, toErrorCode, unreachable } from './shared';
+import {
+  failure,
+  isRecord,
+  normalise,
+  retryableStatus,
+  toErrorCode,
+  unreachable,
+  withTimeout,
+} from './shared';
 import { SlipDetails, SlipInput, SlipProvider } from './types';
 
 /**
@@ -75,7 +83,7 @@ export function createBearerProvider(config: BearerProviderConfig): SlipProvider
 
       let response: Response;
       try {
-        response = await fetch(url, request);
+        response = await fetch(url, withTimeout(request));
       } catch {
         throw unreachable(config.name);
       }

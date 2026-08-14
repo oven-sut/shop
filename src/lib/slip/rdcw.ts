@@ -1,4 +1,12 @@
-import { failure, isRecord, normalise, retryableStatus, toErrorCode, unreachable } from './shared';
+import {
+  failure,
+  isRecord,
+  normalise,
+  retryableStatus,
+  toErrorCode,
+  unreachable,
+  withTimeout,
+} from './shared';
 import { SlipDetails, SlipInput, SlipProvider, SlipVerifyError } from './types';
 
 /** RDCW Slip Verify — https://slip.rdcw.co.th/docs */
@@ -35,7 +43,7 @@ export const rdcwProvider: SlipProvider = {
 
     let response: Response;
     try {
-      response = await fetch(process.env.RDCW_BASE_URL || DEFAULT_URL, request);
+      response = await fetch(process.env.RDCW_BASE_URL || DEFAULT_URL, withTimeout(request));
     } catch {
       throw unreachable('rdcw');
     }

@@ -4,6 +4,18 @@ export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
 /**
+ * Providers are tried one after another, so a single hung request stalls the
+ * whole chain — and the customer's top-up with it. Cutting a slow provider off
+ * is also what lets the next one get its turn, which is the point of the chain.
+ */
+const TIMEOUT_MS = 15_000;
+
+export const withTimeout = <T extends RequestInit>(init: T): T => ({
+  ...init,
+  signal: AbortSignal.timeout(TIMEOUT_MS),
+});
+
+/**
  * Depth-first lookup, so a field keeps working whether it sits at the root or
  * nested under `data` / `data.rawSlip` / … Each provider wraps the bank's
  * response differently, so searching beats hard-coding a path per provider.

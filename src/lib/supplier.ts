@@ -79,6 +79,9 @@ const FRIENDLY: Record<string, string> = {
   SLOT_UNAVAILABLE: 'ช่วงเวลาเช่านี้ถูกจองแล้ว',
 };
 
+/** สั่งซื้อกับซัพพลายเออร์ใช้เวลาจริงไม่กี่วินาที เผื่อไว้ให้พอสำหรับรอบที่ช้าที่สุด */
+const TIMEOUT_MS = 20_000;
+
 function config() {
   const baseUrl = process.env.SUPPLIER_499K_BASE_URL || 'https://store.499k-network.com/api/v1';
   const apiKey = process.env.SUPPLIER_499K_API_KEY;
@@ -111,9 +114,18 @@ async function call<T = Record<string, unknown>>(
       body: init?.body ? JSON.stringify(init.body) : undefined,
       // ราคา/สต็อกเปลี่ยนตลอด จึงห้าม cache
       cache: 'no-store',
+      // ไม่มี timeout = ปลายทางค้างเมื่อไหร่ คำขอฝั่งเราค้างตาม กินคอนเนกชัน
+      // ไปเรื่อย ๆ จนพร็อกซีตัดเป็น 502 โดยไม่มีร่องรอยว่าค้างที่ไหน
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-  } catch {
-    throw new SupplierError('supplier_unreachable', 'ติดต่อระบบซัพพลายเออร์ไม่ได้');
+  } catch (error) {
+    const timedOut = error instanceof DOMException && error.name === 'TimeoutError';
+    throw new SupplierError(
+      timedOut ? 'supplier_timeout' : 'supplier_unreachable',
+      timedOut
+        ? 'ระบบซัพพลายเออร์ตอบช้าเกินกำหนด กรุณาลองใหม่อีกครั้ง'
+        : 'ติดต่อระบบซัพพลายเออร์ไม่ได้'
+    );
   }
 
   const body: unknown = await response.json().catch(() => null);
