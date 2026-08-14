@@ -123,6 +123,20 @@
   p, li, td {
     word-break: break-word;
   }
+  /* Tailwind v4 dropped the v3 preflight rule that gave buttons a pointer, so
+     every button in the app fell back to the browser default arrow. Restore it
+     here rather than sprinkling cursor-pointer on each one, and leave disabled
+     controls alone so they still read as unavailable. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 /* Horizontal tab/category strips scroll without a visible bar. */
