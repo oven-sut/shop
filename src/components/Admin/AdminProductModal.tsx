@@ -20,7 +20,17 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   onClose,
   editingProduct
 }) => {
-  const { addProduct, updateProduct, uploadProductImage } = useShop();
+  const { products, addProduct, updateProduct, uploadProductImage } = useShop();
+
+  /**
+   * Suggestions only — the field itself is free text, so typing a name that is
+   * not here creates the category the moment the product is saved. That mirrors
+   * the storefront, which builds its filter strip from the categories products
+   * actually carry rather than from a fixed list.
+   */
+  const knownCategories = Array.from(
+    new Set(products.map((p) => p.category).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, 'th'));
 
   // The form is seeded once, at mount. AdminProductList mounts this only while the
   // modal is open and keys it by product id, so switching products or reopening the
@@ -69,7 +79,9 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
 
     const payload = {
       name,
-      category,
+      // Trimmed, or a stray space would split one category into two on the
+      // storefront filter strip.
+      category: category.trim(),
       price: Number(price),
       originalPrice: originalPrice !== '' ? Number(originalPrice) : undefined,
       stock: Number(stock),
@@ -137,16 +149,23 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
               <label className="block font-semibold text-neutral-700 mb-1">
                 หมวดหมู่สินค้า <span className="text-neutral-900">*</span>
               </label>
-              <select
+              <Input
+                type="text"
+                required
+                list="admin-product-categories"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-neutral-50 border border-neutral-200 rounded-md p-3 text-neutral-900 focus:outline-none"
-              >
-                <option value="หูฟัง & แอคเซสซอรี">หูฟัง & แอคเซสซอรี</option>
-                <option value="สมาร์ทวอทช์ & แกดเจ็ต">สมาร์ทวอทช์ & แกดเจ็ต</option>
-                <option value="เกมมิ่ง & ไอที">เกมมิ่ง & ไอที</option>
-                <option value="ไลฟ์สไตล์ & เดสก์ท็อป">ไลฟ์สไตล์ & เดสก์ท็อป</option>
-              </select>
+                placeholder="เลือกจากที่มีอยู่ หรือพิมพ์หมวดใหม่"
+                className="w-full bg-neutral-50 border-neutral-200 text-neutral-900"
+              />
+              <datalist id="admin-product-categories">
+                {knownCategories.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+              <p className="mt-1 text-[11px] text-neutral-400">
+                พิมพ์ชื่อใหม่ได้เลย หมวดจะถูกสร้างขึ้นตอนบันทึกสินค้า
+              </p>
             </div>
           </div>
 
