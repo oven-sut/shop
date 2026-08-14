@@ -13,9 +13,15 @@
  *
  * The endpoint is the one the TrueMoney app itself calls; it is not a published
  * API, so `TRUEMONEY_BASE_URL` exists to redirect it if the path ever moves, or
- * to point at a proxy — gift.truemoney.com sits behind Cloudflare and answers
- * some networks with an HTML block page instead of JSON, whatever headers are
- * sent. `edgeBlocked()` below tells that case apart from a real answer.
+ * to point at a proxy.
+ *
+ * A proxy is often necessary. gift.truemoney.com sits behind Cloudflare's bot
+ * protection, which scores the caller, not the request: the same call can be
+ * answered normally and then blocked minutes later from the same address once a
+ * few automated requests have been made, and datacenter addresses tend to be
+ * refused outright. No combination of headers gets past it. `edgeBlocked()` tells
+ * that HTML block page apart from a real answer, and `docs/truemoney-proxy-worker.js`
+ * is a ready-made relay to point `TRUEMONEY_BASE_URL` at.
  */
 const DEFAULT_BASE_URL = 'https://gift.truemoney.com';
 
@@ -117,7 +123,11 @@ const CODES: Record<string, { message: string; status: number; retryable?: boole
  */
 function edgeBlocked(response: Response, code: string | null): boolean {
   if (code) return false;
-  return response.status === 403 || response.status === 429 || response.status === 503;
+
+  // 404 is in the list only because `code` is null: TrueMoney's own "no such
+  // voucher" carries VOUCHER_NOT_FOUND, so a bodiless 404 means the request died
+  // at a relay or a wrong base URL — the voucher was never touched.
+  return [403, 404, 429, 503].includes(response.status);
 }
 
 /**
@@ -139,14 +149,21 @@ export async function redeemVoucher(hash: string, mobile: string): Promise<Redee
 
   const base = (process.env.TRUEMONEY_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, '');
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+
+  // A relay must be able to tell the shop apart from anyone who finds its URL:
+  // left open, it would redeem vouchers into any wallet a stranger names.
+  const proxySecret = process.env.TRUEMONEY_PROXY_SECRET;
+  if (proxySecret) headers['X-Proxy-Secret'] = proxySecret;
+
   let response: Response;
   try {
     response = await fetch(`${base}/campaign/vouchers/${hash}/redeem`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
+      headers,
       body: JSON.stringify({ mobile: digits, voucher_hash: hash }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
@@ -169,10 +186,19 @@ export async function redeemVoucher(hash: string, mobile: string): Promise<Redee
     // A block page never reached the redeem logic, so the voucher is certainly
     // untouched — say that, instead of implying the customer's voucher was bad.
     if (edgeBlocked(response, code)) {
+      // What to do about it is an operator's job, not the customer's — they get
+      // the one fact that matters to them (the voucher is still theirs), and the
+      // fix goes to the log where whoever can act on it will see it.
+      console.error(
+        '[truemoney] BLOCKED BY CLOUDFLARE — the shop cannot reach gift.truemoney.com.',
+        `Set TRUEMONEY_BASE_URL to a relay (see docs/truemoney-proxy-worker.js).`,
+        JSON.stringify({ base, status: response.status })
+      );
+
       throw new VoucherError(
         'truemoney_blocked',
-        'ระบบทรูมันนี่ปฏิเสธการเชื่อมต่อจากเซิร์ฟเวอร์ร้าน (Cloudflare) ซองยังไม่ถูกใช้ — ' +
-          'แจ้งผู้ดูแลระบบให้ตั้ง TRUEMONEY_BASE_URL ให้ยิงผ่านพร็อกซี แล้วลองอีกครั้ง',
+        'ตอนนี้ระบบเชื่อมต่อทรูมันนี่ไม่ได้ ซองของคุณยังไม่ถูกใช้ — ลองใหม่อีกครั้งภายหลัง ' +
+          'หรือเติมด้วยช่องทางอื่นไปก่อน',
         502,
         true
       );
