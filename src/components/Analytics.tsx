@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Script from 'next/script';
 import { CONSENT_EVENT, ConsentRecord, readConsent } from './CookieConsent';
 
-const MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+/** Measurement ID ของ Google Analytics — ค่านี้เปิดเผยอยู่แล้วในหน้าเว็บ ไม่ใช่ความลับ */
+const MEASUREMENT_ID = 'G-93ELQ3L1KZ';
 
 /**
  * Google Analytics (gtag.js)
@@ -12,8 +13,6 @@ const MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
  * โหลดก็ต่อเมื่อผู้ใช้กด "ยอมรับทั้งหมด" ในแถบคุกกี้เท่านั้น ตรงตามที่เขียนไว้ใน
  * นโยบายคุกกี้ว่าคุกกี้เพื่อการวิเคราะห์จะเก็บเมื่อได้รับความยินยอม — ถ้าฝัง
  * สคริปต์ไว้เฉย ๆ GA จะตั้งคุกกี้ _ga ทันทีที่โหลดหน้า ก่อนที่ใครจะได้ตอบ
- *
- * ตั้งค่า ID ที่ NEXT_PUBLIC_GA_MEASUREMENT_ID ไม่มีค่า = ไม่โหลดอะไรเลย
  */
 export const Analytics: React.FC = () => {
   const [allowed, setAllowed] = useState(false);
@@ -37,7 +36,7 @@ export const Analytics: React.FC = () => {
     };
   }, []);
 
-  if (!MEASUREMENT_ID || !allowed) return null;
+  if (!allowed) return null;
 
   return (
     <>
