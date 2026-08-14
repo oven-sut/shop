@@ -4,6 +4,7 @@ import { serverError } from '@/lib/api-response';
 import { activeGateway, GatewayError } from '@/lib/gateway';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { loadSettings } from '@/lib/settings';
+import { channelClosedMessage, isChannelEnabled } from '@/lib/topup-channels';
 import { createRouteClient } from '@/lib/supabase/server';
 
 /**
@@ -31,11 +32,34 @@ export async function GET() {
   const { response: unauthorized } = await requireApiUser();
   if (unauthorized) return unauthorized;
 
-  const gateway = activeGateway();
-  return NextResponse.json({
-    success: true,
-    data: { gateway: gateway?.name ?? null, methods: gateway?.methods ?? [] },
-  });
+  try {
+    const gateway = activeGateway();
+    const supabase = await createRouteClient();
+    const settings = await loadSettings(supabase);
+
+    // Only the methods the gateway supports *and* the shop has left open. The page
+    // draws its tabs from this, so a closed channel never gets offered at all.
+    const methods = (gateway?.methods ?? []).filter((method) =>
+      isChannelEnabled(settings, method === 'truemoney' ? 'truemoney' : 'qr')
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        gateway: gateway?.name ?? null,
+        methods,
+        // ช่องที่ไม่ได้พึ่งเกตเวย์ หน้าเว็บก็ต้องรู้ว่าเปิดอยู่ไหม
+        channels: {
+          slip: isChannelEnabled(settings, 'slip'),
+          qr: isChannelEnabled(settings, 'qr'),
+          truemoney: isChannelEnabled(settings, 'truemoney'),
+          voucher: isChannelEnabled(settings, 'voucher'),
+        },
+      },
+    });
+  } catch (error) {
+    return serverError(error);
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -81,6 +105,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createRouteClient();
     const settings = await loadSettings(supabase);
+
+    // A closed channel is closed at the endpoint, not just missing from the page.
+    // Charges already opened keep settling — see the status route and the webhook.
+    const channel = method === 'truemoney' ? 'truemoney' : 'qr';
+    if (!isChannelEnabled(settings, channel)) {
+      return fail(channelClosedMessage(channel), 503, 'channel_disabled');
+    }
 
     // Same bounds as every other channel that can be checked before the money
     // moves. Here it *can* be enforced up front, because the amount is fixed

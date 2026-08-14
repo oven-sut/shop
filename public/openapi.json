@@ -1264,7 +1264,7 @@
             }
           },
           "503": {
-            "description": "ร้านยังไม่ได้ตั้งค่าบัญชีรับเงิน",
+            "description": "ร้านยังไม่ได้ตั้งค่าบัญชีรับเงิน · หรือร้านปิดช่องทางนี้ไว้ (channel_disabled)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1376,7 +1376,7 @@
             "$ref": "#/components/responses/ServerError"
           },
           "503": {
-            "description": "ร้านยังไม่ได้ตั้งค่าบัญชีรับเงิน หรือเลขที่ตั้งไว้ไม่ใช่พร้อมเพย์",
+            "description": "ร้านยังไม่ได้ตั้งค่าบัญชีรับเงิน หรือเลขที่ตั้งไว้ไม่ใช่พร้อมเพย์ · หรือร้านปิดช่องทางนี้ไว้ (channel_disabled)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1426,6 +1426,24 @@
                             ]
                           },
                           "description": "ช่องทางที่เกตเวย์ที่ตั้งไว้รองรับ"
+                        },
+                        "channels": {
+                          "type": "object",
+                          "description": "สวิตช์เปิด/ปิดของทุกช่องทาง หน้าเว็บใช้ตัดสินว่าจะวาดแท็บไหน",
+                          "properties": {
+                            "slip": {
+                              "type": "boolean"
+                            },
+                            "qr": {
+                              "type": "boolean"
+                            },
+                            "truemoney": {
+                              "type": "boolean"
+                            },
+                            "voucher": {
+                              "type": "boolean"
+                            }
+                          }
                         }
                       }
                     }
@@ -1536,7 +1554,7 @@
             }
           },
           "503": {
-            "description": "ร้านยังไม่ได้ต่อเกตเวย์ (`gateway_not_configured`) หรือคีย์ใช้ไม่ได้",
+            "description": "ร้านยังไม่ได้ต่อเกตเวย์ (`gateway_not_configured`) หรือคีย์ใช้ไม่ได้ · หรือร้านปิดช่องทางนี้ไว้ (channel_disabled)",
             "content": {
               "application/json": {
                 "schema": {
@@ -1913,7 +1931,7 @@
             }
           },
           "503": {
-            "description": "ร้านยังไม่ได้ตั้งเบอร์ทรูวอลเล็ต",
+            "description": "ร้านยังไม่ได้ตั้งเบอร์ทรูวอลเล็ต · หรือร้านปิดช่องทางนี้ไว้ (channel_disabled)",
             "content": {
               "application/json": {
                 "schema": {
@@ -2943,6 +2961,26 @@
           },
           "taxRate": {
             "type": "number"
+          },
+          "topupSlipEnabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "เปิดรับการเติมด้วยสลิปโอน — ปิดแล้ว endpoint ของช่องนั้นตอบ 503 channel_disabled"
+          },
+          "topupQrEnabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "เปิดรับ QR (ทั้งของร้านเองและของเกตเวย์) — ปิดแล้ว endpoint ของช่องนั้นตอบ 503 channel_disabled"
+          },
+          "topupTruemoneyEnabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "เปิดรับทรูวอลเล็ตผ่านเกตเวย์ — ปิดแล้ว endpoint ของช่องนั้นตอบ 503 channel_disabled"
+          },
+          "topupVoucherEnabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "เปิดรับซองอังเปาทรูมันนี่ — ปิดแล้ว endpoint ของช่องนั้นตอบ 503 channel_disabled"
           }
         }
       },

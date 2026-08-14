@@ -3,6 +3,7 @@ import { requireApiUser } from '@/lib/api-auth';
 import { dbError, serverError } from '@/lib/api-response';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { loadSettings } from '@/lib/settings';
+import { channelClosedMessage, isChannelEnabled } from '@/lib/topup-channels';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createRouteClient } from '@/lib/supabase/server';
 import { readVoucherHash, redeemVoucher, VoucherError } from '@/lib/truemoney';
@@ -46,6 +47,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createRouteClient();
     const settings = await loadSettings(supabase);
+
+    // Before anything is sent to TrueMoney: a closed channel must not redeem a
+    // voucher it is then unable to credit.
+    if (!isChannelEnabled(settings, 'voucher')) {
+      return fail(channelClosedMessage('voucher'), 503, 'channel_disabled');
+    }
 
     // Namespaced so a voucher hash can never collide with a bank slip's
     // reference in the same unique column.

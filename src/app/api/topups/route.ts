@@ -5,6 +5,7 @@ import { toTopup } from '@/lib/mappers';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { SlipDetails, SlipVerifyError, verifySlip } from '@/lib/slip';
 import { loadSettings, StoreSettings } from '@/lib/settings';
+import { channelClosedMessage, isChannelEnabled } from '@/lib/topup-channels';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createRouteClient } from '@/lib/supabase/server';
 
@@ -164,6 +165,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createRouteClient();
     const settings = await loadSettings(supabase);
+
+    // Checked before the slip is sent anywhere: verification costs a paid call, and
+    // a closed channel must not spend the shop's quota to say no.
+    if (!isChannelEnabled(settings, 'slip')) {
+      return fail(channelClosedMessage('slip'), 503, 'channel_disabled');
+    }
 
     if (!receivingNumbers(settings).length && !settings.topupReceiverName.trim()) {
       // Fail closed: without a destination to compare against, a slip paid to

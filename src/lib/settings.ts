@@ -14,6 +14,11 @@ export interface StoreSettings {
   topupMinAmount: number;
   topupMaxAmount: number;
   topupMaxSlipAgeDays: number;
+  /** เปิด/ปิดช่องทางเติมเงิน — ดู lib/topup-channels.ts */
+  topupSlipEnabled: boolean;
+  topupQrEnabled: boolean;
+  topupTruemoneyEnabled: boolean;
+  topupVoucherEnabled: boolean;
   taxRate: number;
 }
 
@@ -35,6 +40,11 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   topupMinAmount: 1,
   topupMaxAmount: 50000,
   topupMaxSlipAgeDays: 7,
+  // เปิดทุกช่องเป็นค่าเริ่มต้น — ช่องที่ยังไม่ได้ตั้งคอนฟิกจะถูกซ่อนด้วยเงื่อนไขของมันเองอยู่แล้ว
+  topupSlipEnabled: true,
+  topupQrEnabled: true,
+  topupTruemoneyEnabled: true,
+  topupVoucherEnabled: true,
   taxRate: 7,
 };
 
@@ -52,6 +62,11 @@ export function toSettings(row: Row | null | undefined): StoreSettings {
     topupMinAmount: num(row.topup_min_amount, DEFAULT_SETTINGS.topupMinAmount),
     topupMaxAmount: num(row.topup_max_amount, DEFAULT_SETTINGS.topupMaxAmount),
     topupMaxSlipAgeDays: num(row.topup_max_slip_age_days, DEFAULT_SETTINGS.topupMaxSlipAgeDays),
+    // `!== false` เพื่อให้แถวที่ยังไม่มีคอลัมน์นี้ (undefined) นับเป็นเปิด เหมือน is_open
+    topupSlipEnabled: row.topup_slip_enabled !== false,
+    topupQrEnabled: row.topup_qr_enabled !== false,
+    topupTruemoneyEnabled: row.topup_truemoney_enabled !== false,
+    topupVoucherEnabled: row.topup_voucher_enabled !== false,
     taxRate: num(row.tax_rate, DEFAULT_SETTINGS.taxRate),
   };
 }
@@ -75,6 +90,10 @@ export function toSettingsRow(input: Record<string, unknown>): Row {
   set('topupMaxSlipAgeDays', 'topup_max_slip_age_days', (v) =>
     Math.trunc(num(v, DEFAULT_SETTINGS.topupMaxSlipAgeDays))
   );
+  set('topupSlipEnabled', 'topup_slip_enabled', Boolean);
+  set('topupQrEnabled', 'topup_qr_enabled', Boolean);
+  set('topupTruemoneyEnabled', 'topup_truemoney_enabled', Boolean);
+  set('topupVoucherEnabled', 'topup_voucher_enabled', Boolean);
   set('taxRate', 'tax_rate', (v) => num(v, DEFAULT_SETTINGS.taxRate));
 
   return row;

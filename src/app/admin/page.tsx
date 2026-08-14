@@ -9,7 +9,7 @@ import { AdminOrderList } from '../../components/Admin/AdminOrderList';
 import { AdminAnalytics } from '../../components/Admin/AdminAnalytics';
 import { AdminSupplier } from '../../components/Admin/AdminSupplier';
 import { ToastContainer } from '../../components/ToastContainer';
-import { Settings, Save, Wallet } from 'lucide-react';
+import { Settings, Save, ToggleLeft, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LoadingBlock, Spinner } from '@/components/ui/spinner';
@@ -19,6 +19,7 @@ import {
   readPromptPayTarget,
 } from '../../lib/promptpay-id';
 import { StoreSettings } from '../../lib/settings';
+import { TOPUP_CHANNELS } from '../../lib/topup-channels';
 
 /**
  * Rendered only once the settings row has loaded, so seeding the form from props
@@ -198,6 +199,52 @@ function StoreSettingsPanel() {
                   onChange={(e) => update('taxRate', Number(e.target.value))}
                   className="w-full sm:max-w-[200px] bg-neutral-50 border-neutral-200 text-neutral-900"
                 />
+              </div>
+
+              {/* Payment channels — each one is enforced in its own route handler
+                  as well, so a switch here is a real close, not a hidden tab. */}
+              <div className="p-4 bg-neutral-100/60 rounded-md border border-neutral-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <ToggleLeft className="w-4 h-4 text-neutral-900" />
+                  <span className="font-bold text-neutral-900">ช่องทางเติมเงินที่เปิดรับ</span>
+                </div>
+                <p className="text-[11px] text-neutral-500 -mt-1">
+                  ปิดช่องไหน ช่องนั้นจะหายจากหน้ากระเป๋าเงินและ API ก็ปฏิเสธด้วย
+                  ส่วนรายการที่ลูกค้าจ่ายไปแล้วยังเข้ากระเป๋าตามปกติ
+                </p>
+
+                <div className="space-y-2">
+                  {TOPUP_CHANNELS.map((channel) => {
+                    const enabled = form[channel.field];
+                    return (
+                      <div
+                        key={channel.key}
+                        className="bg-white border border-neutral-200 rounded-md p-3 flex items-start justify-between gap-3"
+                      >
+                        <div className="min-w-0">
+                          <span className="font-semibold text-neutral-900 block">{channel.label}</span>
+                          <span className="text-[11px] text-neutral-500 leading-relaxed">
+                            {channel.hint}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={enabled}
+                          aria-label={channel.label}
+                          onClick={() => update(channel.field, !enabled)}
+                          className={`shrink-0 px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all ${
+                            enabled
+                              ? 'bg-neutral-900 text-white border-neutral-900'
+                              : 'bg-white text-neutral-400 border-neutral-300'
+                          }`}
+                        >
+                          {enabled ? 'เปิด' : 'ปิด'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="p-4 bg-neutral-50 rounded-md border border-neutral-200 flex items-center justify-between">

@@ -115,7 +115,19 @@ function WalletContent() {
     pickPromptPayTarget(settings.topupPromptpayId, settings.topupReceiverAccount) !== null;
 
   /** ซองอังเปาต้องมีเบอร์วอลเล็ตปลายทาง ไม่มีก็ไถ่ไม่ได้ */
-  const voucherSupported = /^0\d{9}$/.test(settings.topupTruemoneyPhone.replace(/\D/g, ''));
+  const voucherConfigured = /^0\d{9}$/.test(settings.topupTruemoneyPhone.replace(/\D/g, ''));
+
+  /**
+   * A tab needs two things: the shop must have left the channel open, and the
+   * channel must actually be set up. The switches come from the same settings row
+   * the route handlers read, so what is shown and what is accepted cannot drift.
+   */
+  const slipTab = settings.topupSlipEnabled;
+  const qrTab = settings.topupQrEnabled && (Boolean(gateway) || promptpaySupported);
+  const voucherSupported = settings.topupVoucherEnabled && voucherConfigured;
+  const truemoneyTab = voucherSupported || gatewayMethods.includes('truemoney');
+
+  const firstOpenTab = slipTab ? 'slip' : qrTab ? 'qr' : truemoneyTab ? 'truemoney' : 'none';
 
   /**
    * A QR carries the amount inside it, so it stops being the right QR the moment
@@ -304,20 +316,33 @@ function WalletContent() {
           {/* Top up — one section, three ways in. They differ in what proves the
               money arrived, which is what the copy in each tab has to say. */}
           <section className="border border-neutral-200 rounded-md p-6 space-y-5">
-            <Tabs defaultValue="slip" className="gap-5">
+            {firstOpenTab === 'none' && (
+              <p className="border-l-2 border-neutral-900 pl-3 text-xs text-neutral-600 leading-relaxed">
+                ร้านปิดรับการเติมเงินทุกช่องทางชั่วคราว — ลองใหม่ภายหลัง หรือติดต่อผู้ดูแลร้าน
+              </p>
+            )}
+
+            <Tabs key={firstOpenTab} defaultValue={firstOpenTab} className="gap-5">
               <TabsList variant="line" className="w-full gap-5 h-auto! p-0 border-b border-neutral-100">
-                <TabsTrigger value="slip" className="flex-none h-auto px-0 pb-3 text-xs">
-                  สลิปโอนเงิน
-                </TabsTrigger>
-                <TabsTrigger value="qr" className="flex-none h-auto px-0 pb-3 text-xs">
-                  QR {gateway ? 'อัตโนมัติ' : 'พร้อมเพย์'}
-                </TabsTrigger>
-                <TabsTrigger value="truemoney" className="flex-none h-auto px-0 pb-3 text-xs">
-                  ทรูวอลเล็ต
-                </TabsTrigger>
+                {slipTab && (
+                  <TabsTrigger value="slip" className="flex-none h-auto px-0 pb-3 text-xs">
+                    สลิปโอนเงิน
+                  </TabsTrigger>
+                )}
+                {qrTab && (
+                  <TabsTrigger value="qr" className="flex-none h-auto px-0 pb-3 text-xs">
+                    QR {gateway ? 'อัตโนมัติ' : 'พร้อมเพย์'}
+                  </TabsTrigger>
+                )}
+                {truemoneyTab && (
+                  <TabsTrigger value="truemoney" className="flex-none h-auto px-0 pb-3 text-xs">
+                    ทรูวอลเล็ต
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               {/* ── 1. โอนแล้วส่งสลิป — ตรวจกับธนาคารก่อนเติม ─────────────── */}
+              {slipTab && (
               <TabsContent value="slip" className="space-y-5">
             {receiverConfigured ? (
               <dl className="border border-neutral-200 rounded-md p-4 text-xs space-y-2">
@@ -427,8 +452,10 @@ function WalletContent() {
               )}
             </form>
               </TabsContent>
+              )}
 
               {/* ── 2. QR — เข้าเองเมื่อจ่าย ถ้าร้านต่อเกตเวย์ไว้ ─────────── */}
+              {qrTab && (
               <TabsContent value="qr" className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-neutral-700 mb-1.5">
@@ -566,8 +593,10 @@ function WalletContent() {
                   </>
                 )}
               </TabsContent>
+              )}
 
               {/* ── 3. ทรูวอลเล็ต — จ่ายผ่านเกตเวย์ หรือส่งซองอังเปา ─────── */}
+              {truemoneyTab && (
               <TabsContent value="truemoney" className="space-y-4">
                 {/* จ่ายจากวอลเล็ตโดยตรง: เกตเวย์ถือความสัมพันธ์กับทรูให้ จึงไม่ต้อง
                     ยิง endpoint ที่ทรูไม่ได้เปิดให้ใครเรียก */}
@@ -707,6 +736,7 @@ function WalletContent() {
                   )
                 )}
               </TabsContent>
+              )}
             </Tabs>
           </section>
 

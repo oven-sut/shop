@@ -89,6 +89,14 @@ end $$;
 
 alter table public.store_settings add column if not exists topup_truemoney_phone text not null default '';
 
+-- สวิตช์เปิด/ปิดช่องทางเติมเงิน แยกจากคอนฟิกของช่องนั้น
+-- เดิมปิดช่องได้ด้วยการลบคอนฟิกทิ้งอย่างเดียว ซึ่งลบข้อมูลที่ลูกค้าต้องเห็นไปด้วย
+-- และไม่มีทางปิดช่องสลิปได้เลย · default true = ของเดิมทำงานเหมือนเดิมหลัง migrate
+alter table public.store_settings add column if not exists topup_slip_enabled boolean not null default true;
+alter table public.store_settings add column if not exists topup_qr_enabled boolean not null default true;
+alter table public.store_settings add column if not exists topup_truemoney_enabled boolean not null default true;
+alter table public.store_settings add column if not exists topup_voucher_enabled boolean not null default true;
+
 insert into public.store_settings (id) values (true) on conflict (id) do nothing;
 
 drop trigger if exists store_settings_touch_updated_at on public.store_settings;

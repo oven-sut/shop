@@ -92,6 +92,7 @@ src/
 │  ├─ promptpay.ts             ← สร้าง payload + รูป QR (เซิร์ฟเวอร์เท่านั้น)
 │  ├─ truemoney.ts             ← ไถ่ซองอังเปา + แยก error ว่าซองถูกใช้ไปหรือยัง
 │  ├─ topup-charge.ts          ← เติมเงินจาก charge ที่เกตเวย์ยืนยันแล้ว (ใช้ร่วม 2 ทาง)
+│  ├─ topup-channels.ts        ← สวิตช์เปิด/ปิดช่องทางเติมเงิน (ใช้ร่วมทั้ง 3 ฝั่ง)
 │  ├─ gateway/                 ← เกตเวย์รับชำระเงิน: types.ts, omise.ts, index.ts
 │  ├─ rdcw.ts                  ← เรียก RDCW Slip Verify และ normalise ผลลัพธ์
 │  └─ supabase/

@@ -9,6 +9,7 @@ import {
 } from '@/lib/promptpay-id';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { loadSettings } from '@/lib/settings';
+import { channelClosedMessage, isChannelEnabled } from '@/lib/topup-channels';
 import { createRouteClient } from '@/lib/supabase/server';
 
 /**
@@ -40,6 +41,10 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createRouteClient();
     const settings = await loadSettings(supabase);
+
+    if (!isChannelEnabled(settings, 'qr')) {
+      return fail(channelClosedMessage('qr'), 503, 'channel_disabled');
+    }
 
     const target = pickPromptPayTarget(settings.topupPromptpayId, settings.topupReceiverAccount);
     if (!target) {
