@@ -8,13 +8,25 @@ import { Footer } from '../../components/Footer';
 import { ToastContainer } from '../../components/ToastContainer';
 import { CartDrawer } from '../../components/CartDrawer';
 import { Topup } from '../../types/ecommerce';
-import { ArrowDownRight, ArrowUpRight, Banknote } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Banknote, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton, SkeletonRegion } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
+import { readPromptPayTarget } from '@/lib/promptpay-id';
 
 const money = (value: number) => `฿${value.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
+
+/** What `/api/topups/qr` answers with. */
+interface PromptPayQr {
+  image: string;
+  payload: string;
+  amount: number | null;
+  kindLabel: string;
+  account: string;
+  receiverName: string;
+  bankName: string;
+}
 
 function WalletContent() {
   const { balance, walletTransactions, settings, isLoading, topUp, refreshWallet, showToast } =
@@ -25,6 +37,10 @@ function WalletContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [history, setHistory] = useState<Topup[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+
+  const [qr, setQr] = useState<PromptPayQr | null>(null);
+  const [qrError, setQrError] = useState('');
+  const [isQrLoading, setIsQrLoading] = useState(false);
 
   const loadHistory = async () => {
     const response = await fetch('/api/topups');
@@ -43,6 +59,47 @@ function WalletContent() {
   const receiverConfigured = Boolean(
     settings.topupReceiverAccount.trim() || settings.topupReceiverName.trim()
   );
+
+  /**
+   * Only a PromptPay ID can be turned into a QR. When the shop receives on a
+   * plain account number the panel is left out altogether — a button that can
+   * only answer "this is not a PromptPay account" is worse than no button.
+   */
+  const promptpaySupported = readPromptPayTarget(settings.topupReceiverAccount) !== null;
+
+  /**
+   * A QR carries the amount inside it, so it stops being the right QR the moment
+   * the field changes — dropping it is safer than leaving one on screen that
+   * charges a figure the customer is no longer looking at.
+   */
+  const handleAmountChange = (value: string) => {
+    setAmount(value);
+    setQr(null);
+    setQrError('');
+  };
+
+  const loadQr = async () => {
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) {
+      showToast('กรอกจำนวนเงินก่อน แล้วจึงสร้าง QR', 'warning');
+      return;
+    }
+
+    setIsQrLoading(true);
+    setQrError('');
+
+    const response = await fetch(`/api/topups/qr?amount=${encodeURIComponent(value)}`);
+    const body = await response.json().catch(() => ({}));
+
+    setIsQrLoading(false);
+
+    if (body.success) {
+      setQr(body.data as PromptPayQr);
+    } else {
+      setQr(null);
+      setQrError(body.message || 'สร้าง QR ไม่สำเร็จ');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +123,7 @@ function WalletContent() {
     if (result.success) {
       setAmount('');
       setSlip(null);
+      setQr(null);
       await Promise.all([refreshWallet(), loadHistory()]);
     }
   };
@@ -150,7 +208,7 @@ function WalletContent() {
                     required
                     placeholder="เช่น 500"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     className="h-11 pl-10 bg-white border-neutral-300 rounded-md text-neutral-900 text-sm"
                   />
                   <Banknote className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -159,6 +217,65 @@ function WalletContent() {
                   ต้องตรงกับยอดในสลิป ระบบจะตรวจกับธนาคารก่อนเติมเข้าให้
                 </p>
               </div>
+
+              {/* PromptPay — scan, pay, then upload the slip below to be credited. */}
+              {promptpaySupported && (
+                <div className="border border-neutral-200 rounded-md p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="text-xs font-semibold text-neutral-900 block">
+                        สแกนจ่ายด้วยพร้อมเพย์
+                      </span>
+                      <span className="text-[11px] text-neutral-400">
+                        QR ใส่ยอดมาให้แล้ว จ่ายเสร็จอัปโหลดสลิปด้านล่างเพื่อรับเงินเข้ากระเป๋า
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={loadQr}
+                      disabled={isQrLoading}
+                      className="h-9 px-3 shrink-0 rounded-md border-neutral-300 text-xs font-medium"
+                    >
+                      {isQrLoading ? <Spinner className="mr-1.5" /> : <QrCode className="mr-1.5" />}
+                      {qr ? 'สร้างใหม่' : 'สร้าง QR'}
+                    </Button>
+                  </div>
+
+                  {qrError && (
+                    <p className="border-l-2 border-neutral-900 pl-3 text-[11px] text-neutral-600 leading-relaxed">
+                      {qrError}
+                    </p>
+                  )}
+
+                  {qr && (
+                    <div className="flex flex-col items-center gap-2 pt-1">
+                      <img
+                        src={qr.image}
+                        alt={`QR พร้อมเพย์ ยอด ${money(qr.amount ?? 0)}`}
+                        width={224}
+                        height={224}
+                        className="w-56 h-56 rounded-md border border-neutral-200"
+                      />
+                      <p className="text-sm font-semibold text-neutral-900">
+                        {money(qr.amount ?? 0)}
+                      </p>
+                      <p className="text-[11px] text-neutral-400 text-center">
+                        {qr.receiverName || qr.account}
+                        {' · '}
+                        {qr.kindLabel} {qr.account}
+                      </p>
+                      <a
+                        href={qr.image}
+                        download={`promptpay-${qr.amount ?? 'static'}.png`}
+                        className="text-[11px] text-neutral-500 underline underline-offset-2"
+                      >
+                        บันทึกรูป QR
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-medium text-neutral-700 mb-1.5">

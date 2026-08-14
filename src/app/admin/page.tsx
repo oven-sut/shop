@@ -13,6 +13,11 @@ import { Settings, Save, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LoadingBlock, Spinner } from '@/components/ui/spinner';
+import {
+  PROMPTPAY_KIND_LABEL,
+  PROMPTPAY_SHAPE_HINT,
+  readPromptPayTarget,
+} from '../../lib/promptpay-id';
 import { StoreSettings } from '../../lib/settings';
 
 /**
@@ -27,6 +32,9 @@ function StoreSettingsPanel() {
 
   const update = <K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  /** Whether the number being typed can also be handed out as a QR. */
+  const promptpay = readPromptPayTarget(form.topupReceiverAccount);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +97,15 @@ function StoreSettingsPanel() {
                       onChange={(e) => update('topupReceiverAccount', e.target.value)}
                       className="w-full bg-white border-neutral-200 text-neutral-900 font-mono"
                     />
+                    {/* Only a PromptPay ID can be drawn as a QR, so say which of
+                        the two this value is before the customer finds out. */}
+                    <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">
+                      {!form.topupReceiverAccount.trim()
+                        ? `กรอกเป็นพร้อมเพย์เพื่อให้ลูกค้าสแกน QR จ่ายได้ — ${PROMPTPAY_SHAPE_HINT}`
+                        : promptpay
+                          ? `ลูกค้าสแกน QR จ่ายได้ (${PROMPTPAY_KIND_LABEL[promptpay.kind]})`
+                          : `เลขนี้ใช้รับโอน + ตรวจสลิปได้ แต่สร้าง QR ให้ลูกค้าไม่ได้ — ${PROMPTPAY_SHAPE_HINT}`}
+                    </p>
                   </div>
                   <div>
                     <label className="block font-semibold text-neutral-700 mb-1">ธนาคาร</label>

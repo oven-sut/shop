@@ -1276,6 +1276,118 @@
         }
       }
     },
+    "/api/topups/qr": {
+      "get": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "QR พร้อมเพย์สำหรับเติมเงิน",
+        "description": "สร้าง QR พร้อมเพย์ (EMV QRCPS) ของบัญชีร้านตามยอดที่ขอ ลูกค้าสแกนจ่ายแล้วอัปโหลดสลิปที่ `POST /api/topups` ต่อ — endpoint นี้ไม่เติมเงินเข้ากระเป๋าเอง\n\nปลายทางมาจาก `store_settings.topup_receiver_account` เท่านั้น และต้องเป็นพร้อมเพย์: เบอร์ 10 หลัก, เลขบัตรประชาชน/ผู้เสียภาษี 13 หลัก หรือ e-Wallet 15 หลัก",
+        "operationId": "getTopupQr",
+        "parameters": [
+          {
+            "name": "amount",
+            "in": "query",
+            "required": false,
+            "description": "ยอดที่จะใส่ใน QR (บาท) ต้องอยู่ในช่วง min/max ของร้าน ไม่ส่งมา = QR แบบไม่ระบุยอด ให้ผู้จ่ายกรอกเอง",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "payload": {
+                          "type": "string",
+                          "description": "ข้อความ EMV QRCPS ที่แอปธนาคารอ่าน"
+                        },
+                        "image": {
+                          "type": "string",
+                          "description": "รูป QR แบบ data URL (image/png)"
+                        },
+                        "amount": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "ยอดในQR ปัดเป็นสตางค์แล้ว, null = ไม่ระบุยอด"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "phone",
+                            "national-id",
+                            "ewallet"
+                          ]
+                        },
+                        "kindLabel": {
+                          "type": "string"
+                        },
+                        "account": {
+                          "type": "string"
+                        },
+                        "receiverName": {
+                          "type": "string"
+                        },
+                        "bankName": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "จำนวนเงินไม่ถูกต้อง หรืออยู่นอกช่วงที่ร้านกำหนด",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "ขอ QR ถี่เกินไป (60 ครั้ง/นาที ต่อผู้ใช้)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          },
+          "503": {
+            "description": "ร้านยังไม่ได้ตั้งค่าบัญชีรับเงิน หรือเลขที่ตั้งไว้ไม่ใช่พร้อมเพย์",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/settings": {
       "get": {
         "tags": [

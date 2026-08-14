@@ -581,6 +581,32 @@
           }
         },
         {
+          "name": "PromptPay QR",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/topups/qr?amount=500",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "topups",
+                "qr"
+              ],
+              "query": [
+                {
+                  "key": "amount",
+                  "value": "500",
+                  "description": "ยอดที่จะใส่ใน QR — ตัดออกได้ถ้าอยากให้ผู้จ่ายกรอกเอง"
+                }
+              ]
+            },
+            "description": "คืน payload EMV QRCPS + รูป PNG (data URL) ของบัญชีร้าน ใช้ได้เมื่อ topup_receiver_account เป็นพร้อมเพย์ (10/13/15 หลัก) — QR ไม่เติมเงินเอง ต้องอัปโหลดสลิปต่อ"
+          }
+        },
+        {
           "name": "Top up with slip",
           "request": {
             "method": "POST",

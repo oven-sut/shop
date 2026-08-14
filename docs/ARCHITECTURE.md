@@ -60,7 +60,7 @@ src/
 ├─ app/
 │  ├─ layout.tsx               ← Root layout (server) อ่าน session + แถบยินยอมคุกกี้
 │  ├─ page.tsx                 ← หน้าร้าน
-│  ├─ wallet/page.tsx          ← กระเป๋าเงิน: ยอดคงเหลือ เติมเงินด้วยสลิป ประวัติ
+│  ├─ wallet/page.tsx          ← กระเป๋าเงิน: ยอดคงเหลือ QR พร้อมเพย์ เติมเงินด้วยสลิป ประวัติ
 │  ├─ login/page.tsx           ← Google OAuth + email/password + สมัครสมาชิก
 │  ├─ (legal)/                 ← terms, privacy, cookies (เปิดสาธารณะ)
 │  ├─ docs/                    ← Swagger UI (แอดมินเท่านั้น)
@@ -73,6 +73,7 @@ src/
 │     ├─ orders, orders/[id], coupons, stats
 │     ├─ wallet                GET  ยอดเงิน + ความเคลื่อนไหว
 │     ├─ topups                GET ประวัติ | POST เติมเงินด้วยสลิป
+│     ├─ topups/qr             GET  QR พร้อมเพย์ของบัญชีร้าน (ใส่ยอดให้)
 │     ├─ settings              GET อ่าน | PATCH แก้ (แอดมิน)
 │     └─ uploads               POST อัปโหลดรูปสินค้า (แอดมิน)
 │
@@ -82,6 +83,8 @@ src/
 │  ├─ api-response.ts          ← unauthorized() / serverError()
 │  ├─ mappers.ts               ← แปลงแถว Postgres (snake_case, numeric) ↔ ชนิดข้อมูลในแอป
 │  ├─ settings.ts              ← StoreSettings + loadSettings()
+│  ├─ promptpay-id.ts          ← กฎว่าเลขแบบไหนเป็นพร้อมเพย์ (ใช้ได้ทั้งสองฝั่ง)
+│  ├─ promptpay.ts             ← สร้าง payload + รูป QR (เซิร์ฟเวอร์เท่านั้น)
 │  ├─ rdcw.ts                  ← เรียก RDCW Slip Verify และ normalise ผลลัพธ์
 │  └─ supabase/
 │     ├─ env.ts, client.ts, server.ts, proxy.ts, session.ts
@@ -135,6 +138,8 @@ API ทุกเส้นต้องยืนยันตัวตน ราย
 ### ขั้นตอนเติมเงิน (`POST /api/topups`)
 
 ```
+กรอกยอด → (ถ้าบัญชีร้านเป็นพร้อมเพย์) GET /api/topups/qr?amount= → สแกนจ่าย
+   ↓ QR แค่ขอเงิน ไม่เติมกระเป๋าเอง
 ผู้ใช้โอนเงินเข้าบัญชีร้าน → อัปโหลดสลิป + กรอกยอดที่โอน
    ↓
 ส่งสลิปไปตรวจกับ RDCW (https://suba.rdcw.co.th/v2/inquiry)
