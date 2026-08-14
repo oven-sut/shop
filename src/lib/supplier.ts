@@ -22,6 +22,8 @@ export interface SupplierProduct {
   genres: string[];
   /** เฉพาะสินค้าเช่า: จำนวนวัน → ราคา */
   durations?: Record<string, { webPrice: number; cost: number }>;
+  /** เฉพาะสินค้าเช่า: ช่วงที่สั้นที่สุด ซึ่งเป็นช่วงที่ webPrice/cost ด้านบนอ้างถึง */
+  defaultDurationDays?: number;
 }
 
 export interface SupplierOrder {
@@ -147,7 +149,9 @@ function toProduct(row: Record<string, unknown>): SupplierProduct {
     : undefined;
 
   // สินค้าเช่าไม่มีราคาเดี่ยว ใช้ราคาของช่วงสั้นที่สุดเป็นราคาเริ่มต้น
+  // (คีย์เป็นตัวเลขล้วน JS จึงเรียงจากน้อยไปมากให้เอง)
   const firstDuration = durations ? Object.values(durations)[0] : undefined;
+  const firstDurationDays = durations ? Number(Object.keys(durations)[0]) : undefined;
 
   return {
     productId: str(row.product_id),
@@ -163,6 +167,7 @@ function toProduct(row: Record<string, unknown>): SupplierProduct {
     description: str(steam.description ?? steam.short_description),
     genres: Array.isArray(steam.genres) ? (steam.genres as string[]) : [],
     durations,
+    defaultDurationDays: Number.isFinite(firstDurationDays) ? firstDurationDays : undefined,
   };
 }
 
@@ -186,11 +191,34 @@ export async function fetchSupplierProducts(): Promise<SupplierProduct[]> {
   return rows.filter(isRecord).map(toProduct);
 }
 
+const HALF_HOUR_MS = 30 * 60 * 1000;
+
+/**
+ * ปัดเวลาเริ่มเช่าขึ้นไปหา "ครึ่งชั่วโมงถัดไป" ในรูปแบบ ISO 8601 โซน UTC
+ * เช่น 2026-08-14T12:00:00Z — 499K รับเฉพาะรูปแบบนี้ ถ้าส่งเวลาที่ไม่ตรง
+ * นาที 00/30 หรือมีเศษวินาที จะถูกปฏิเสธทั้งคำสั่งซื้อ
+ *
+ * ปัดขึ้นเสมอเพื่อไม่ให้ได้เวลาที่ผ่านไปแล้ว
+ */
+export function alignRentalStart(input?: string | Date): string {
+  const base = input ? new Date(input) : new Date();
+
+  if (Number.isNaN(base.getTime())) {
+    throw new SupplierError('invalid_start_at', 'รูปแบบเวลาเริ่มเช่าไม่ถูกต้อง', 400);
+  }
+
+  const slot = Math.ceil(base.getTime() / HALF_HOUR_MS) * HALF_HOUR_MS;
+  // toISOString ให้ .000Z มาด้วย ซึ่งซัพพลายเออร์ไม่รับ จึงตัดมิลลิวินาทีทิ้ง
+  return new Date(slot).toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+
 /**
  * สั่งซื้อจากซัพพลายเออร์
  *
  * `ref` ต้องคงที่ต่อหนึ่งรายการสั่งซื้อของเรา เพราะฝั่งเขาใช้ตัดซ้ำ:
  * ยิงซ้ำด้วย ref เดิมจะได้ผลลัพธ์เดิมโดยไม่ถูกหักเงินอีกรอบ
+ * (ยิงซ้ำคนละรอบครึ่งชั่วโมงจะคำนวณ start_at ได้ใหม่ แต่ ref เดิมทำให้
+ * ซัพพลายเออร์คืนคำสั่งซื้อเดิม ไม่ได้จองรอบใหม่)
  */
 export async function createSupplierOrder(input: {
   productId: string;
@@ -208,7 +236,9 @@ export async function createSupplierOrder(input: {
 
   if (input.type === 'rental') {
     body.duration_days = input.durationDays ?? 1;
-    if (input.startAt) body.start_at = input.startAt;
+    // start_at เป็นฟิลด์บังคับของสินค้าเช่า และต้องตรงช่วงครึ่งชั่วโมงเสมอ
+    // จึงคำนวณให้ตรงนี้แทนที่จะหวังให้ผู้เรียกส่งมาถูกรูปแบบเอง
+    body.start_at = alignRentalStart(input.startAt);
     if (input.accountId) body.account_id = input.accountId;
   }
 

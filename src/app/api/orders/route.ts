@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     // ── ส่งมอบสินค้าที่มาจากซัพพลายเออร์ ────────────────────────────────────
     const { data: sourced } = await supabase
       .from('products')
-      .select('id, name, supplier, supplier_product_id, supplier_type')
+      .select('id, name, supplier, supplier_product_id, supplier_type, supplier_duration_days')
       .in('id', order.items.map((item) => item.productId))
       .not('supplier', 'is', null);
 
@@ -98,6 +98,9 @@ export async function POST(request: NextRequest) {
         supplierProductId: product.supplier_product_id as string,
         supplierType: (product.supplier_type as string) || 'offline',
         name: (product.name as string) ?? line.name,
+        // ราคาที่ลูกค้าจ่ายผูกกับช่วงเช่าที่บันทึกไว้ตอนนำเข้า จึงต้องสั่งด้วย
+        // จำนวนวันเดียวกัน ไม่งั้นจะขายราคา 7 วันแต่สั่งของมาแค่ 1 วัน
+        durationDays: (product.supplier_duration_days as number | null) ?? undefined,
       }));
     });
 

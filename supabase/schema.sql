@@ -611,6 +611,9 @@ alter table public.products add column if not exists supplier text;
 alter table public.products add column if not exists supplier_product_id text;
 alter table public.products add column if not exists supplier_type text;
 alter table public.products add column if not exists supplier_cost numeric(12, 2);
+-- เฉพาะสินค้าเช่า (supplier_type = 'rental'): ช่วงเช่าที่ราคาขายอ้างถึง
+-- ต้องส่งกลับไปตอนสั่งซื้อ ไม่งั้นซัพพลายเออร์จะให้มาแค่ 1 วันตามค่าเริ่มต้น
+alter table public.products add column if not exists supplier_duration_days integer;
 
 -- นำเข้าสินค้าเดิมซ้ำได้โดยไม่เกิดรายการซ้ำ
 --

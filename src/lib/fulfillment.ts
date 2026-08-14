@@ -23,7 +23,14 @@ export interface FulfilledAccount {
 export async function fulfillOrder(
   admin: SupabaseClient,
   order: Order & { userId: string },
-  lines: { productId: string; supplierProductId: string; supplierType: string; name: string }[]
+  lines: {
+    productId: string;
+    supplierProductId: string;
+    supplierType: string;
+    name: string;
+    /** เฉพาะสินค้าเช่า: จำนวนวันที่ราคาขายอ้างถึง */
+    durationDays?: number;
+  }[]
 ): Promise<FulfilledAccount[]> {
   const delivered: FulfilledAccount[] = [];
 
@@ -34,6 +41,8 @@ export async function fulfillOrder(
       productId: line.supplierProductId,
       type: line.supplierType,
       ref,
+      // สินค้าเช่าต้องมีทั้งจำนวนวันและเวลาเริ่ม (start_at จัดรูปแบบใน createSupplierOrder)
+      durationDays: line.durationDays,
     });
 
     await admin.from('order_fulfillments').upsert(

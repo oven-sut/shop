@@ -104,6 +104,9 @@ export async function POST(request: NextRequest) {
       supplier_product_id: product.productId,
       supplier_type: product.type,
       supplier_cost: product.cost,
+      // price/webPrice ด้านบนเป็นราคาของช่วงที่สั้นที่สุด จึงต้องเก็บจำนวนวัน
+      // ของช่วงเดียวกันไว้ ให้ตอนสั่งซื้อส่ง duration_days ตรงกับที่ตั้งราคาไว้
+      supplier_duration_days: product.type === 'rental' ? product.defaultDurationDays ?? 1 : null,
       is_featured: Boolean(body.isFeatured),
     }));
 
