@@ -4,8 +4,13 @@ export interface StoreSettings {
   storeName: string;
   isOpen: boolean;
   topupReceiverName: string;
+  /** เลขบัญชีธนาคาร — เทียบผู้รับในสลิปได้ แต่ทำ QR ไม่ได้ */
   topupReceiverAccount: string;
   topupBankName: string;
+  /** พร้อมเพย์ — ช่องเดียวที่เอาไปสร้าง QR ให้ลูกค้าสแกนได้ */
+  topupPromptpayId: string;
+  /** เบอร์ทรูวอลเล็ตของร้าน — ปลายทางที่ไถ่ซองอังเปาเข้า */
+  topupTruemoneyPhone: string;
   topupMinAmount: number;
   topupMaxAmount: number;
   topupMaxSlipAgeDays: number;
@@ -25,6 +30,8 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   topupReceiverName: '',
   topupReceiverAccount: '',
   topupBankName: '',
+  topupPromptpayId: '',
+  topupTruemoneyPhone: '',
   topupMinAmount: 1,
   topupMaxAmount: 50000,
   topupMaxSlipAgeDays: 7,
@@ -40,6 +47,8 @@ export function toSettings(row: Row | null | undefined): StoreSettings {
     topupReceiverName: (row.topup_receiver_name as string) ?? '',
     topupReceiverAccount: (row.topup_receiver_account as string) ?? '',
     topupBankName: (row.topup_bank_name as string) ?? '',
+    topupPromptpayId: (row.topup_promptpay_id as string) ?? '',
+    topupTruemoneyPhone: (row.topup_truemoney_phone as string) ?? '',
     topupMinAmount: num(row.topup_min_amount, DEFAULT_SETTINGS.topupMinAmount),
     topupMaxAmount: num(row.topup_max_amount, DEFAULT_SETTINGS.topupMaxAmount),
     topupMaxSlipAgeDays: num(row.topup_max_slip_age_days, DEFAULT_SETTINGS.topupMaxSlipAgeDays),
@@ -59,6 +68,8 @@ export function toSettingsRow(input: Record<string, unknown>): Row {
   set('topupReceiverName', 'topup_receiver_name', String);
   set('topupReceiverAccount', 'topup_receiver_account', String);
   set('topupBankName', 'topup_bank_name', String);
+  set('topupPromptpayId', 'topup_promptpay_id', String);
+  set('topupTruemoneyPhone', 'topup_truemoney_phone', String);
   set('topupMinAmount', 'topup_min_amount', (v) => num(v, DEFAULT_SETTINGS.topupMinAmount));
   set('topupMaxAmount', 'topup_max_amount', (v) => num(v, DEFAULT_SETTINGS.topupMaxAmount));
   set('topupMaxSlipAgeDays', 'topup_max_slip_age_days', (v) =>

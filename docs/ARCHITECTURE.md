@@ -60,7 +60,7 @@ src/
 ├─ app/
 │  ├─ layout.tsx               ← Root layout (server) อ่าน session + แถบยินยอมคุกกี้
 │  ├─ page.tsx                 ← หน้าร้าน
-│  ├─ wallet/page.tsx          ← กระเป๋าเงิน: ยอดคงเหลือ QR พร้อมเพย์ เติมเงินด้วยสลิป ประวัติ
+│  ├─ wallet/page.tsx          ← กระเป๋าเงิน: ยอดคงเหลือ ซองอังเปา QR พร้อมเพย์ สลิป ประวัติ
 │  ├─ login/page.tsx           ← Google OAuth + email/password + สมัครสมาชิก
 │  ├─ (legal)/                 ← terms, privacy, cookies (เปิดสาธารณะ)
 │  ├─ docs/                    ← Swagger UI (แอดมินเท่านั้น)
@@ -74,6 +74,7 @@ src/
 │     ├─ wallet                GET  ยอดเงิน + ความเคลื่อนไหว
 │     ├─ topups                GET ประวัติ | POST เติมเงินด้วยสลิป
 │     ├─ topups/qr             GET  QR พร้อมเพย์ของบัญชีร้าน (ใส่ยอดให้)
+│     ├─ topups/truemoney      POST ไถ่ซองอังเปาทรูมันนี่ → เติมทันที
 │     ├─ settings              GET อ่าน | PATCH แก้ (แอดมิน)
 │     └─ uploads               POST อัปโหลดรูปสินค้า (แอดมิน)
 │
@@ -85,6 +86,7 @@ src/
 │  ├─ settings.ts              ← StoreSettings + loadSettings()
 │  ├─ promptpay-id.ts          ← กฎว่าเลขแบบไหนเป็นพร้อมเพย์ (ใช้ได้ทั้งสองฝั่ง)
 │  ├─ promptpay.ts             ← สร้าง payload + รูป QR (เซิร์ฟเวอร์เท่านั้น)
+│  ├─ truemoney.ts             ← ไถ่ซองอังเปา + แยก error ว่าซองถูกใช้ไปหรือยัง
 │  ├─ rdcw.ts                  ← เรียก RDCW Slip Verify และ normalise ผลลัพธ์
 │  └─ supabase/
 │     ├─ env.ts, client.ts, server.ts, proxy.ts, session.ts
@@ -138,18 +140,33 @@ API ทุกเส้นต้องยืนยันตัวตน ราย
 ### ขั้นตอนเติมเงิน (`POST /api/topups`)
 
 ```
-กรอกยอด → (ถ้าบัญชีร้านเป็นพร้อมเพย์) GET /api/topups/qr?amount= → สแกนจ่าย
+กรอกยอด → (ถ้าตั้งพร้อมเพย์ไว้) GET /api/topups/qr?amount= → สแกนจ่าย
    ↓ QR แค่ขอเงิน ไม่เติมกระเป๋าเอง
-ผู้ใช้โอนเงินเข้าบัญชีร้าน → อัปโหลดสลิป + กรอกยอดที่โอน
+ผู้ใช้โอนเงินเข้าช่องทางใดช่องทางหนึ่งของร้าน → อัปโหลดสลิป + กรอกยอดที่โอน
    ↓
 ส่งสลิปไปตรวจกับ RDCW (https://suba.rdcw.co.th/v2/inquiry)
    ↓ ผ่านครบทุกข้อจึงเติมเงิน
    1. ยอดในสลิป = ยอดที่กรอก        (ต่างกัน 100 เท่า = RDCW_AMOUNT_UNIT ตั้งผิด บอกให้แก้)
-   2. ผู้รับในสลิป = บัญชีร้านใน store_settings   (เทียบเลขบัญชี 4 ตัวท้าย หรือชื่อบัญชี)
+   2. ผู้รับในสลิป = ช่องใดช่องหนึ่งใน store_settings
+      (เลขบัญชี / พร้อมเพย์ / เบอร์ทรู — เทียบ 4 ตัวท้าย, ไม่มีเลขเลยจึงเทียบชื่อบัญชี)
    3. สลิปไม่เก่าเกิน topup_max_slip_age_days
    4. trans_ref ยังไม่เคยถูกใช้     (unique ทั้งตาราง)
    ↓
 credit_topup() — service key เท่านั้น: ล็อกแถว wallet, insert topup, บวกยอด, บันทึก ledger
+```
+
+### ขั้นตอนเติมด้วยซองอังเปา (`POST /api/topups/truemoney`)
+
+```
+วางลิงก์ซอง → อ่าน hash (ไม่ผ่านรูปแบบ = ตีกลับ ไม่ยิงเน็ต)
+   ↓
+เช็คก่อนว่า trans_ref = truemoney:<hash> เคยถูกเติมแล้วหรือยัง (กันเผาสิทธิ์ไถ่ฟรี ๆ)
+   ↓
+ไถ่ซองกับทรู — หลังบรรทัดนี้เงินอยู่ในวอลเล็ตร้านแล้ว ยกเลิกไม่ได้
+   ↓ จึงไม่มีการปฏิเสธยอดหลังไถ่: min/max ของร้านไม่ถูกใช้กับซอง
+credit_topup(p_note = 'เติมเงินด้วยซองอังเปาทรูมันนี่') — unique(trans_ref) กันไถ่ซ้ำ
+   ↓ ถ้า insert ล้มหลังไถ่สำเร็จ
+log '[topup:truemoney] REDEEMED BUT NOT CREDITED' + user id/ยอด/ref ไว้ตามคืนมือ
 ```
 
 ### ขั้นตอนสั่งซื้อ (`POST /api/orders` → `place_order()`)

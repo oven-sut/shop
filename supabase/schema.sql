@@ -44,6 +44,9 @@ create table if not exists public.store_settings (
 
   -- บัญชีที่ลูกค้าโอนเข้ามาเติมเงิน ต้องกรอกอย่างน้อยหนึ่งช่อง
   -- ไม่งั้นระบบเติมเงินจะปฏิเสธทุกสลิป (กันคนเอาสลิปที่โอนให้คนอื่นมาเติม)
+  --
+  -- แยกเป็นช่อง ๆ เพราะทำหน้าที่ไม่เหมือนกัน: เลขบัญชีธนาคารใช้เทียบผู้รับในสลิปได้
+  -- แต่ทำ QR ไม่ได้, พร้อมเพย์ทำได้ทั้งสองอย่าง, เบอร์ทรูวอลเล็ตใช้ไถ่ซองอังเปา
   topup_receiver_name text not null default '',
   topup_receiver_account text not null default '',
   topup_bank_name text not null default '',
@@ -59,6 +62,32 @@ create table if not exists public.store_settings (
 -- เคยมีค่าจัดส่งตอนที่ยังคิดว่าขายสินค้าจริง ตอนนี้ขายของดิจิทัลล้วนจึงไม่ใช้แล้ว
 alter table public.store_settings drop column if exists free_shipping_min;
 alter table public.store_settings drop column if exists shipping_fee;
+
+-- พร้อมเพย์กับทรูวอลเล็ตเพิ่มมาทีหลัง ตอนแรกมีแค่ topup_receiver_account ช่องเดียว
+-- ที่ปนกันทั้งเลขบัญชีและพร้อมเพย์
+--
+-- ย้ายค่าเดิมให้เฉพาะจังหวะที่เพิ่งเพิ่มคอลัมน์ ไม่ใช่ทุกครั้งที่รันไฟล์นี้ — ไม่งั้น
+-- แอดมินที่ลบพร้อมเพย์ออกเองจะเห็นมันกลับมาทุกรอบที่ apply สคีมา
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'store_settings'
+      and column_name = 'topup_promptpay_id'
+  ) then
+    alter table public.store_settings add column topup_promptpay_id text not null default '';
+
+    -- เลขที่ตั้งไว้เป็นพร้อมเพย์อยู่แล้ว (เบอร์ 10 หลัก / บัตรประชาชน 13 / e-Wallet 15)
+    -- ก็ย้ายมาช่องใหม่ให้เลย ไม่ต้องให้แอดมินมากรอกซ้ำ
+    update public.store_settings
+    set topup_promptpay_id = topup_receiver_account
+    where length(regexp_replace(topup_receiver_account, '\D', '', 'g')) in (13, 15)
+       or regexp_replace(topup_receiver_account, '\D', '', 'g') ~ '^0\d{9}$';
+  end if;
+end $$;
+
+alter table public.store_settings add column if not exists topup_truemoney_phone text not null default '';
 
 insert into public.store_settings (id) values (true) on conflict (id) do nothing;
 
@@ -264,8 +293,16 @@ on conflict (user_id) do nothing;
 
 -- ============================================================================
 -- เติมเงิน — เรียกได้จากฝั่งเซิร์ฟเวอร์ด้วย secret key เท่านั้น
--- ข้อมูลสลิปถูกตรวจกับ RDCW มาแล้วใน /api/topups ก่อนเรียกฟังก์ชันนี้
+-- เงินที่เข้ามาถูกยืนยันกับเจ้าของเงินจริงมาแล้วก่อนเรียกฟังก์ชันนี้:
+-- สลิปตรวจกับธนาคารใน /api/topups, ซองอังเปาไถ่กับทรูใน /api/topups/truemoney
 -- ============================================================================
+-- เดิมไม่มี p_note (ข้อความ ledger ฟิกซ์ว่า "เติมเงินด้วยสลิปโอน" อยู่ในตัวฟังก์ชัน)
+-- ต้อง drop ตัวเก่าทิ้งก่อน ไม่ใช่ create or replace เฉย ๆ เพราะจำนวนพารามิเตอร์
+-- ที่ต่างกันจะกลายเป็นสองฟังก์ชันซ้อนกัน แล้ว rpc ที่ส่งมา 9 ตัวจะ ambiguous
+drop function if exists public.credit_topup(
+  uuid, numeric, text, text, text, text, text, timestamptz, jsonb
+);
+
 create or replace function public.credit_topup(
   p_user_id uuid,
   p_amount numeric,
@@ -275,7 +312,8 @@ create or replace function public.credit_topup(
   p_sender_name text default null,
   p_receiver_name text default null,
   p_transferred_at timestamptz default null,
-  p_raw jsonb default '{}'::jsonb
+  p_raw jsonb default '{}'::jsonb,
+  p_note text default null
 )
 returns public.wallets
 language plpgsql
@@ -309,14 +347,18 @@ begin
   returning * into v_wallet;
 
   insert into public.wallet_transactions (user_id, kind, amount, balance_after, reference, note)
-  values (p_user_id, 'topup', p_amount, v_wallet.balance, p_trans_ref, 'เติมเงินด้วยสลิปโอน');
+  values (
+    p_user_id, 'topup', p_amount, v_wallet.balance, p_trans_ref,
+    coalesce(nullif(p_note, ''), 'เติมเงินด้วยสลิปโอน')
+  );
 
   return v_wallet;
 end;
 $$;
 
-revoke execute on function public.credit_topup(uuid, numeric, text, text, text, text, text, timestamptz, jsonb)
-  from public, anon, authenticated;
+revoke execute on function public.credit_topup(
+  uuid, numeric, text, text, text, text, text, timestamptz, jsonb, text
+) from public, anon, authenticated;
 
 -- ============================================================================
 -- สั่งซื้อ — คิดราคาจากฐานข้อมูล ตัดสต็อกและตัดเงินในทรานแซกชันเดียว

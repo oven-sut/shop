@@ -32,17 +32,32 @@ const nameKey = (value: string) =>
     .split(/\s+/)
     .filter(Boolean);
 
+/** Every number the shop is willing to be paid on. */
+function receivingNumbers(settings: StoreSettings) {
+  return [
+    settings.topupReceiverAccount,
+    settings.topupPromptpayId,
+    settings.topupTruemoneyPhone,
+  ].filter((value) => value.trim());
+}
+
 /**
  * Slips mask the destination: "นาย ส*** ใ***", "xxx-x-x1234-x". A masked value can
  * never equal the configured one, so match on what the bank does reveal.
+ *
+ * Any of the shop's channels counts — a customer who paid the PromptPay QR and a
+ * customer who transferred to the bank account both hold a slip for the same
+ * shop, and the slip says nothing about which field an admin typed the number in.
  */
 function receiverMatches(slip: SlipDetails, settings: StoreSettings) {
-  const expectedDigits = digitsOnly(settings.topupReceiverAccount);
+  const tails = receivingNumbers(settings)
+    .map(digitsOnly)
+    .filter((digits) => digits.length >= 4)
+    .map((digits) => digits.slice(-4));
 
-  if (expectedDigits.length >= 4) {
-    const tail = expectedDigits.slice(-4);
-    const candidates = [...slip.receiverAccounts, slip.receiverName ?? ''];
-    return candidates.some((candidate) => digitsOnly(candidate).includes(tail));
+  if (tails.length) {
+    const candidates = [...slip.receiverAccounts, slip.receiverName ?? ''].map(digitsOnly);
+    return tails.some((tail) => candidates.some((candidate) => candidate.includes(tail)));
   }
 
   const expectedTokens = nameKey(settings.topupReceiverName);
@@ -130,7 +145,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createRouteClient();
     const settings = await loadSettings(supabase);
 
-    if (!settings.topupReceiverAccount.trim() && !settings.topupReceiverName.trim()) {
+    if (!receivingNumbers(settings).length && !settings.topupReceiverName.trim()) {
       // Fail closed: without a destination to compare against, a slip paid to
       // anyone at all would top this account up.
       return fail(

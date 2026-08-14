@@ -607,6 +607,34 @@
           }
         },
         {
+          "name": "Top up with TrueMoney voucher",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"voucher\": \"https://gift.truemoney.com/campaign/?v=0123456789abcdefgh\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topups/truemoney",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "topups",
+                "truemoney"
+              ]
+            },
+            "description": "ไถ่ซองอังเปาเข้าเบอร์ทรูวอลเล็ตของร้าน แล้วเติมยอดที่ได้เข้ากระเป๋าทันที ซองใบเดิมใช้ซ้ำไม่ได้ และยอดจากซองไม่ถูกบังคับด้วย min/max ของร้านเพราะไถ่แล้วคืนไม่ได้"
+          }
+        },
+        {
           "name": "Top up with slip",
           "request": {
             "method": "POST",
@@ -674,7 +702,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"storeName\": \"NEO APP\",\n  \"topupReceiverName\": \"นายสมชาย ใจดี\",\n  \"topupReceiverAccount\": \"012-3-45678-9\",\n  \"topupBankName\": \"กสิกรไทย\"\n}"
+              "raw": "{\n  \"storeName\": \"NEO APP\",\n  \"topupReceiverName\": \"นายสมชาย ใจดี\",\n  \"topupReceiverAccount\": \"012-3-45678-9\",\n  \"topupBankName\": \"กสิกรไทย\",\n  \"topupPromptpayId\": \"081-234-5678\",\n  \"topupTruemoneyPhone\": \"0812345678\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/settings",

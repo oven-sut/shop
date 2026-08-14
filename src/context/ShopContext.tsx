@@ -46,6 +46,7 @@ interface ShopContextType {
   walletTransactions: WalletTransaction[];
   refreshWallet: () => Promise<void>;
   topUp: (amount: number, slip: File | null, payload?: string) => Promise<ActionResult>;
+  redeemVoucher: (voucher: string) => Promise<ActionResult>;
 
   // Setters & Filters
   setSearchQuery: (query: string) => void;
@@ -365,6 +366,26 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { success: true, message: result.message || 'เติมเงินสำเร็จ' };
   };
 
+  /**
+   * ซองอังเปาทรูมันนี่ — เงินเข้าทันทีที่ไถ่สำเร็จ ไม่ต้องแนบสลิป
+   *
+   * The message is passed through as the server wrote it: it distinguishes an
+   * expired voucher from one someone else already took from a redeem that went
+   * through but could not be credited, and the customer needs to know which.
+   */
+  const redeemVoucher = async (voucher: string): Promise<ActionResult> => {
+    const result = await callApi<{ balance: number }>('/api/topups/truemoney', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ voucher }),
+    });
+
+    if (!result.ok) return { success: false, message: result.message || 'ไถ่ซองอังเปาไม่สำเร็จ' };
+
+    await refreshWallet();
+    return { success: true, message: result.message || 'เติมเงินสำเร็จ' };
+  };
+
   // ── Orders ────────────────────────────────────────────────────────────────
   const createOrder = async (customer: CustomerInfo): Promise<Order | null> => {
     const result = await callApi<Order>('/api/orders', {
@@ -533,6 +554,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         walletTransactions,
         refreshWallet,
         topUp,
+        redeemVoucher,
         setSearchQuery,
         setSelectedCategory,
         setQuickViewProduct,

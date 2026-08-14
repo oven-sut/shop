@@ -34,7 +34,10 @@ function StoreSettingsPanel() {
     setForm((prev) => ({ ...prev, [key]: value }));
 
   /** Whether the number being typed can also be handed out as a QR. */
-  const promptpay = readPromptPayTarget(form.topupReceiverAccount);
+  const promptpay = readPromptPayTarget(form.topupPromptpayId);
+
+  /** TrueMoney redeems into a mobile number, nothing else. */
+  const truemoneyReady = /^0\d{9}$/.test(form.topupTruemoneyPhone.replace(/\D/g, ''));
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +75,8 @@ function StoreSettingsPanel() {
                   <span className="font-bold text-neutral-900">บัญชีรับเงินเติม</span>
                 </div>
                 <p className="text-[11px] text-neutral-500 -mt-1">
-                  ระบบจะเทียบผู้รับในสลิปกับค่านี้ก่อนเติมเงินให้ลูกค้า ถ้าเว้นว่างทั้งคู่จะเติมเงินไม่ได้เลย
+                  กรอกช่องไหนก็เปิดช่องทางนั้น ลูกค้าโอนเข้าช่องไหนก็ตรวจสลิปผ่าน ถ้าไม่กรอกเลย
+                  แม้แต่ช่องเดียวจะเติมเงินไม่ได้ (กันคนเอาสลิปที่โอนให้คนอื่นมาเติม)
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -87,27 +91,6 @@ function StoreSettingsPanel() {
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-neutral-700 mb-1">
-                      เลขบัญชี / พร้อมเพย์
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="เช่น 012-3-45678-9"
-                      value={form.topupReceiverAccount}
-                      onChange={(e) => update('topupReceiverAccount', e.target.value)}
-                      className="w-full bg-white border-neutral-200 text-neutral-900 font-mono"
-                    />
-                    {/* Only a PromptPay ID can be drawn as a QR, so say which of
-                        the two this value is before the customer finds out. */}
-                    <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">
-                      {!form.topupReceiverAccount.trim()
-                        ? `กรอกเป็นพร้อมเพย์เพื่อให้ลูกค้าสแกน QR จ่ายได้ — ${PROMPTPAY_SHAPE_HINT}`
-                        : promptpay
-                          ? `ลูกค้าสแกน QR จ่ายได้ (${PROMPTPAY_KIND_LABEL[promptpay.kind]})`
-                          : `เลขนี้ใช้รับโอน + ตรวจสลิปได้ แต่สร้าง QR ให้ลูกค้าไม่ได้ — ${PROMPTPAY_SHAPE_HINT}`}
-                    </p>
-                  </div>
-                  <div>
                     <label className="block font-semibold text-neutral-700 mb-1">ธนาคาร</label>
                     <Input
                       type="text"
@@ -116,6 +99,59 @@ function StoreSettingsPanel() {
                       onChange={(e) => update('topupBankName', e.target.value)}
                       className="w-full bg-white border-neutral-200 text-neutral-900"
                     />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-neutral-700 mb-1">
+                      เลขบัญชีธนาคาร
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="เช่น 012-3-45678-9"
+                      value={form.topupReceiverAccount}
+                      onChange={(e) => update('topupReceiverAccount', e.target.value)}
+                      className="w-full bg-white border-neutral-200 text-neutral-900 font-mono"
+                    />
+                    <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">
+                      ใช้รับโอน + เทียบผู้รับในสลิป สร้าง QR ไม่ได้ (ใส่พร้อมเพย์ในช่องถัดไป)
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-neutral-700 mb-1">พร้อมเพย์</label>
+                    <Input
+                      type="text"
+                      placeholder="เช่น 081-234-5678"
+                      value={form.topupPromptpayId}
+                      onChange={(e) => update('topupPromptpayId', e.target.value)}
+                      className="w-full bg-white border-neutral-200 text-neutral-900 font-mono"
+                    />
+                    {/* Only a PromptPay ID can be drawn as a QR, so say whether this
+                        value is one before the customer finds out. */}
+                    <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">
+                      {!form.topupPromptpayId.trim()
+                        ? `กรอกเพื่อเปิดปุ่มสแกน QR ในหน้ากระเป๋าเงิน — ${PROMPTPAY_SHAPE_HINT}`
+                        : promptpay
+                          ? `ลูกค้าสแกน QR จ่ายได้ (${PROMPTPAY_KIND_LABEL[promptpay.kind]})`
+                          : `เลขนี้สร้าง QR ไม่ได้ — ${PROMPTPAY_SHAPE_HINT}`}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-neutral-700 mb-1">
+                      เบอร์ทรูวอลเล็ต (รับซองอังเปา)
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="เช่น 0812345678"
+                      value={form.topupTruemoneyPhone}
+                      onChange={(e) => update('topupTruemoneyPhone', e.target.value)}
+                      className="w-full bg-white border-neutral-200 text-neutral-900 font-mono"
+                    />
+                    {/* The redeem call needs this exact wallet's mobile; a typo here
+                        means every voucher a customer sends is refused by TrueMoney. */}
+                    <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">
+                      {truemoneyReady
+                        ? 'ซองอังเปาที่ลูกค้าส่งมาจะถูกไถ่เข้าเบอร์นี้ แล้วเติมเข้ากระเป๋าให้ทันที'
+                        : 'ต้องเป็นเบอร์มือถือ 10 หลักของวอลเล็ตที่จะรับเงิน ถ้าไม่กรอกจะปิดการเติมด้วยซองอังเปา'}
+                    </p>
                   </div>
                   <div>
                     <label className="block font-semibold text-neutral-700 mb-1">

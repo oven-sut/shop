@@ -3,9 +3,9 @@ import { requireApiUser } from '@/lib/api-auth';
 import { serverError } from '@/lib/api-response';
 import { buildPromptPayQr } from '@/lib/promptpay';
 import {
+  pickPromptPayTarget,
   PROMPTPAY_KIND_LABEL,
   PROMPTPAY_SHAPE_HINT,
-  readPromptPayTarget,
 } from '@/lib/promptpay-id';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { loadSettings } from '@/lib/settings';
@@ -41,12 +41,12 @@ export async function GET(request: NextRequest) {
     const supabase = await createRouteClient();
     const settings = await loadSettings(supabase);
 
-    const target = readPromptPayTarget(settings.topupReceiverAccount);
+    const target = pickPromptPayTarget(settings.topupPromptpayId, settings.topupReceiverAccount);
     if (!target) {
       return fail(
-        settings.topupReceiverAccount.trim()
-          ? `เลขบัญชีที่ร้านตั้งไว้ไม่ใช่พร้อมเพย์ (${PROMPTPAY_SHAPE_HINT}) — โอนตามเลขบัญชีที่แสดงไว้แล้วอัปโหลดสลิปได้ตามปกติ`
-          : 'ร้านยังไม่ได้ตั้งค่าบัญชีรับเงิน กรุณาให้ผู้ดูแลระบบตั้งค่าที่หน้าแอดมิน → ตั้งค่าร้านค้า',
+        settings.topupPromptpayId.trim()
+          ? `เลขพร้อมเพย์ที่ร้านตั้งไว้ไม่ถูกต้อง (${PROMPTPAY_SHAPE_HINT}) — โอนตามเลขบัญชีที่แสดงไว้แล้วอัปโหลดสลิปได้ตามปกติ`
+          : 'ร้านยังไม่ได้ตั้งค่าพร้อมเพย์ กรุณาให้ผู้ดูแลระบบตั้งค่าที่หน้าแอดมิน → ตั้งค่าร้านค้า',
         503,
         'promptpay_not_configured'
       );
@@ -83,9 +83,9 @@ export async function GET(request: NextRequest) {
         amount: qr.amount,
         kind: qr.kind,
         kindLabel: PROMPTPAY_KIND_LABEL[qr.kind],
-        // Echoed as the admin typed it, so the customer can read the QR back
-        // against the account details shown beside it.
-        account: settings.topupReceiverAccount,
+        // Echoed as the admin typed it — separators and all — so the customer can
+        // read the QR back against the account details shown beside it.
+        account: settings.topupPromptpayId.trim() || settings.topupReceiverAccount,
         receiverName: settings.topupReceiverName,
         bankName: settings.topupBankName,
       },

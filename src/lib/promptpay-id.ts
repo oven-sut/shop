@@ -42,3 +42,18 @@ export const PROMPTPAY_KIND_LABEL: Record<PromptPayIdKind, string> = {
 /** Shown wherever an admin can type the receiving account. */
 export const PROMPTPAY_SHAPE_HINT =
   'พร้อมเพย์ต้องเป็นเบอร์มือถือ 10 หลัก เลขบัตรประชาชน/ผู้เสียภาษี 13 หลัก หรือ e-Wallet 15 หลัก';
+
+/**
+ * Which number the QR is drawn from.
+ *
+ * `topup_promptpay_id` is the field meant for it. The bank-account field is
+ * consulted only as a fallback, because it used to be the *only* field and an
+ * admin may still have typed a PromptPay number there — reading it keeps a QR
+ * working for that shop instead of silently dropping the feature.
+ */
+export function pickPromptPayTarget(
+  promptpayId: string,
+  bankAccount: string
+): PromptPayTarget | null {
+  return readPromptPayTarget(promptpayId) ?? readPromptPayTarget(bankAccount);
+}

@@ -8,12 +8,12 @@ import { Footer } from '../../components/Footer';
 import { ToastContainer } from '../../components/ToastContainer';
 import { CartDrawer } from '../../components/CartDrawer';
 import { Topup } from '../../types/ecommerce';
-import { ArrowDownRight, ArrowUpRight, Banknote, QrCode } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Banknote, Gift, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton, SkeletonRegion } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import { readPromptPayTarget } from '@/lib/promptpay-id';
+import { pickPromptPayTarget } from '@/lib/promptpay-id';
 
 const money = (value: number) => `฿${value.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
 
@@ -29,8 +29,16 @@ interface PromptPayQr {
 }
 
 function WalletContent() {
-  const { balance, walletTransactions, settings, isLoading, topUp, refreshWallet, showToast } =
-    useShop();
+  const {
+    balance,
+    walletTransactions,
+    settings,
+    isLoading,
+    topUp,
+    redeemVoucher,
+    refreshWallet,
+    showToast,
+  } = useShop();
 
   const [amount, setAmount] = useState('');
   const [slip, setSlip] = useState<File | null>(null);
@@ -41,6 +49,9 @@ function WalletContent() {
   const [qr, setQr] = useState<PromptPayQr | null>(null);
   const [qrError, setQrError] = useState('');
   const [isQrLoading, setIsQrLoading] = useState(false);
+
+  const [voucher, setVoucher] = useState('');
+  const [isRedeeming, setIsRedeeming] = useState(false);
 
   const loadHistory = async () => {
     const response = await fetch('/api/topups');
@@ -57,7 +68,10 @@ function WalletContent() {
   }, []);
 
   const receiverConfigured = Boolean(
-    settings.topupReceiverAccount.trim() || settings.topupReceiverName.trim()
+    settings.topupReceiverAccount.trim() ||
+      settings.topupPromptpayId.trim() ||
+      settings.topupTruemoneyPhone.trim() ||
+      settings.topupReceiverName.trim()
   );
 
   /**
@@ -65,7 +79,11 @@ function WalletContent() {
    * plain account number the panel is left out altogether — a button that can
    * only answer "this is not a PromptPay account" is worse than no button.
    */
-  const promptpaySupported = readPromptPayTarget(settings.topupReceiverAccount) !== null;
+  const promptpaySupported =
+    pickPromptPayTarget(settings.topupPromptpayId, settings.topupReceiverAccount) !== null;
+
+  /** ซองอังเปาต้องมีเบอร์วอลเล็ตปลายทาง ไม่มีก็ไถ่ไม่ได้ */
+  const voucherSupported = /^0\d{9}$/.test(settings.topupTruemoneyPhone.replace(/\D/g, ''));
 
   /**
    * A QR carries the amount inside it, so it stops being the right QR the moment
@@ -98,6 +116,26 @@ function WalletContent() {
     } else {
       setQr(null);
       setQrError(body.message || 'สร้าง QR ไม่สำเร็จ');
+    }
+  };
+
+  const handleRedeem = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!voucher.trim()) {
+      showToast('วางลิงก์ซองอังเปาก่อน', 'warning');
+      return;
+    }
+
+    setIsRedeeming(true);
+    const result = await redeemVoucher(voucher.trim());
+    setIsRedeeming(false);
+
+    showToast(result.message, result.success ? 'success' : 'warning');
+
+    if (result.success) {
+      setVoucher('');
+      await loadHistory();
     }
   };
 
@@ -147,6 +185,48 @@ function WalletContent() {
           )}
         </div>
 
+        {/* TrueMoney voucher — the only channel that credits inside the request,
+            so it sits above the slip form rather than beside it. */}
+        {voucherSupported && (
+          <section className="border border-neutral-200 rounded-md p-6 space-y-4">
+            <div className="flex items-start justify-between gap-3 border-b border-neutral-100 pb-3">
+              <h2 className="text-base font-semibold">เติมเงินด้วยซองอังเปาทรูมันนี่</h2>
+              <span className="text-[11px] text-neutral-400 shrink-0 pt-1">เงินเข้าทันที</span>
+            </div>
+
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              ส่งซองอังเปาจากแอปทรูวอลเล็ตมาที่{' '}
+              <span className="font-mono font-semibold text-neutral-900">
+                {settings.topupTruemoneyPhone}
+              </span>{' '}
+              แล้ววางลิงก์ซองที่ได้ลงช่องนี้ ระบบจะรับซองแล้วเติมยอดตามที่อยู่ในซองให้ทันที
+              ไม่ต้องแนบสลิป — ซองหนึ่งใบใช้ได้ครั้งเดียว
+            </p>
+
+            <form onSubmit={handleRedeem} className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Input
+                  type="text"
+                  required
+                  placeholder="https://gift.truemoney.com/campaign/?v=..."
+                  value={voucher}
+                  onChange={(e) => setVoucher(e.target.value)}
+                  className="h-11 pl-10 bg-white border-neutral-300 rounded-md text-neutral-900 text-sm font-mono"
+                />
+                <Gift className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              </div>
+              <Button
+                type="submit"
+                disabled={isRedeeming}
+                className="h-11 px-6 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md border-0 disabled:opacity-40"
+              >
+                {isRedeeming && <Spinner className="mr-2" />}
+                {isRedeeming ? 'กำลังรับซอง...' : 'รับซอง'}
+              </Button>
+            </form>
+          </section>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top up */}
           <section className="border border-neutral-200 rounded-md p-6 space-y-5">
@@ -157,7 +237,7 @@ function WalletContent() {
             {receiverConfigured ? (
               <dl className="border border-neutral-200 rounded-md p-4 text-xs space-y-2">
                 <span className="font-semibold text-neutral-900 block">
-                  โอนเข้าบัญชีนี้ก่อน แล้วอัปโหลดสลิป
+                  โอนเข้าช่องทางใดช่องทางหนึ่งนี้ก่อน แล้วอัปโหลดสลิป
                 </span>
                 {settings.topupBankName && (
                   <div className="flex justify-between gap-3">
@@ -167,9 +247,25 @@ function WalletContent() {
                 )}
                 {settings.topupReceiverAccount && (
                   <div className="flex justify-between gap-3">
-                    <dt className="text-neutral-500">เลขบัญชี/พร้อมเพย์</dt>
+                    <dt className="text-neutral-500">เลขบัญชี</dt>
                     <dd className="font-mono font-semibold text-neutral-900">
                       {settings.topupReceiverAccount}
+                    </dd>
+                  </div>
+                )}
+                {settings.topupPromptpayId && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-neutral-500">พร้อมเพย์</dt>
+                    <dd className="font-mono font-semibold text-neutral-900">
+                      {settings.topupPromptpayId}
+                    </dd>
+                  </div>
+                )}
+                {settings.topupTruemoneyPhone && (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-neutral-500">ทรูวอลเล็ต</dt>
+                    <dd className="font-mono font-semibold text-neutral-900">
+                      {settings.topupTruemoneyPhone}
                     </dd>
                   </div>
                 )}
