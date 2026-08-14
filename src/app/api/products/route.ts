@@ -16,7 +16,15 @@ export async function GET(request: NextRequest) {
     const limit = Number(searchParams.get('limit'));
 
     const supabase = await createRouteClient();
-    let query = supabase.from('products').select('*').order('created_at', { ascending: false });
+    // The reviews have to be embedded here, not just on /api/products/[id]: the
+    // storefront renders the quick-view straight off this list, so a bare
+    // select('*') leaves every product with `reviews: undefined` and the review
+    // tab looks empty even when rows exist.
+    let query = supabase
+      .from('products')
+      .select('*, product_reviews(*)')
+      .order('created_at', { ascending: false })
+      .order('created_at', { referencedTable: 'product_reviews', ascending: false });
 
     if (category && category !== 'ทั้งหมด') query = query.eq('category', category);
     if (featured === 'true') query = query.eq('is_featured', true);

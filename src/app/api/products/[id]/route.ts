@@ -55,7 +55,9 @@ export async function PATCH(
       .from('products')
       .update(patch)
       .eq('id', id)
-      .select('*')
+      // Same embed as the read paths — the client swaps this row straight into
+      // state, so returning it without reviews would blank them until a reload.
+      .select('*, product_reviews(*)')
       .maybeSingle();
 
     if (error) {
