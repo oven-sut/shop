@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Sarabun } from "next/font/google";
 import { AuthProvider } from "../context/AuthContext";
 import { CookieConsent } from "../components/CookieConsent";
+import { Analytics } from "../components/Analytics";
 import { siteOrigin } from "../lib/auth";
 import { getSessionUser } from "../lib/supabase/session";
 import "./globals.css";
@@ -77,6 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-full flex flex-col font-sans bg-white text-neutral-900 selection:bg-neutral-900 selection:text-white">
         <AuthProvider initialUser={user}>{children}</AuthProvider>
         <CookieConsent />
+        <Analytics />
       </body>
     </html>
   );
