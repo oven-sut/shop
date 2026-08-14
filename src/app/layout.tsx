@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
-import { Prompt, Inter } from "next/font/google";
+import { Sarabun } from "next/font/google";
 import { AuthProvider } from "../context/AuthContext";
 import { CookieConsent } from "../components/CookieConsent";
 import { getSessionUser } from "../lib/supabase/session";
 import "./globals.css";
 
-const promptFont = Prompt({
+/**
+ * Sarabun is the web-served descendant of TH Sarabun (same Cadson Demak
+ * lineage) and the only one of the family that next/font can self-host, so it
+ * carries both Thai and Latin here — no second face to keep in step.
+ */
+const sarabun = Sarabun({
   weight: ["300", "400", "500", "600", "700", "800"],
   subsets: ["thai", "latin"],
-  variable: "--font-prompt",
-});
-
-const interFont = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-sarabun",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -35,11 +36,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const user = await getSessionUser();
 
   return (
-    <html
-      lang="th"
-      className={`${promptFont.variable} ${interFont.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col font-sans bg-slate-50 text-slate-900 selection:bg-indigo-600 selection:text-white">
+    <html lang="th" className={`${sarabun.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col font-sans bg-white text-neutral-900 selection:bg-neutral-900 selection:text-white">
         <AuthProvider initialUser={user}>{children}</AuthProvider>
         <CookieConsent />
       </body>

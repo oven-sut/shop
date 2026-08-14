@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useShop } from '../context/ShopContext';
 import { useAuth } from '../context/AuthContext';
-import { ShoppingBag, Heart, Search, Sparkles, Package, Wallet as WalletIcon, User as UserIcon, LogOut, LayoutDashboard } from 'lucide-react';
+import { ShoppingBag, Heart, Search, Package, Wallet as WalletIcon, User as UserIcon, LogOut, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -42,31 +42,30 @@ export const Navbar: React.FC = () => {
   const categories = ['ทั้งหมด', ...new Set(products.map((p) => p.category).filter(Boolean))];
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200 text-slate-900 shadow-sm">
-      {/* Top Banner Notice */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white text-xs font-semibold py-1.5 px-4 text-center flex items-center justify-center gap-2">
-        <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-        <span>เติมเงินเข้ากระเป๋า แล้วซื้อแอปได้ทันทีในคลิกเดียว</span>
+    <header className="sticky top-0 z-40 bg-white border-b border-neutral-200">
+      {/* Notice strip — inverted rather than coloured. */}
+      <div className="bg-neutral-900 text-white text-xs py-2 px-4 text-center tracking-wide">
+        เติมเงินเข้ากระเป๋า แล้วซื้อแอปได้ทันทีในคลิกเดียว
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4">
-          
+        <div className="flex items-center justify-between h-20 gap-6">
+
           {/* Brand Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
+          <Link href="/" className="flex items-center gap-3 shrink-0">
             <Image
               src="/logo-mark.png"
               alt=""
               width={470}
               height={462}
               priority
-              className="h-10 w-auto group-hover:scale-105 transition-transform"
+              className="h-9 w-auto"
             />
-            <div>
-              <span className="text-xl font-extrabold tracking-tight text-slate-900">
-                NEO <span className="text-indigo-600">APP</span>
+            <div className="leading-none">
+              <span className="text-lg font-bold tracking-tight text-neutral-900">
+                NEO APP
               </span>
-              <span className="block text-[10px] text-slate-500 tracking-widest font-medium uppercase">
+              <span className="block text-[10px] text-neutral-400 tracking-[0.2em] uppercase mt-1">
                 App Store
               </span>
             </div>
@@ -80,15 +79,15 @@ export const Navbar: React.FC = () => {
                 placeholder="ค้นหาแอปที่ต้องการ..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-100/80 border-slate-200 rounded-full py-2 pl-11 pr-12 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all"
+                className="w-full h-10 bg-neutral-50 border-neutral-200 rounded-md pl-10 pr-14 text-sm text-neutral-900 placeholder-neutral-400 focus-visible:border-neutral-900 focus-visible:ring-0 focus:bg-white transition-colors"
               />
-              <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               {searchQuery && (
                 <Button
                   variant="ghost"
                   size="xs"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-neutral-400 hover:text-neutral-900"
                 >
                   ล้าง
                 </Button>
@@ -97,18 +96,18 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Wishlist */}
             <div className="relative">
               <Button
                 variant="outline"
                 size="icon"
                 title="รายการโปรด"
-                className="rounded-xl bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 hover:text-pink-600 border-slate-200"
+                className="size-10 rounded-md bg-white hover:bg-neutral-100 text-neutral-700 border-neutral-200"
               >
-                <Heart className="w-5 h-5" />
+                <Heart className="w-[18px] h-[18px]" />
                 {wishlist.length > 0 && (
-                  <Badge className="absolute -top-1.5 -right-1.5 bg-pink-500 text-white text-[10px] font-bold w-5 h-5 rounded-full p-0 flex items-center justify-center border-2 border-white shadow">
+                  <Badge className="absolute -top-1.5 -right-1.5 bg-neutral-900 text-white text-[10px] font-semibold w-5 h-5 rounded-full p-0 flex items-center justify-center ring-2 ring-white">
                     {wishlist.length}
                   </Badge>
                 )}
@@ -118,12 +117,12 @@ export const Navbar: React.FC = () => {
             {/* Cart Button */}
             <Button
               onClick={() => setIsCartOpen(true)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl shadow-lg shadow-indigo-600/20 transition-all active:scale-95 border-0"
+              className="h-10 flex items-center gap-2.5 bg-neutral-900 hover:bg-neutral-700 text-white px-4 rounded-md transition-colors border-0"
             >
               <div className="relative">
-                <ShoppingBag className="w-5 h-5" />
+                <ShoppingBag className="w-[18px] h-[18px]" />
                 {totalCartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-[10px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-2 -right-2 bg-white text-neutral-900 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {totalCartCount}
                   </span>
                 )}
@@ -140,55 +139,62 @@ export const Navbar: React.FC = () => {
                     inside it would be invalid HTML. */}
                 <DropdownMenuTrigger
                   aria-label={`บัญชีของ ${user.name}`}
-                  className="relative h-10 w-10 rounded-full p-0 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                  className="relative h-10 w-10 rounded-full p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-900"
                 >
-                  <Avatar className="h-10 w-10 border-2 border-indigo-500/40">
+                  <Avatar className="h-10 w-10 border border-neutral-200">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback className="bg-indigo-100 text-indigo-700 font-bold">
+                    <AvatarFallback className="bg-neutral-100 text-neutral-700 font-semibold">
                       {user.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 bg-white border-slate-200 text-slate-900 shadow-xl" align="end">
+                <DropdownMenuContent className="w-60 bg-white border-neutral-200 text-neutral-900 rounded-md shadow-lg" align="end">
                   {/* Base UI requires GroupLabel to sit inside a Group. */}
                   <DropdownMenuGroup>
                     <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-bold leading-none text-slate-900">{user.name}</p>
-                        <p className="text-xs leading-none text-slate-500 truncate">{user.email}</p>
+                      <div className="flex flex-col space-y-1.5">
+                        <p className="text-sm font-semibold leading-none text-neutral-900">{user.name}</p>
+                        <p className="text-xs leading-none text-neutral-500 truncate">{user.email}</p>
                         <div className="pt-1">
-                          <Badge variant="outline" className={isAdmin ? "bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px]" : "bg-slate-100 text-slate-700 border-slate-200 text-[10px]"}>
+                          <Badge
+                            className={
+                              isAdmin
+                                ? 'bg-neutral-900 text-white border-0 text-[10px] tracking-wider rounded-sm'
+                                : 'bg-neutral-100 text-neutral-600 border-0 text-[10px] tracking-wider rounded-sm'
+                            }
+                          >
                             {user.role === 'admin' ? 'ADMIN' : 'MEMBER'}
                           </Badge>
                         </div>
                       </div>
                     </DropdownMenuLabel>
                   </DropdownMenuGroup>
-                  <DropdownMenuSeparator className="bg-slate-100" />
+                  <DropdownMenuSeparator className="bg-neutral-100" />
                   <DropdownMenuItem className="cursor-pointer">
-                    <Link href="/orders" className="flex items-center gap-2 w-full text-slate-700 font-semibold">
+                    <Link href="/orders" className="flex items-center gap-2 w-full text-neutral-700">
                       <Package className="w-4 h-4" />
                       บัญชีเกมที่ซื้อไว้
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem className="cursor-pointer">
                     <Link href="/wallet" className="flex items-center justify-between gap-2 w-full">
-                      <span className="flex items-center gap-2 text-slate-700 font-semibold">
+                      <span className="flex items-center gap-2 text-neutral-700">
                         <WalletIcon className="w-4 h-4" />
                         กระเป๋าเงิน
                       </span>
-                      <span className="font-bold text-emerald-600">฿{balance.toLocaleString()}</span>
+                      <span className="font-semibold text-neutral-900">฿{balance.toLocaleString()}</span>
                     </Link>
                   </DropdownMenuItem>
                   {isAdmin && (
                     <DropdownMenuItem className="cursor-pointer">
-                      <Link href="/admin" className="flex items-center gap-2 text-indigo-600 font-semibold w-full">
+                      <Link href="/admin" className="flex items-center gap-2 text-neutral-900 font-semibold w-full">
                         <LayoutDashboard className="w-4 h-4" />
                         <span>ระบบหลังบ้าน (Admin)</span>
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50">
+                  <DropdownMenuSeparator className="bg-neutral-100" />
+                  <DropdownMenuItem onClick={logout} className="cursor-pointer text-neutral-500 focus:text-neutral-900">
                     <LogOut className="w-4 h-4 mr-2" />
                     <span>ออกจากระบบ</span>
                   </DropdownMenuItem>
@@ -198,9 +204,9 @@ export const Navbar: React.FC = () => {
               <Link href="/login">
                 <Button
                   variant="outline"
-                  className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 border-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold"
+                  className="h-10 flex items-center gap-2 bg-white hover:bg-neutral-100 text-neutral-900 border-neutral-200 px-4 rounded-md text-sm font-medium"
                 >
-                  <UserIcon className="w-4 h-4 text-indigo-600" />
+                  <UserIcon className="w-4 h-4" />
                   <span>เข้าสู่ระบบ</span>
                 </Button>
               </Link>
@@ -213,29 +219,29 @@ export const Navbar: React.FC = () => {
           <div className="relative">
             <Input
               type="text"
-              placeholder="ค้นหาสินค้าไอที..."
+              placeholder="ค้นหาแอปที่ต้องการ..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-100 border-slate-200 rounded-xl py-2 pl-10 pr-4 text-sm text-slate-900 placeholder-slate-400"
+              className="w-full h-10 bg-neutral-50 border-neutral-200 rounded-md pl-10 pr-4 text-sm text-neutral-900 placeholder-neutral-400"
             />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           </div>
         </div>
 
-        {/* Category Navigation Pills */}
-        <nav className="flex items-center gap-2 overflow-x-auto py-2.5 no-scrollbar border-t border-slate-200/80">
+        {/* Category Navigation */}
+        <nav className="flex items-center gap-1 overflow-x-auto py-2 no-scrollbar border-t border-neutral-100">
           {categories.map((cat) => {
             const isActive = selectedCategory === cat;
             return (
               <Button
                 key={cat}
-                variant={isActive ? "default" : "outline"}
+                variant="ghost"
                 size="sm"
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                className={`h-8 px-3 rounded-md text-sm whitespace-nowrap transition-colors ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 border-0'
-                    : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border-slate-200'
+                    ? 'bg-neutral-900 text-white hover:bg-neutral-900 font-medium'
+                    : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
                 }`}
               >
                 {cat}

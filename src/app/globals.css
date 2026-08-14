@@ -7,9 +7,35 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-prompt), var(--font-inter), sans-serif;
-  --font-mono: var(--font-inter), monospace;
-  --font-heading: var(--font-prompt), sans-serif;
+
+  /* Sarabun everywhere. The two local names are the desktop TH Sarabun cuts —
+     they only kick in if the self-hosted webfont fails to load. */
+  --font-sans: var(--font-sarabun), "TH Sarabun New", "TH SarabunPSK", sans-serif;
+  --font-heading: var(--font-sarabun), "TH Sarabun New", "TH SarabunPSK", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Menlo, monospace;
+
+  /* Thai has tall ascenders and stacked vowels/tone marks, so the stock Tailwind
+     leading is too tight. Sizes are nudged up a notch as well — Sarabun sets
+     visually smaller than Inter at the same px. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.65;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.65;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.75;
+  --text-lg: 1.1875rem;
+  --text-lg--line-height: 1.6;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.5;
+  --text-2xl: 1.625rem;
+  --text-2xl--line-height: 1.4;
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 1.3;
+  --text-4xl: 2.5rem;
+  --text-4xl--line-height: 1.2;
+  --text-5xl: 3.25rem;
+  --text-5xl--line-height: 1.15;
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,35 +65,43 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-3xl: calc(var(--radius) * 2.5);
+  --radius-4xl: calc(var(--radius) * 3);
 }
 
+/*
+ * Monochrome only. Every colour below has zero chroma, so the whole UI —
+ * including the shadcn primitives that read these tokens — resolves to
+ * white / black / grey. Emphasis is carried by weight, contrast and rules
+ * instead of hue.
+ */
 :root {
-  --background: oklch(0.985 0.005 240);
-  --foreground: oklch(0.145 0.02 260);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.16 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.02 260);
+  --card-foreground: oklch(0.16 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.02 260);
-  --primary: oklch(0.52 0.22 264);
+  --popover-foreground: oklch(0.16 0 0);
+  --primary: oklch(0.16 0 0);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.96 0.01 260);
-  --secondary-foreground: oklch(0.2 0.02 260);
-  --muted: oklch(0.96 0.01 260);
-  --muted-foreground: oklch(0.5 0.02 260);
-  --accent: oklch(0.96 0.01 260);
-  --accent-foreground: oklch(0.2 0.02 260);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.91 0.01 260);
-  --input: oklch(0.91 0.01 260);
-  --ring: oklch(0.52 0.22 264);
-  --radius: 0.75rem;
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.24 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.53 0 0);
+  --accent: oklch(0.955 0 0);
+  --accent-foreground: oklch(0.24 0 0);
+  /* Destructive is a dark grey, not red — danger reads through wording and
+     the confirm step, not colour. */
+  --destructive: oklch(0.32 0 0);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.88 0 0);
+  --ring: oklch(0.62 0 0);
+  --radius: 0.375rem;
 }
 
 @layer base {
@@ -76,9 +110,31 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
-    font-family: var(--font-prompt), var(--font-inter), system-ui, sans-serif;
+    font-family: var(--font-sarabun), "TH Sarabun New", "TH SarabunPSK", sans-serif;
+    /* Sarabun's default figures are proportional; tabular keeps prices and
+       balances from jittering as they update. */
+    font-variant-numeric: tabular-nums;
   }
   html {
-    font-family: var(--font-prompt), var(--font-inter), system-ui, sans-serif;
+    font-family: var(--font-sarabun), "TH Sarabun New", "TH SarabunPSK", sans-serif;
   }
+  /* Thai text does not hyphenate and breaks on word boundaries the browser has
+     to guess at — this keeps paragraphs from tearing mid-word. */
+  p, li, td {
+    word-break: break-word;
+  }
+}
+
+/* Horizontal tab/category strips scroll without a visible bar. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* A single hairline rule that follows the border token. */
+@utility hairline {
+  border-color: var(--border);
 }

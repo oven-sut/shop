@@ -51,9 +51,9 @@ export default function ApiDocsPage() {
         href={`https://unpkg.com/swagger-ui-dist@${SWAGGER_VERSION}/swagger-ui.css`}
       />
 
-      <header className="sticky top-0 z-10 bg-slate-900 text-white">
+      <header className="sticky top-0 z-10 bg-neutral-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
-          <Link href="/" className="flex items-center gap-2 text-xs font-semibold hover:text-indigo-300">
+          <Link href="/" className="flex items-center gap-2 text-xs font-semibold text-neutral-300 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
             <span>กลับหน้าร้านค้า</span>
           </Link>
@@ -61,7 +61,7 @@ export default function ApiDocsPage() {
           <a
             href="/openapi.json"
             download
-            className="flex items-center gap-1.5 text-xs font-semibold hover:text-indigo-300"
+            className="flex items-center gap-1.5 text-xs font-semibold text-neutral-300 hover:text-white transition-colors"
           >
             <Download className="w-4 h-4" />
             <span>openapi.json</span>
@@ -70,7 +70,7 @@ export default function ApiDocsPage() {
       </header>
 
       {failed && (
-        <div className="max-w-3xl mx-auto m-8 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm">
+        <div className="max-w-3xl mx-auto m-8 p-4 rounded-md border-l-2 border-neutral-900 bg-neutral-50 text-neutral-700 text-sm">
           โหลด Swagger UI จาก CDN ไม่สำเร็จ (ออฟไลน์หรือถูกบล็อก) — ดาวน์โหลด{' '}
           <a href="/openapi.json" className="underline font-semibold" download>
             openapi.json

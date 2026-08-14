@@ -25,7 +25,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeTab, setActiveTa
   ];
 
   return (
-    <header className="bg-white border-b border-slate-200 text-slate-900 sticky top-0 z-40 shadow-sm">
+    <header className="bg-white border-b border-neutral-200 text-neutral-900 sticky top-0 z-40 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 gap-4">
           
@@ -41,14 +41,14 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeTab, setActiveTa
             />
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-extrabold tracking-tight text-slate-900">
+                <span className="text-lg font-bold tracking-tight text-neutral-900">
                   NEO APP
                 </span>
-                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 text-[10px] font-bold border-indigo-200">
+                <Badge variant="outline" className="bg-neutral-100 text-neutral-700 text-[10px] font-bold border-neutral-300">
                   BACKOFFICE
                 </Badge>
               </div>
-              <span className="text-xs text-slate-500">ระบบบริหารจัดการหลังบ้าน</span>
+              <span className="text-xs text-neutral-500">ระบบบริหารจัดการหลังบ้าน</span>
             </div>
           </div>
 
@@ -56,16 +56,16 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeTab, setActiveTa
           <Link href="/">
             <Button
               variant="outline"
-              className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+              className="flex items-center gap-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border-neutral-200 px-4 py-2 rounded-md text-xs font-bold transition-all shadow-sm"
             >
-              <Store className="w-4 h-4 text-emerald-600" />
+              <Store className="w-4 h-4 text-neutral-900" />
               <span>กลับสู่หน้าร้าน (Storefront)</span>
             </Button>
           </Link>
         </div>
 
         {/* Tab Navigation */}
-        <nav className="flex items-center gap-2 overflow-x-auto py-2 no-scrollbar border-t border-slate-100">
+        <nav className="flex items-center gap-2 overflow-x-auto py-2 no-scrollbar border-t border-neutral-100">
           {tabs.map((tab) => {
             const IconComp = tab.icon;
             const isActive = activeTab === tab.id;
@@ -75,10 +75,10 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeTab, setActiveTa
                 variant={isActive ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 border-0'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-neutral-900 text-white border-0'
+                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
                 }`}
               >
                 <IconComp className="w-4 h-4" />

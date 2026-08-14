@@ -2,10 +2,9 @@
 
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
-import { X, Trash2, Plus, Minus, Tag, ArrowRight, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -45,172 +44,163 @@ export const CartDrawer: React.FC = () => {
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-neutral-900/50"
         onClick={() => setIsCartOpen(false)}
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white border-l border-slate-200 text-slate-900 shadow-2xl flex flex-col justify-between">
-          
+        <div className="w-screen max-w-md bg-white border-l border-neutral-200 text-neutral-900 flex flex-col justify-between animate-in slide-in-from-right duration-200">
+
           {/* Drawer Header */}
-          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-lg font-bold text-slate-900">ตะกร้าสินค้าของคุณ</h2>
-              <Badge variant="outline" className="bg-indigo-50 text-indigo-700 text-xs font-bold border-indigo-200">
+          <div className="px-5 h-16 border-b border-neutral-200 flex items-center justify-between shrink-0">
+            <div className="flex items-baseline gap-2">
+              <h2 className="text-base font-semibold text-neutral-900">ตะกร้าสินค้า</h2>
+              <span className="text-xs text-neutral-400">
                 {cart.reduce((s, i) => s + i.quantity, 0)} รายการ
-              </Badge>
+              </span>
             </div>
             <button
               onClick={() => setIsCartOpen(false)}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              className="p-2 -mr-2 rounded-md text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition-colors"
+              aria-label="ปิด"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Drawer Item List */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div className="flex-1 overflow-y-auto">
             {cart.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center py-12 text-slate-400 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
-                  <ShoppingBag className="w-8 h-8 text-slate-400" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-base">ตะกร้าของคุณยังว่างอยู่</h3>
-                  <p className="text-xs text-slate-500 mt-1 max-w-xs">
-                    เลือกชมสินค้าหลากหลายรายการ และเพิ่มไอเทมที่คุณชื่นชอบลงในตะกร้าได้เลย
-                  </p>
-                </div>
+              <div className="h-full flex flex-col items-center justify-center text-center px-8 space-y-4">
+                <h3 className="font-semibold text-neutral-900 text-base">ตะกร้าของคุณยังว่างอยู่</h3>
+                <p className="text-xs text-neutral-500 max-w-xs">
+                  เลือกชมสินค้าหลากหลายรายการ และเพิ่มไอเทมที่คุณชื่นชอบลงในตะกร้าได้เลย
+                </p>
                 <Button
                   onClick={() => setIsCartOpen(false)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-600/20 border-0"
+                  className="h-10 bg-neutral-900 hover:bg-neutral-700 text-white font-medium text-sm px-5 rounded-md transition-colors border-0"
                 >
                   เลือกช้อปสินค้าตอนนี้
                 </Button>
               </div>
             ) : (
-              cart.map((item) => (
-                <div
-                  key={item.product.id}
-                  className="flex gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 items-center justify-between shadow-sm"
-                >
-                  <img
-                    src={item.product.image}
-                    alt={item.product.name}
-                    className="w-16 h-16 object-cover rounded-xl border border-slate-200 shrink-0"
-                  />
+              <ul className="divide-y divide-neutral-100">
+                {cart.map((item) => (
+                  <li key={item.product.id} className="flex gap-3.5 p-5 items-start">
+                    <img
+                      src={item.product.image}
+                      alt={item.product.name}
+                      className="w-16 h-16 object-cover rounded-md border border-neutral-200 shrink-0"
+                    />
 
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-slate-900 truncate">{item.product.name}</h4>
-                    <span className="text-xs font-extrabold text-indigo-600 block mt-0.5">
-                      ฿{item.product.price.toLocaleString()}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-medium text-neutral-900 line-clamp-2">
+                        {item.product.name}
+                      </h4>
+                      <span className="text-xs text-neutral-400 block mt-0.5">
+                        ฿{item.product.price.toLocaleString()} / ชิ้น
+                      </span>
 
-                    {/* Quantity Controls */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5">
+                      {/* Quantity Controls */}
+                      <div className="flex items-center gap-3 mt-2.5">
+                        <div className="flex items-center border border-neutral-200 rounded-md">
+                          <button
+                            onClick={() => updateCartQuantity(item.product.id, -1)}
+                            className="px-2 py-1 text-neutral-400 hover:text-neutral-900 transition-colors"
+                            aria-label="ลดจำนวน"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="w-7 text-center text-xs font-semibold text-neutral-900">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => updateCartQuantity(item.product.id, 1)}
+                            className="px-2 py-1 text-neutral-400 hover:text-neutral-900 transition-colors"
+                            aria-label="เพิ่มจำนวน"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+
                         <button
-                          onClick={() => updateCartQuantity(item.product.id, -1)}
-                          className="p-1 text-slate-500 hover:text-slate-900"
+                          onClick={() => removeFromCart(item.product.id)}
+                          className="text-neutral-300 hover:text-neutral-900 transition-colors"
+                          title="ลบรายการ"
                         >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="w-6 text-center text-xs font-bold text-slate-900">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => updateCartQuantity(item.product.id, 1)}
-                          className="p-1 text-slate-500 hover:text-slate-900"
-                        >
-                          <Plus className="w-3 h-3" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-
-                      <button
-                        onClick={() => removeFromCart(item.product.id)}
-                        className="text-slate-400 hover:text-red-600 p-1 transition-colors"
-                        title="ลบรายการ"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
                     </div>
-                  </div>
 
-                  <div className="text-right shrink-0">
-                    <span className="text-xs font-extrabold text-slate-900">
+                    <span className="text-sm font-semibold text-neutral-900 shrink-0">
                       ฿{(item.product.price * item.quantity).toLocaleString()}
                     </span>
-                  </div>
-                </div>
-              ))
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
 
           {/* Drawer Footer Summary */}
           {cart.length > 0 && (
-            <div className="p-5 border-t border-slate-200 bg-slate-50 space-y-4">
+            <div className="p-5 border-t border-neutral-200 space-y-4 shrink-0">
               {/* Coupon Input Form */}
-              <div>
-                {activeCoupon ? (
-                  <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl text-xs">
-                    <div className="flex items-center gap-2 text-emerald-800">
-                      <Tag className="w-4 h-4 text-emerald-600" />
-                      <span>
-                        ส่วนลดโค้ด <strong className="font-mono">{activeCoupon.code}</strong> ({activeCoupon.discountPercent}% OFF)
-                      </span>
-                    </div>
-                    <button
-                      onClick={removeCoupon}
-                      className="text-emerald-700 hover:text-emerald-900 font-bold underline text-[10px]"
+              {activeCoupon ? (
+                <div className="flex items-center justify-between border border-neutral-900 rounded-md px-3 py-2.5 text-xs">
+                  <span className="text-neutral-900">
+                    ใช้โค้ด <strong className="font-mono font-semibold">{activeCoupon.code}</strong>{' '}
+                    · ลด {activeCoupon.discountPercent}%
+                  </span>
+                  <button
+                    onClick={removeCoupon}
+                    className="text-neutral-400 hover:text-neutral-900 underline underline-offset-2 transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleApplyCoupon} className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="กรอกโค้ดส่วนลด"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value)}
+                      className="h-10 flex-1 bg-white border-neutral-300 rounded-md text-xs text-neutral-900 placeholder-neutral-400"
+                    />
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      className="h-10 bg-white hover:bg-neutral-100 text-neutral-900 font-medium text-xs px-4 rounded-md border-neutral-300"
                     >
-                      ยกเลิก
-                    </button>
+                      ใช้โค้ด
+                    </Button>
                   </div>
-                ) : (
-                  <form onSubmit={handleApplyCoupon} className="space-y-1">
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Input
-                          type="text"
-                          placeholder="กรอกโค้ดส่วนลด (เช่น DISCOUNT500)"
-                          value={couponInput}
-                          onChange={(e) => setCouponInput(e.target.value)}
-                          className="w-full bg-white border-slate-200 rounded-xl py-2 pl-8 pr-3 text-xs text-slate-900 placeholder-slate-400"
-                        />
-                        <Tag className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                      </div>
-                      <Button
-                        type="submit"
-                        variant="outline"
-                        className="bg-white hover:bg-slate-100 text-indigo-600 font-semibold text-xs px-3.5 py-2 rounded-xl border-slate-200"
-                      >
-                        ใช้โค้ด
-                      </Button>
-                    </div>
-                    {couponError && (
-                      <p className="text-[11px] text-red-600 pl-1">{couponError}</p>
-                    )}
-                  </form>
-                )}
-              </div>
+                  {couponError && (
+                    <p className="text-[11px] text-neutral-500 border-l-2 border-neutral-900 pl-2">
+                      {couponError}
+                    </p>
+                  )}
+                </form>
+              )}
 
               {/* Price Breakdown */}
-              <div className="space-y-2 text-xs text-slate-600 border-t border-slate-200 pt-3">
+              <div className="space-y-2 text-xs text-neutral-500 border-t border-neutral-100 pt-4">
                 <div className="flex justify-between">
                   <span>ยอดรวมสินค้า</span>
-                  <span className="text-slate-900 font-medium">฿{cartSubtotal.toLocaleString()}</span>
+                  <span className="text-neutral-900">฿{cartSubtotal.toLocaleString()}</span>
                 </div>
                 {discountAmount > 0 && (
-                  <div className="flex justify-between text-emerald-600">
+                  <div className="flex justify-between">
                     <span>ส่วนลด</span>
-                    <span className="font-medium">-฿{discountAmount.toLocaleString()}</span>
+                    <span className="text-neutral-900">-฿{discountAmount.toLocaleString()}</span>
                   </div>
                 )}
 
-                <div className="flex justify-between text-base font-extrabold text-slate-900 border-t border-slate-200 pt-2">
+                <div className="flex justify-between items-baseline text-base font-bold text-neutral-900 border-t border-neutral-200 pt-3 mt-1">
                   <span>ยอดชำระสุทธิ</span>
-                  <span className="text-indigo-600">฿{cartTotal.toLocaleString()}</span>
+                  <span>฿{cartTotal.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -220,14 +210,14 @@ export const CartDrawer: React.FC = () => {
                   setIsCartOpen(false);
                   setIsCheckoutOpen(true);
                 }}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-sm py-3.5 rounded-xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 border-0"
+                className="w-full h-12 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md transition-colors flex items-center justify-center gap-2 border-0"
               >
-                <span>ดำเนินการสั่งซื้อสินค้า</span>
+                <span>ดำเนินการสั่งซื้อ</span>
                 <ArrowRight className="w-4 h-4" />
               </Button>
 
-              <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-500 pt-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-400">
+                <ShieldCheck className="w-3.5 h-3.5" strokeWidth={1.5} />
                 <span>ชำระเงินปลอดภัยด้วยระบบการเงินมาตรฐานสากล</span>
               </div>
             </div>

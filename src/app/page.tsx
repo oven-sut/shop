@@ -11,7 +11,6 @@ import { CartDrawer } from '../components/CartDrawer';
 import { CheckoutModal } from '../components/CheckoutModal';
 import { ToastContainer } from '../components/ToastContainer';
 import { Footer } from '../components/Footer';
-import { Flame, Sparkles, PackageSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function StorefrontContent() {
@@ -32,7 +31,7 @@ function StorefrontContent() {
   const featuredProducts = products.filter((p) => p.isFeatured || p.badge === 'HOT');
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-white text-neutral-900 flex flex-col font-sans selection:bg-neutral-900 selection:text-white">
       {/* Toast Flash Messages */}
       <ToastContainer />
 
@@ -40,7 +39,7 @@ function StorefrontContent() {
       <Navbar />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 space-y-12 pb-16">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-20">
         {/* Hero Banner */}
         <HeroBanner />
 
@@ -48,23 +47,23 @@ function StorefrontContent() {
         <FeatureBar />
 
         {/* Hot / Featured Products Showcase */}
-        {!searchQuery && selectedCategory === 'ทั้งหมด' && (
-          <section className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center border border-orange-200">
-                  <Flame className="w-5 h-5 fill-orange-500" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                    สินค้าฮิตติดเทรนด์ (HOT DEALS)
-                  </h2>
-                  <p className="text-xs text-slate-500">สินค้าขายดีที่มีผู้สนใจสั่งซื้อมากที่สุดในขณะนี้</p>
-                </div>
+        {!searchQuery && selectedCategory === 'ทั้งหมด' && featuredProducts.length > 0 && (
+          <section className="pt-16 space-y-6">
+            <div className="flex items-end justify-between gap-4 border-b border-neutral-200 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
+                  สินค้าฮิตติดเทรนด์
+                </h2>
+                <p className="text-xs text-neutral-500 mt-1">
+                  สินค้าขายดีที่มีผู้สนใจสั่งซื้อมากที่สุดในขณะนี้
+                </p>
               </div>
+              <span className="text-[11px] tracking-[0.2em] uppercase text-neutral-400 shrink-0 hidden sm:block">
+                Hot deals
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {featuredProducts.slice(0, 4).map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -73,40 +72,41 @@ function StorefrontContent() {
         )}
 
         {/* All Products Catalog */}
-        <section id="products-section" className="space-y-6 pt-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <section id="products-section" className="pt-16 space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 border-b border-neutral-200 pb-4">
             <div>
-              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-600" />
-                <span>แคตตาล็อกสินค้าทั้งหมด</span>
+              <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
+                แคตตาล็อกสินค้าทั้งหมด
               </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                แสดงผลสินค้าในหมวดหมู่ <strong className="text-indigo-600">&quot;{selectedCategory}&quot;</strong> ({filteredProducts.length} รายการ)
+              <p className="text-xs text-neutral-500 mt-1">
+                หมวดหมู่{' '}
+                <strong className="font-semibold text-neutral-900">
+                  &quot;{selectedCategory}&quot;
+                </strong>{' '}
+                · {filteredProducts.length} รายการ
               </p>
             </div>
+            <span className="text-[11px] tracking-[0.2em] uppercase text-neutral-400 shrink-0 hidden sm:block">
+              Catalogue
+            </span>
           </div>
 
           {/* Product Grid */}
           {filteredProducts.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center space-y-4 my-8 shadow-sm">
-              <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center border border-slate-200">
-                <PackageSearch className="w-8 h-8" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900">ไม่พบสินค้าที่คุณค้นหา</h3>
-              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <div className="border border-neutral-200 rounded-md p-16 text-center space-y-4">
+              <h3 className="text-base font-semibold text-neutral-900">ไม่พบสินค้าที่คุณค้นหา</h3>
+              <p className="text-xs text-neutral-500 max-w-sm mx-auto">
                 ลองค้นหาด้วยคำค้นอื่น หรือเลือกสลับหมวดหมู่สินค้าในเมนูด้านบน
               </p>
               <Button
-                onClick={() => {
-                  setSelectedCategory('ทั้งหมด');
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow border-0"
+                onClick={() => setSelectedCategory('ทั้งหมด')}
+                className="h-10 bg-neutral-900 hover:bg-neutral-700 text-white font-medium text-sm px-5 rounded-md transition-colors border-0"
               >
                 ดูสินค้าทั้งหมด
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

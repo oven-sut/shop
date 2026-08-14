@@ -6,24 +6,24 @@ const UPDATED = '14 สิงหาคม 2569';
 
 export default function PrivacyPage() {
   return (
-    <div className="space-y-6 text-sm leading-relaxed text-slate-700">
-      <header className="space-y-1 pb-4 border-b border-slate-100">
-        <h1 className="text-2xl font-extrabold text-slate-900">นโยบายความเป็นส่วนตัว</h1>
-        <p className="text-xs text-slate-400">ปรับปรุงล่าสุด {UPDATED}</p>
+    <div className="space-y-6 text-sm leading-relaxed text-neutral-700">
+      <header className="space-y-1 pb-4 border-b border-neutral-100">
+        <h1 className="text-2xl font-extrabold text-neutral-900">นโยบายความเป็นส่วนตัว</h1>
+        <p className="text-xs text-neutral-400">ปรับปรุงล่าสุด {UPDATED}</p>
       </header>
 
       <section className="space-y-2">
-        <h2 className="text-base font-bold text-slate-900">1. ข้อมูลที่เราเก็บ</h2>
+        <h2 className="text-base font-bold text-neutral-900">1. ข้อมูลที่เราเก็บ</h2>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
-            <thead className="bg-slate-50 text-slate-600">
+          <table className="w-full text-xs border border-neutral-200 rounded-xl overflow-hidden">
+            <thead className="bg-neutral-50 text-neutral-600">
               <tr>
                 <th className="text-left p-2.5 font-semibold">ข้อมูล</th>
                 <th className="text-left p-2.5 font-semibold">เก็บเมื่อไร</th>
                 <th className="text-left p-2.5 font-semibold">ใช้ทำอะไร</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-neutral-100">
               <tr>
                 <td className="p-2.5">อีเมล ชื่อ รูปโปรไฟล์</td>
                 <td className="p-2.5">ตอนสมัครสมาชิกหรือเข้าสู่ระบบด้วย Google</td>
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-base font-bold text-slate-900">2. ผู้ให้บริการภายนอก</h2>
+        <h2 className="text-base font-bold text-neutral-900">2. ผู้ให้บริการภายนอก</h2>
         <ul className="list-disc pl-5 space-y-1">
           <li>
             <strong>Supabase</strong> — ระบบบัญชีผู้ใช้ ฐานข้อมูล และที่เก็บไฟล์
@@ -63,13 +63,13 @@ export default function PrivacyPage() {
             โดยส่งข้อมูลบนสลิปที่คุณอัปโหลดไปตรวจสอบ
           </li>
         </ul>
-        <p className="text-slate-500">
+        <p className="text-neutral-500">
           เราไม่ขายหรือให้เช่าข้อมูลส่วนบุคคลของคุณแก่บุคคลที่สาม
         </p>
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-base font-bold text-slate-900">3. ระยะเวลาเก็บข้อมูล</h2>
+        <h2 className="text-base font-bold text-neutral-900">3. ระยะเวลาเก็บข้อมูล</h2>
         <p>
           ข้อมูลบัญชีเก็บไว้ตลอดเวลาที่คุณยังใช้งานอยู่
           ส่วนรายการเติมเงินและคำสั่งซื้อเก็บไว้เท่าที่จำเป็นสำหรับการตรวจสอบทางบัญชีและตามที่กฎหมายกำหนด
@@ -77,7 +77,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-base font-bold text-slate-900">4. ความปลอดภัย</h2>
+        <h2 className="text-base font-bold text-neutral-900">4. ความปลอดภัย</h2>
         <ul className="list-disc pl-5 space-y-1">
           <li>รหัสผ่านถูกจัดเก็บแบบเข้ารหัสโดยระบบยืนยันตัวตนของ Supabase เราไม่เห็นรหัสผ่านของคุณ</li>
           <li>สิทธิ์การเข้าถึงข้อมูลถูกบังคับที่ระดับฐานข้อมูล (Row Level Security)</li>
@@ -86,20 +86,20 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-base font-bold text-slate-900">5. สิทธิของคุณ</h2>
+        <h2 className="text-base font-bold text-neutral-900">5. สิทธิของคุณ</h2>
         <p>
           คุณมีสิทธิขอเข้าถึง ขอสำเนา ขอแก้ไข ขอลบ หรือคัดค้านการประมวลผลข้อมูลส่วนบุคคลของคุณ
           รวมถึงเพิกถอนความยินยอมได้ตลอดเวลา โดยติดต่อผู้ให้บริการตามช่องทางด้านล่าง
         </p>
       </section>
 
-      <section className="space-y-2 pt-4 border-t border-slate-100">
-        <h2 className="text-base font-bold text-slate-900">6. ติดต่อ</h2>
-        <p className="text-slate-500">
-          ผู้ควบคุมข้อมูล: <span className="font-semibold text-slate-700">[ระบุชื่อผู้ประกอบการ]</span>
-          {' · '}อีเมล: <span className="font-semibold text-slate-700">[ระบุอีเมลติดต่อ]</span>
+      <section className="space-y-2 pt-4 border-t border-neutral-100">
+        <h2 className="text-base font-bold text-neutral-900">6. ติดต่อ</h2>
+        <p className="text-neutral-500">
+          ผู้ควบคุมข้อมูล: <span className="font-semibold text-neutral-700">[ระบุชื่อผู้ประกอบการ]</span>
+          {' · '}อีเมล: <span className="font-semibold text-neutral-700">[ระบุอีเมลติดต่อ]</span>
         </p>
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
+        <p className="text-xs text-neutral-600 border-l-2 border-neutral-900 pl-3 py-1">
           เอกสารนี้เป็นแบบร่าง ก่อนเปิดให้บริการจริงควรกรอกข้อมูลผู้ประกอบการให้ครบ
           และให้ผู้เชี่ยวชาญด้านกฎหมายตรวจสอบให้สอดคล้องกับ พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA)
         </p>

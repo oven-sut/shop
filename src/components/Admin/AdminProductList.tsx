@@ -36,7 +36,7 @@ export const AdminProductList: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* Top Action Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white border border-neutral-200 p-4 rounded-md shadow-sm">
         <div className="flex flex-col sm:flex-row items-center gap-3 flex-1">
           {/* Search Input */}
           <div className="relative flex-1 w-full">
@@ -45,16 +45,16 @@ export const AdminProductList: React.FC = () => {
               placeholder="ค้นหาชื่อสินค้าในคลัง..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-50 border-slate-200 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-900 placeholder-slate-400"
+              className="w-full bg-neutral-50 border-neutral-200 rounded-md py-2 pl-9 pr-4 text-xs text-neutral-900 placeholder-neutral-400"
             />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-1/2 -translate-y-1/2" />
           </div>
 
           {/* Category Filter */}
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="bg-slate-50 border border-slate-200 text-xs text-slate-800 rounded-xl px-3 py-2 focus:outline-none"
+            className="bg-neutral-50 border border-neutral-200 text-xs text-neutral-800 rounded-md px-3 py-2 focus:outline-none"
           >
             {categories.map((c) => (
               <option key={c} value={c}>{c}</option>
@@ -68,7 +68,7 @@ export const AdminProductList: React.FC = () => {
             setEditingProduct(null);
             setIsModalOpen(true);
           }}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95 border-0"
+          className="bg-neutral-900 hover:bg-neutral-700 text-white font-bold text-xs px-4 py-2.5 rounded-md transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95 border-0"
         >
           <Plus className="w-4 h-4" />
           <span>เพิ่มสินค้าใหม่ (Add Product)</span>
@@ -76,48 +76,48 @@ export const AdminProductList: React.FC = () => {
       </div>
 
       {/* Product Table using shadcn Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-neutral-200 rounded-md overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <Table className="w-full text-left text-xs text-slate-700">
-            <TableHeader className="bg-slate-50 text-slate-600 uppercase font-semibold">
-              <TableRow className="border-b border-slate-200 hover:bg-transparent">
-                <TableHead className="p-3.5 text-slate-600">สินค้า</TableHead>
-                <TableHead className="p-3.5 text-slate-600">หมวดหมู่</TableHead>
-                <TableHead className="p-3.5 text-slate-600">ราคาขาย</TableHead>
-                <TableHead className="p-3.5 text-slate-600">สต็อกคงเหลือ</TableHead>
-                <TableHead className="p-3.5 text-slate-600">ป้ายกำกับ</TableHead>
-                <TableHead className="p-3.5 text-slate-600">คะแนนรีวิว</TableHead>
-                <TableHead className="p-3.5 text-right text-slate-600">การจัดการ</TableHead>
+          <Table className="w-full text-left text-xs text-neutral-700">
+            <TableHeader className="bg-neutral-50 text-neutral-600 uppercase font-semibold">
+              <TableRow className="border-b border-neutral-200 hover:bg-transparent">
+                <TableHead className="p-3.5 text-neutral-600">สินค้า</TableHead>
+                <TableHead className="p-3.5 text-neutral-600">หมวดหมู่</TableHead>
+                <TableHead className="p-3.5 text-neutral-600">ราคาขาย</TableHead>
+                <TableHead className="p-3.5 text-neutral-600">สต็อกคงเหลือ</TableHead>
+                <TableHead className="p-3.5 text-neutral-600">ป้ายกำกับ</TableHead>
+                <TableHead className="p-3.5 text-neutral-600">คะแนนรีวิว</TableHead>
+                <TableHead className="p-3.5 text-right text-neutral-600">การจัดการ</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="divide-y divide-slate-100">
+            <TableBody className="divide-y divide-neutral-100">
               {filteredProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="p-8 text-center text-slate-400">
+                  <TableCell colSpan={7} className="p-8 text-center text-neutral-400">
                     ไม่พบรายการสินค้าที่ค้นหา
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredProducts.map((p) => (
-                  <TableRow key={p.id} className="hover:bg-slate-50 border-b border-slate-100">
+                  <TableRow key={p.id} className="hover:bg-neutral-50 border-b border-neutral-100">
                     <TableCell className="p-3.5 flex items-center gap-3">
                       <img
                         src={p.image}
                         alt={p.name}
-                        className="w-10 h-10 object-cover rounded-lg border border-slate-200 shrink-0"
+                        className="w-10 h-10 object-cover rounded-lg border border-neutral-200 shrink-0"
                       />
                       <div>
-                        <span className="font-bold text-slate-900 block">{p.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">ID: {p.id}</span>
+                        <span className="font-bold text-neutral-900 block">{p.name}</span>
+                        <span className="text-[10px] text-neutral-400 font-mono">ID: {p.id}</span>
                       </div>
                     </TableCell>
 
-                    <TableCell className="p-3.5 text-slate-500">{p.category}</TableCell>
+                    <TableCell className="p-3.5 text-neutral-500">{p.category}</TableCell>
 
-                    <TableCell className="p-3.5 font-bold text-slate-900">
+                    <TableCell className="p-3.5 font-bold text-neutral-900">
                       ฿{p.price.toLocaleString()}
                       {p.originalPrice && (
-                        <span className="block text-[10px] text-slate-400 line-through">
+                        <span className="block text-[10px] text-neutral-400 line-through">
                           ฿{p.originalPrice.toLocaleString()}
                         </span>
                       )}
@@ -129,26 +129,26 @@ export const AdminProductList: React.FC = () => {
                         <Badge
                           className={`font-bold px-2 py-0.5 rounded text-[11px] border-0 ${
                             p.stock <= 0
-                              ? 'bg-red-50 text-red-600 border border-red-200'
+                              ? 'bg-neutral-50 text-neutral-900 border border-neutral-400'
                               : p.stock <= 5
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'bg-slate-100 text-slate-700'
+                              ? 'bg-neutral-50 text-neutral-700 border border-neutral-400'
+                              : 'bg-neutral-100 text-neutral-700'
                           }`}
                         >
                           {p.stock} ชิ้น
                         </Badge>
                         
-                        <div className="flex items-center bg-slate-50 border border-slate-200 rounded">
+                        <div className="flex items-center bg-neutral-50 border border-neutral-200 rounded">
                           <button
                             onClick={() => handleStockAdjustment(p, -1)}
-                            className="px-1.5 py-0.5 hover:bg-slate-200 text-slate-600"
+                            className="px-1.5 py-0.5 hover:bg-neutral-200 text-neutral-600"
                             title="ลดสต็อก 1"
                           >
                             -
                           </button>
                           <button
                             onClick={() => handleStockAdjustment(p, 1)}
-                            className="px-1.5 py-0.5 hover:bg-slate-200 text-slate-600 border-l border-slate-200"
+                            className="px-1.5 py-0.5 hover:bg-neutral-200 text-neutral-600 border-l border-neutral-200"
                             title="เพิ่มสต็อก 1"
                           >
                             +
@@ -159,16 +159,16 @@ export const AdminProductList: React.FC = () => {
 
                     <TableCell className="p-3.5">
                       {p.badge ? (
-                        <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 px-2 py-0.5 text-[10px] font-bold">
+                        <Badge variant="outline" className="bg-neutral-100 text-neutral-700 border-neutral-300 px-2 py-0.5 text-[10px] font-bold">
                           {p.badge}
                         </Badge>
                       ) : (
-                        <span className="text-slate-400 text-[10px]">-</span>
+                        <span className="text-neutral-400 text-[10px]">-</span>
                       )}
                     </TableCell>
 
-                    <TableCell className="p-3.5 font-bold text-amber-500">
-                      {p.rating} <span className="text-slate-400 text-[10px] font-normal">({p.reviewsCount})</span>
+                    <TableCell className="p-3.5 font-bold text-neutral-900">
+                      {p.rating} <span className="text-neutral-400 text-[10px] font-normal">({p.reviewsCount})</span>
                     </TableCell>
 
                     <TableCell className="p-3.5 text-right space-x-2">
@@ -179,7 +179,7 @@ export const AdminProductList: React.FC = () => {
                           setEditingProduct(p);
                           setIsModalOpen(true);
                         }}
-                        className="bg-slate-50 hover:bg-slate-100 text-indigo-600 border-slate-200"
+                        className="bg-neutral-50 hover:bg-neutral-100 text-neutral-900 border-neutral-200"
                         title="แก้ไขสินค้า"
                       >
                         <Edit3 className="w-3.5 h-3.5" />
@@ -193,7 +193,7 @@ export const AdminProductList: React.FC = () => {
                             deleteProduct(p.id);
                           }
                         }}
-                        className="bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 border-slate-200"
+                        className="bg-neutral-50 hover:bg-neutral-50 text-neutral-500 hover:text-neutral-900 border-neutral-200"
                         title="ลบสินค้า"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

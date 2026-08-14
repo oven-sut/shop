@@ -8,34 +8,25 @@ import { useAuth } from '../../context/AuthContext';
 import { ShopProvider, useShop } from '../../context/ShopContext';
 import { ToastContainer } from '../../components/ToastContainer';
 import { safeRedirectPath } from '../../lib/auth';
-import { Mail, Lock, User as UserIcon, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User as UserIcon, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
+/** Google's mark, drawn in a single ink so it sits inside the monochrome palette. */
 function GoogleIcon() {
   return (
-    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-      <path
-        fill="#4285F4"
-        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.27v3.15C3.25 21.3 7.31 24 12 24z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.27C.46 8.2.01 10.05.01 12c0 1.95.45 3.8 1.26 5.42l4.01-3.15z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.58l4.01 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-      />
+    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
+      <path d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.27v3.15C3.25 21.3 7.31 24 12 24z" />
+      <path d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.27C.46 8.2.01 10.05.01 12c0 1.95.45 3.8 1.26 5.42l4.01-3.15z" />
+      <path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.27 6.58l4.01 3.15c.95-2.83 3.6-4.98 6.72-4.98z" />
     </svg>
   );
 }
+
+const FIELD_CLASS =
+  'h-11 pl-10 bg-white border-neutral-300 rounded-md text-neutral-900 text-sm focus-visible:border-neutral-900 focus-visible:ring-0';
 
 function LoginContent() {
   const router = useRouter();
@@ -120,53 +111,54 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-center items-center p-4 font-sans selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-white text-neutral-900 flex flex-col justify-center items-center p-4 font-sans selection:bg-neutral-900 selection:text-white">
       <ToastContainer />
 
       {/* Header Logo */}
-      <Link href="/" className="flex items-center gap-3 mb-8 group">
+      <Link href="/" className="flex items-center gap-3 mb-10">
         <Image
           src="/logo-mark.png"
           alt=""
           width={470}
           height={462}
           priority
-          className="h-14 w-auto group-hover:scale-105 transition-transform"
+          className="h-12 w-auto"
         />
-        <div>
-          <span className="text-2xl font-black tracking-tight text-slate-900">
-            NEO <span className="text-indigo-600">APP</span>
-          </span>
-          <span className="block text-xs text-slate-500 tracking-widest font-medium uppercase">
-            Authentication Portal
+        <div className="leading-none">
+          <span className="text-xl font-bold tracking-tight text-neutral-900">NEO APP</span>
+          <span className="block text-[10px] text-neutral-400 tracking-[0.2em] uppercase mt-1.5">
+            Authentication
           </span>
         </div>
       </Link>
 
       {/* Login / Register Card Container */}
-      <Card className="w-full max-w-md bg-white border-slate-200 shadow-xl rounded-3xl overflow-hidden">
+      <div className="w-full max-w-md bg-white border border-neutral-200 rounded-md overflow-hidden">
 
         {/* Already logged in banner indicator */}
         {user && (
-          <div className="bg-indigo-50 border-b border-indigo-100 p-3 text-center text-xs text-indigo-800 flex items-center justify-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-indigo-600" />
-            <span>เข้าสู่ระบบอยู่แล้วในชื่อ: <strong>{user.name}</strong> ({user.role === 'admin' ? 'ADMIN' : 'MEMBER'})</span>
+          <div className="bg-neutral-900 text-white p-3 text-center text-xs">
+            เข้าสู่ระบบอยู่แล้วในชื่อ <strong className="font-semibold">{user.name}</strong> (
+            {user.role === 'admin' ? 'ADMIN' : 'MEMBER'})
           </div>
         )}
 
         <Tabs defaultValue="login" className="w-full">
-          <CardHeader className="pb-2 text-center">
-            <TabsList className="grid grid-cols-2 bg-slate-100 p-1 rounded-xl">
-              <TabsTrigger value="login" className="rounded-lg text-xs font-bold">
+          {/* `line` keeps the switch to a rule under the active label — no pill, no fill. */}
+          <div className="px-6 pt-5 border-b border-neutral-200">
+            {/* h-auto! overrides the primitive's fixed 2rem list height — Thai
+                labels need the extra room. */}
+            <TabsList variant="line" className="w-full gap-6 h-auto! p-0">
+              <TabsTrigger value="login" className="flex-none h-auto px-0 pb-3 text-sm">
                 เข้าสู่ระบบ
               </TabsTrigger>
-              <TabsTrigger value="signup" className="rounded-lg text-xs font-bold">
+              <TabsTrigger value="signup" className="flex-none h-auto px-0 pb-3 text-sm">
                 สมัครสมาชิก
               </TabsTrigger>
             </TabsList>
-          </CardHeader>
+          </div>
 
-          <CardContent className="pt-4">
+          <div className="p-6">
 
             {/* TAB 1: CUSTOMER LOGIN */}
             <TabsContent value="login" className="space-y-4">
@@ -176,24 +168,26 @@ function LoginContent() {
                 variant="outline"
                 disabled={isGoogleLoading}
                 onClick={handleGoogleLogin}
-                className="w-full py-3 h-auto bg-white hover:bg-slate-50 text-slate-700 border-slate-300 font-bold text-xs rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2.5"
+                className="w-full h-11 bg-white hover:bg-neutral-100 text-neutral-900 border-neutral-300 font-medium text-sm rounded-md flex items-center justify-center gap-2.5"
               >
                 <GoogleIcon />
                 <span>{isGoogleLoading ? 'กำลังเชื่อมต่อ Google...' : 'เข้าสู่ระบบด้วย Google'}</span>
               </Button>
 
-              <div className="relative my-4">
+              <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
+                  <div className="w-full border-t border-neutral-200" />
                 </div>
-                <div className="relative flex justify-center text-[11px] uppercase">
-                  <span className="bg-white px-3 text-slate-400 font-medium">หรือเข้าสู่ระบบด้วยอีเมล</span>
+                <div className="relative flex justify-center text-[11px]">
+                  <span className="bg-white px-3 text-neutral-400">หรือเข้าสู่ระบบด้วยอีเมล</span>
                 </div>
               </div>
 
-              <form onSubmit={handleCustomerLogin} className="space-y-4 text-xs">
+              <form onSubmit={handleCustomerLogin} className="space-y-4">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">อีเมลผู้ใช้งาน</label>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    อีเมลผู้ใช้งาน
+                  </label>
                   <div className="relative">
                     <Input
                       type="email"
@@ -201,14 +195,14 @@ function LoginContent() {
                       placeholder="name@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-9 bg-slate-50 border-slate-200 text-slate-900 text-xs"
+                      className={FIELD_CLASS}
                     />
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">รหัสผ่าน</label>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">รหัสผ่าน</label>
                   <div className="relative">
                     <Input
                       type="password"
@@ -216,16 +210,16 @@ function LoginContent() {
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-9 bg-slate-50 border-slate-200 text-slate-900 text-xs"
+                      className={FIELD_CLASS}
                     />
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   </div>
                 </div>
 
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all border-0 flex items-center justify-center gap-2"
+                  className="w-full h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md transition-colors border-0 flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                   <span>เข้าสู่ระบบ</span>
                   <ArrowRight className="w-4 h-4" />
@@ -241,24 +235,26 @@ function LoginContent() {
                 variant="outline"
                 disabled={isGoogleLoading}
                 onClick={handleGoogleLogin}
-                className="w-full py-3 h-auto bg-white hover:bg-slate-50 text-slate-700 border-slate-300 font-bold text-xs rounded-xl shadow-sm hover:shadow transition-all flex items-center justify-center gap-2.5"
+                className="w-full h-11 bg-white hover:bg-neutral-100 text-neutral-900 border-neutral-300 font-medium text-sm rounded-md flex items-center justify-center gap-2.5"
               >
                 <GoogleIcon />
                 <span>สมัครสมาชิกด้วย Google</span>
               </Button>
 
-              <div className="relative my-4">
+              <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
+                  <div className="w-full border-t border-neutral-200" />
                 </div>
-                <div className="relative flex justify-center text-[11px] uppercase">
-                  <span className="bg-white px-3 text-slate-400 font-medium">หรือกรอกข้อมูลสมัครสมาชิก</span>
+                <div className="relative flex justify-center text-[11px]">
+                  <span className="bg-white px-3 text-neutral-400">หรือกรอกข้อมูลสมัครสมาชิก</span>
                 </div>
               </div>
 
-              <form onSubmit={handleCustomerSignup} className="space-y-4 text-xs">
+              <form onSubmit={handleCustomerSignup} className="space-y-4">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">ชื่อ-นามสกุล</label>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    ชื่อ-นามสกุล
+                  </label>
                   <div className="relative">
                     <Input
                       type="text"
@@ -266,14 +262,14 @@ function LoginContent() {
                       placeholder="คุณสมชาย ใจดี"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="pl-9 bg-slate-50 border-slate-200 text-slate-900 text-xs"
+                      className={FIELD_CLASS}
                     />
-                    <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <UserIcon className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">อีเมล</label>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">อีเมล</label>
                   <div className="relative">
                     <Input
                       type="email"
@@ -281,14 +277,16 @@ function LoginContent() {
                       placeholder="somchai@example.com"
                       value={regEmail}
                       onChange={(e) => setRegEmail(e.target.value)}
-                      className="pl-9 bg-slate-50 border-slate-200 text-slate-900 text-xs"
+                      className={FIELD_CLASS}
                     />
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Mail className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">ตั้งรหัสผ่าน</label>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    ตั้งรหัสผ่าน
+                  </label>
                   <div className="relative">
                     <Input
                       type="password"
@@ -297,27 +295,35 @@ function LoginContent() {
                       placeholder="••••••••"
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
-                      className="pl-9 bg-slate-50 border-slate-200 text-slate-900 text-xs"
+                      className={FIELD_CLASS}
                     />
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                   </div>
                 </div>
 
-                <label className="flex items-start gap-2.5 text-[11px] text-slate-600 leading-relaxed cursor-pointer">
+                <label className="flex items-start gap-2.5 text-[11px] text-neutral-500 leading-relaxed cursor-pointer">
                   <input
                     type="checkbox"
                     required
                     checked={acceptedTerms}
                     onChange={(e) => setAcceptedTerms(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 shrink-0"
+                    className="mt-0.5 w-4 h-4 rounded-sm border-neutral-300 accent-neutral-900 shrink-0"
                   />
                   <span>
                     ข้าพเจ้ายอมรับ{' '}
-                    <Link href="/terms" target="_blank" className="text-indigo-600 font-semibold hover:underline">
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      className="text-neutral-900 font-medium underline underline-offset-2"
+                    >
                       ข้อกำหนดการใช้งาน
                     </Link>{' '}
                     และ{' '}
-                    <Link href="/privacy" target="_blank" className="text-indigo-600 font-semibold hover:underline">
+                    <Link
+                      href="/privacy"
+                      target="_blank"
+                      className="text-neutral-900 font-medium underline underline-offset-2"
+                    >
                       นโยบายความเป็นส่วนตัว
                     </Link>
                   </span>
@@ -326,20 +332,20 @@ function LoginContent() {
                 <Button
                   type="submit"
                   disabled={isSubmitting || !acceptedTerms}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all border-0 flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md transition-colors border-0 flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                   <span>ยืนยันสมัครสมาชิก</span>
-                  <CheckCircle2 className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4" />
                 </Button>
               </form>
             </TabsContent>
 
-          </CardContent>
+          </div>
         </Tabs>
-      </Card>
+      </div>
 
-      <div className="mt-8 text-xs text-slate-500 text-center">
-        <Link href="/" className="hover:text-indigo-600 transition-colors">
+      <div className="mt-8 text-xs text-neutral-400 text-center">
+        <Link href="/" className="hover:text-neutral-900 transition-colors">
           ← ย้อนกลับสู่หน้าร้านค้า
         </Link>
       </div>

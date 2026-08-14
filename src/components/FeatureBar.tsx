@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Zap, ShieldCheck, Wallet, Headphones } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 
 export const FeatureBar: React.FC = () => {
   const features = [
@@ -28,23 +27,22 @@ export const FeatureBar: React.FC = () => {
     }
   ];
 
+  /* Divided by hairlines rather than boxed in cards — fewer edges, same grouping. */
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-8">
-      {features.map((item, idx) => {
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-l border-neutral-200">
+      {features.map((item) => {
         const IconComponent = item.icon;
         return (
-          <Card
-            key={idx}
-            className="flex items-center gap-4 bg-white border-slate-200 p-4 rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 transition-all"
+          <div
+            key={item.title}
+            className="flex items-start gap-3.5 p-5 border-b border-r border-neutral-200"
           >
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-              <IconComponent className="w-6 h-6 text-indigo-600" />
-            </div>
+            <IconComponent className="w-5 h-5 text-neutral-900 shrink-0 mt-0.5" strokeWidth={1.5} />
             <div>
-              <h4 className="text-sm font-bold text-slate-900">{item.title}</h4>
-              <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
+              <h4 className="text-sm font-semibold text-neutral-900">{item.title}</h4>
+              <p className="text-xs text-neutral-500 mt-0.5">{item.desc}</p>
             </div>
-          </Card>
+          </div>
         );
       })}
     </div>

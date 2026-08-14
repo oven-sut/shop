@@ -36,49 +36,49 @@ function StoreSettingsPanel() {
   };
 
   return (
-    <div className="bg-white border border-slate-200 p-6 rounded-2xl max-w-2xl mx-auto space-y-6 shadow-sm animate-in fade-in">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <Settings className="w-6 h-6 text-indigo-600" />
+    <div className="bg-white border border-neutral-200 p-6 rounded-md max-w-2xl mx-auto space-y-6 shadow-sm animate-in fade-in">
+            <div className="flex items-center gap-3 border-b border-neutral-100 pb-4">
+              <Settings className="w-6 h-6 text-neutral-900" />
               <div>
-                <h2 className="text-lg font-bold text-slate-900">ตั้งค่าระบบร้านค้า (Store Settings)</h2>
-                <p className="text-xs text-slate-500">ชื่อร้าน บัญชีรับเงินเติม และเงื่อนไขการสั่งซื้อ</p>
+                <h2 className="text-lg font-bold text-neutral-900">ตั้งค่าระบบร้านค้า (Store Settings)</h2>
+                <p className="text-xs text-neutral-500">ชื่อร้าน บัญชีรับเงินเติม และเงื่อนไขการสั่งซื้อ</p>
               </div>
             </div>
 
             <form onSubmit={handleSaveSettings} className="space-y-5 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">ชื่อร้านค้า</label>
+                <label className="block font-semibold text-neutral-700 mb-1">ชื่อร้านค้า</label>
                 <Input
                   type="text"
                   value={form.storeName}
                   onChange={(e) => update('storeName', e.target.value)}
-                  className="w-full bg-slate-50 border-slate-200 text-slate-900"
+                  className="w-full bg-neutral-50 border-neutral-200 text-neutral-900"
                 />
               </div>
 
               {/* Top-up destination */}
-              <div className="p-4 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-3">
+              <div className="p-4 bg-neutral-100/60 rounded-md border border-neutral-200 space-y-3">
                 <div className="flex items-center gap-2">
-                  <Wallet className="w-4 h-4 text-indigo-600" />
-                  <span className="font-bold text-slate-900">บัญชีรับเงินเติม</span>
+                  <Wallet className="w-4 h-4 text-neutral-900" />
+                  <span className="font-bold text-neutral-900">บัญชีรับเงินเติม</span>
                 </div>
-                <p className="text-[11px] text-slate-500 -mt-1">
+                <p className="text-[11px] text-neutral-500 -mt-1">
                   ระบบจะเทียบผู้รับในสลิปกับค่านี้ก่อนเติมเงินให้ลูกค้า ถ้าเว้นว่างทั้งคู่จะเติมเงินไม่ได้เลย
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">ชื่อบัญชี</label>
+                    <label className="block font-semibold text-neutral-700 mb-1">ชื่อบัญชี</label>
                     <Input
                       type="text"
                       placeholder="เช่น นายสมชาย ใจดี"
                       value={form.topupReceiverName}
                       onChange={(e) => update('topupReceiverName', e.target.value)}
-                      className="w-full bg-white border-slate-200 text-slate-900"
+                      className="w-full bg-white border-neutral-200 text-neutral-900"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
+                    <label className="block font-semibold text-neutral-700 mb-1">
                       เลขบัญชี / พร้อมเพย์
                     </label>
                     <Input
@@ -86,21 +86,21 @@ function StoreSettingsPanel() {
                       placeholder="เช่น 012-3-45678-9"
                       value={form.topupReceiverAccount}
                       onChange={(e) => update('topupReceiverAccount', e.target.value)}
-                      className="w-full bg-white border-slate-200 text-slate-900 font-mono"
+                      className="w-full bg-white border-neutral-200 text-neutral-900 font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">ธนาคาร</label>
+                    <label className="block font-semibold text-neutral-700 mb-1">ธนาคาร</label>
                     <Input
                       type="text"
                       placeholder="เช่น กสิกรไทย"
                       value={form.topupBankName}
                       onChange={(e) => update('topupBankName', e.target.value)}
-                      className="w-full bg-white border-slate-200 text-slate-900"
+                      className="w-full bg-white border-neutral-200 text-neutral-900"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
+                    <label className="block font-semibold text-neutral-700 mb-1">
                       สลิปเก่าได้ไม่เกิน (วัน)
                     </label>
                     <Input
@@ -108,67 +108,67 @@ function StoreSettingsPanel() {
                       min={1}
                       value={form.topupMaxSlipAgeDays}
                       onChange={(e) => update('topupMaxSlipAgeDays', Number(e.target.value))}
-                      className="w-full bg-white border-slate-200 text-slate-900"
+                      className="w-full bg-white border-neutral-200 text-neutral-900"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">เติมขั้นต่ำ (฿)</label>
+                    <label className="block font-semibold text-neutral-700 mb-1">เติมขั้นต่ำ (฿)</label>
                     <Input
                       type="number"
                       min={1}
                       value={form.topupMinAmount}
                       onChange={(e) => update('topupMinAmount', Number(e.target.value))}
-                      className="w-full bg-white border-slate-200 text-slate-900"
+                      className="w-full bg-white border-neutral-200 text-neutral-900"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">เติมสูงสุด (฿)</label>
+                    <label className="block font-semibold text-neutral-700 mb-1">เติมสูงสุด (฿)</label>
                     <Input
                       type="number"
                       min={1}
                       value={form.topupMaxAmount}
                       onChange={(e) => update('topupMaxAmount', Number(e.target.value))}
-                      className="w-full bg-white border-slate-200 text-slate-900"
+                      className="w-full bg-white border-neutral-200 text-neutral-900"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">VAT (%)</label>
+                <label className="block font-semibold text-neutral-700 mb-1">VAT (%)</label>
                 <Input
                   type="number"
                   min={0}
                   max={100}
                   value={form.taxRate}
                   onChange={(e) => update('taxRate', Number(e.target.value))}
-                  className="w-full sm:max-w-[200px] bg-slate-50 border-slate-200 text-slate-900"
+                  className="w-full sm:max-w-[200px] bg-neutral-50 border-neutral-200 text-neutral-900"
                 />
               </div>
 
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+              <div className="p-4 bg-neutral-50 rounded-md border border-neutral-200 flex items-center justify-between">
                 <div>
-                  <span className="font-bold text-slate-900 block">สถานะเปิด/ปิดรับคำสั่งซื้อ</span>
-                  <span className="text-slate-500 text-[11px]">
+                  <span className="font-bold text-neutral-900 block">สถานะเปิด/ปิดรับคำสั่งซื้อ</span>
+                  <span className="text-neutral-500 text-[11px]">
                     ปิดแล้วลูกค้าจะสั่งซื้อไม่ได้ (ตรวจที่ฝั่งเซิร์ฟเวอร์)
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => update('isOpen', !form.isOpen)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    form.isOpen ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+                  className={`px-4 py-2 rounded-md text-xs font-bold transition-all ${
+                    form.isOpen ? 'bg-neutral-900 text-white' : 'bg-neutral-900 text-white'
                   }`}
                 >
                   {form.isOpen ? 'เปิดร้านปกติ' : 'ปิดปรับปรุง'}
                 </button>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex justify-end">
+              <div className="pt-4 border-t border-neutral-100 flex justify-end">
                 <Button
                   type="submit"
                   disabled={isSaving}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 border-0 disabled:opacity-50"
+                  className="bg-neutral-900 hover:bg-neutral-700 text-white font-bold text-xs px-6 py-3 rounded-md transition-all flex items-center gap-2 border-0 disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า'}</span>
@@ -186,7 +186,7 @@ function AdminContent() {
   >('overview');
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-neutral-50 text-neutral-900 flex flex-col font-sans selection:bg-neutral-900 selection:text-white">
       <ToastContainer />
       <AdminHeader activeTab={activeTab} setActiveTab={setActiveTab} />
 
@@ -208,7 +208,7 @@ function AdminContent() {
 
         {activeTab === 'settings' &&
           (isLoading ? (
-            <p className="text-center text-xs text-slate-400 py-16">กำลังโหลดการตั้งค่า...</p>
+            <p className="text-center text-xs text-neutral-400 py-16">กำลังโหลดการตั้งค่า...</p>
           ) : (
             <StoreSettingsPanel />
           ))}

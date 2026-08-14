@@ -70,21 +70,25 @@ export const CookieConsent: React.FC = () => {
       aria-label="การใช้คุกกี้"
       className="fixed inset-x-0 bottom-0 z-50 p-4 animate-in slide-in-from-bottom-4 duration-300"
     >
-      <div className="max-w-4xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 flex flex-col sm:flex-row items-start gap-4">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-          <Cookie className="w-5 h-5" />
-        </div>
+      <div className="max-w-4xl mx-auto bg-white border border-neutral-900 rounded-md p-5 flex flex-col sm:flex-row items-start gap-4">
+        <Cookie className="w-5 h-5 text-neutral-900 shrink-0 mt-0.5" strokeWidth={1.5} />
 
         <div className="flex-1 space-y-1">
-          <h2 className="text-sm font-bold text-slate-900">เว็บไซต์นี้ใช้คุกกี้</h2>
-          <p className="text-xs text-slate-500 leading-relaxed">
+          <h2 className="text-sm font-semibold text-neutral-900">เว็บไซต์นี้ใช้คุกกี้</h2>
+          <p className="text-xs text-neutral-500 leading-relaxed">
             เราใช้คุกกี้ที่จำเป็นเพื่อให้ระบบเข้าสู่ระบบและตะกร้าสินค้าทำงานได้ ซึ่งปิดไม่ได้
             ส่วนคุกกี้เพื่อการวิเคราะห์การใช้งานจะเก็บก็ต่อเมื่อคุณกดยอมรับเท่านั้น อ่านเพิ่มเติมที่{' '}
-            <Link href="/cookies" className="text-indigo-600 font-semibold hover:underline">
+            <Link
+              href="/cookies"
+              className="text-neutral-900 font-medium underline underline-offset-2"
+            >
               นโยบายคุกกี้
             </Link>{' '}
             และ{' '}
-            <Link href="/privacy" className="text-indigo-600 font-semibold hover:underline">
+            <Link
+              href="/privacy"
+              className="text-neutral-900 font-medium underline underline-offset-2"
+            >
               นโยบายความเป็นส่วนตัว
             </Link>
           </p>
@@ -94,13 +98,13 @@ export const CookieConsent: React.FC = () => {
           <Button
             variant="outline"
             onClick={() => decide(false)}
-            className="flex-1 sm:flex-none bg-white hover:bg-slate-50 text-slate-700 border-slate-300 font-bold text-xs px-4 py-2.5 rounded-xl"
+            className="flex-1 sm:flex-none h-10 bg-white hover:bg-neutral-100 text-neutral-900 border-neutral-300 font-medium text-xs px-4 rounded-md"
           >
             เฉพาะที่จำเป็น
           </Button>
           <Button
             onClick={() => decide(true)}
-            className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 border-0"
+            className="flex-1 sm:flex-none h-10 bg-neutral-900 hover:bg-neutral-700 text-white font-medium text-xs px-5 rounded-md border-0"
           >
             ยอมรับทั้งหมด
           </Button>

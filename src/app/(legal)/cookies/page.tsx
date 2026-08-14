@@ -27,14 +27,14 @@ const COOKIES = [
 
 export default function CookiesPage() {
   return (
-    <div className="space-y-6 text-sm leading-relaxed text-slate-700">
-      <header className="space-y-1 pb-4 border-b border-slate-100">
-        <h1 className="text-2xl font-extrabold text-slate-900">นโยบายคุกกี้</h1>
-        <p className="text-xs text-slate-400">ปรับปรุงล่าสุด {UPDATED}</p>
+    <div className="space-y-6 text-sm leading-relaxed text-neutral-700">
+      <header className="space-y-1 pb-4 border-b border-neutral-100">
+        <h1 className="text-2xl font-extrabold text-neutral-900">นโยบายคุกกี้</h1>
+        <p className="text-xs text-neutral-400">ปรับปรุงล่าสุด {UPDATED}</p>
       </header>
 
       <section className="space-y-2">
-        <h2 className="text-base font-bold text-slate-900">1. คุกกี้คืออะไร</h2>
+        <h2 className="text-base font-bold text-neutral-900">1. คุกกี้คืออะไร</h2>
         <p>
           คุกกี้คือไฟล์ข้อมูลขนาดเล็กที่เว็บไซต์ฝากไว้ในเบราว์เซอร์ของคุณ
           เว็บนี้ใช้ทั้งคุกกี้และพื้นที่เก็บข้อมูลในเบราว์เซอร์ (localStorage) ในลักษณะเดียวกัน
@@ -42,10 +42,10 @@ export default function CookiesPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-base font-bold text-slate-900">2. รายการที่เราใช้</h2>
+        <h2 className="text-base font-bold text-neutral-900">2. รายการที่เราใช้</h2>
         <div className="overflow-x-auto">
-          <table className="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
-            <thead className="bg-slate-50 text-slate-600">
+          <table className="w-full text-xs border border-neutral-200 rounded-xl overflow-hidden">
+            <thead className="bg-neutral-50 text-neutral-600">
               <tr>
                 <th className="text-left p-2.5 font-semibold">ชื่อ</th>
                 <th className="text-left p-2.5 font-semibold">ประเภท</th>
@@ -53,26 +53,26 @@ export default function CookiesPage() {
                 <th className="text-left p-2.5 font-semibold">อยู่นานแค่ไหน</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-neutral-100">
               {COOKIES.map((cookie) => (
                 <tr key={cookie.name}>
-                  <td className="p-2.5 font-mono text-[11px] text-slate-800">{cookie.name}</td>
+                  <td className="p-2.5 font-mono text-[11px] text-neutral-800">{cookie.name}</td>
                   <td className="p-2.5">{cookie.type}</td>
                   <td className="p-2.5">{cookie.purpose}</td>
-                  <td className="p-2.5 text-slate-500">{cookie.life}</td>
+                  <td className="p-2.5 text-neutral-500">{cookie.life}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="text-slate-500 text-xs">
+        <p className="text-neutral-500 text-xs">
           ปัจจุบันเรายังไม่ได้ติดตั้งคุกกี้เพื่อการวิเคราะห์หรือโฆษณา
           หากมีการเพิ่มในอนาคตจะเก็บเฉพาะเมื่อคุณกดยอมรับ และจะอัปเดตตารางนี้
         </p>
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-base font-bold text-slate-900">3. คุกกี้ที่ปิดไม่ได้</h2>
+        <h2 className="text-base font-bold text-neutral-900">3. คุกกี้ที่ปิดไม่ได้</h2>
         <p>
           คุกกี้ประเภท &quot;จำเป็น&quot; ทำให้ระบบเข้าสู่ระบบ ตะกร้าสินค้า และการเติมเงินทำงานได้
           หากปิดจะใช้งานเว็บไซต์ไม่ได้ จึงไม่ได้ให้เลือกปิดในแถบยินยอม
@@ -80,7 +80,7 @@ export default function CookiesPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-base font-bold text-slate-900">4. เปลี่ยนใจภายหลัง</h2>
+        <h2 className="text-base font-bold text-neutral-900">4. เปลี่ยนใจภายหลัง</h2>
         <p>
           ล้างคุกกี้และข้อมูลเว็บไซต์นี้ในเบราว์เซอร์ของคุณ แถบขอความยินยอมจะกลับมาแสดงอีกครั้ง
           และคุณเลือกใหม่ได้ การปฏิเสธคุกกี้ที่ไม่จำเป็นไม่กระทบการสั่งซื้อ
