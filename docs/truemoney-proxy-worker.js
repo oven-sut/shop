@@ -24,18 +24,33 @@ const UPSTREAM = 'https://gift.truemoney.com';
 /** ส่งต่อเฉพาะเส้นเดียวที่ร้านใช้จริง ไม่ใช่ทั้งเว็บ */
 const ALLOWED = /^\/campaign\/vouchers\/[A-Za-z0-9]{16,64}\/redeem$/;
 
-/** ตอบเหมือนกันหมดทุกกรณีที่ไม่ผ่าน ไม่บอกว่าอะไรผิด */
-const notFound = () => new Response('Not found', { status: 404 });
+/**
+ * ตอบเหมือนกันหมดทุกกรณีที่ไม่ผ่าน ไม่บอกว่าอะไรผิด
+ *
+ * เหตุผลไปลง log ของ Worker แทน (Observability → Logs) — คนที่ดูได้คือเจ้าของ
+ * Worker เท่านั้น ตอนตั้งค่าครั้งแรกจะได้รู้ว่าติดด่านไหน โดยไม่บอกใบ้คนที่ยิงมั่วมา
+ * ความยาวของ secret ถูก log ไว้เทียบกัน แต่ไม่เคย log ตัวค่า
+ */
+const notFound = (reason, detail) => {
+  console.warn(`[tm-relay] rejected: ${reason}`, detail ? JSON.stringify(detail) : '');
+  return new Response('Not found', { status: 404 });
+};
 
 const worker = {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (request.method !== 'POST' || !ALLOWED.test(url.pathname)) return notFound();
-    if (!env.PROXY_SECRET) return notFound();
+    if (request.method !== 'POST') return notFound('method', { method: request.method });
+    if (!ALLOWED.test(url.pathname)) return notFound('path', { path: url.pathname });
+    if (!env.PROXY_SECRET) return notFound('PROXY_SECRET ยังไม่ได้ตั้ง (หรือยังไม่ deploy)');
 
     const given = request.headers.get('X-Proxy-Secret') ?? '';
-    if (!timingSafeEqual(given, env.PROXY_SECRET)) return notFound();
+    if (!timingSafeEqual(given, env.PROXY_SECRET)) {
+      return notFound('secret ไม่ตรง', {
+        givenLength: given.length,
+        expectedLength: env.PROXY_SECRET.length,
+      });
+    }
 
     let upstream;
     try {
