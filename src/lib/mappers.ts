@@ -94,7 +94,6 @@ export function toCoupon(row: Row): Coupon {
     code: str(row.code),
     discountPercent: num(row.discount_percent),
     minSpend: num(row.min_spend),
-    freeShipping: Boolean(row.free_shipping),
     description: str(row.description),
     isActive: Boolean(row.is_active),
   };

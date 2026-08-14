@@ -9,8 +9,6 @@ export interface StoreSettings {
   topupMinAmount: number;
   topupMaxAmount: number;
   topupMaxSlipAgeDays: number;
-  freeShippingMin: number;
-  shippingFee: number;
   taxRate: number;
 }
 
@@ -30,8 +28,6 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   topupMinAmount: 1,
   topupMaxAmount: 50000,
   topupMaxSlipAgeDays: 7,
-  freeShippingMin: 500,
-  shippingFee: 50,
   taxRate: 7,
 };
 
@@ -47,8 +43,6 @@ export function toSettings(row: Row | null | undefined): StoreSettings {
     topupMinAmount: num(row.topup_min_amount, DEFAULT_SETTINGS.topupMinAmount),
     topupMaxAmount: num(row.topup_max_amount, DEFAULT_SETTINGS.topupMaxAmount),
     topupMaxSlipAgeDays: num(row.topup_max_slip_age_days, DEFAULT_SETTINGS.topupMaxSlipAgeDays),
-    freeShippingMin: num(row.free_shipping_min, DEFAULT_SETTINGS.freeShippingMin),
-    shippingFee: num(row.shipping_fee, DEFAULT_SETTINGS.shippingFee),
     taxRate: num(row.tax_rate, DEFAULT_SETTINGS.taxRate),
   };
 }
@@ -70,8 +64,6 @@ export function toSettingsRow(input: Record<string, unknown>): Row {
   set('topupMaxSlipAgeDays', 'topup_max_slip_age_days', (v) =>
     Math.trunc(num(v, DEFAULT_SETTINGS.topupMaxSlipAgeDays))
   );
-  set('freeShippingMin', 'free_shipping_min', (v) => num(v, DEFAULT_SETTINGS.freeShippingMin));
-  set('shippingFee', 'shipping_fee', (v) => num(v, DEFAULT_SETTINGS.shippingFee));
   set('taxRate', 'tax_rate', (v) => num(v, DEFAULT_SETTINGS.taxRate));
 
   return row;

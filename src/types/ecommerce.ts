@@ -45,14 +45,10 @@ export interface OrderItem {
   selectedColor?: string;
 }
 
+/** สินค้าเป็นดิจิทัล ส่งมอบผ่านหน้าเว็บ จึงไม่มีข้อมูลจัดส่ง */
 export interface CustomerInfo {
   name: string;
   email: string;
-  phone: string;
-  address: string;
-  district: string;
-  province: string;
-  postalCode: string;
   note?: string;
 }
 
@@ -80,7 +76,6 @@ export interface Coupon {
   code: string;
   discountPercent: number;
   minSpend: number;
-  freeShipping: boolean;
   description: string;
   isActive: boolean;
 }

@@ -51,12 +51,14 @@ create table if not exists public.store_settings (
   topup_max_amount numeric(12, 2) not null default 50000 check (topup_max_amount > 0),
   topup_max_slip_age_days integer not null default 7 check (topup_max_slip_age_days > 0),
 
-  free_shipping_min numeric(12, 2) not null default 500 check (free_shipping_min >= 0),
-  shipping_fee numeric(12, 2) not null default 50 check (shipping_fee >= 0),
   tax_rate numeric(5, 2) not null default 7 check (tax_rate >= 0 and tax_rate <= 100),
 
   updated_at timestamptz not null default now()
 );
+
+-- เคยมีค่าจัดส่งตอนที่ยังคิดว่าขายสินค้าจริง ตอนนี้ขายของดิจิทัลล้วนจึงไม่ใช้แล้ว
+alter table public.store_settings drop column if exists free_shipping_min;
+alter table public.store_settings drop column if exists shipping_fee;
 
 insert into public.store_settings (id) values (true) on conflict (id) do nothing;
 
@@ -151,11 +153,12 @@ create table if not exists public.coupons (
   code text primary key check (code = upper(trim(code)) and length(code) > 0),
   discount_percent numeric(5, 2) not null default 0 check (discount_percent >= 0 and discount_percent <= 100),
   min_spend numeric(12, 2) not null default 0 check (min_spend >= 0),
-  free_shipping boolean not null default false,
   description text not null default '',
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+alter table public.coupons drop column if exists free_shipping;
 
 -- ============================================================================
 -- กระเป๋าเงิน
@@ -408,11 +411,7 @@ begin
     end if;
   end if;
 
-  if v_subtotal > 0
-     and v_subtotal < coalesce(v_settings.free_shipping_min, 500)
-     and not coalesce(v_coupon.free_shipping, false) then
-    v_shipping := coalesce(v_settings.shipping_fee, 50);
-  end if;
+  -- สินค้าเป็นดิจิทัล ส่งมอบทันที จึงไม่มีค่าจัดส่ง (v_shipping คงเป็น 0 เสมอ)
 
   v_total := v_subtotal - v_discount + v_shipping;
 
@@ -428,8 +427,10 @@ begin
   where user_id = v_user
   returning balance into v_balance;
 
+  -- ใช้ gen_random_uuid() ซึ่งเป็นของ Postgres core ไม่ใช่ gen_random_bytes() ของ pgcrypto
+  -- เพราะฟังก์ชันนี้ตั้ง search_path = '' และ Supabase ติดตั้ง extension ไว้ที่ schema extensions
   v_order_id := 'ORD-' || to_char(now(), 'YYMMDD') || '-'
-                || upper(substr(encode(gen_random_bytes(3), 'hex'), 1, 5));
+                || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 5));
 
   insert into public.orders (
     id, user_id, customer, items, subtotal, discount, shipping_fee,

@@ -20,7 +20,7 @@ export const AdminOrderList: React.FC = () => {
     const matchesSearch =
       ord.id.toLowerCase().includes(search.toLowerCase()) ||
       ord.customer.name.toLowerCase().includes(search.toLowerCase()) ||
-      ord.customer.phone.includes(search);
+      (ord.customer.email ?? '').toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'ทั้งหมด' || ord.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -39,7 +39,7 @@ export const AdminOrderList: React.FC = () => {
         <div className="relative flex-1">
           <Input
             type="text"
-            placeholder="ค้นหาด้วยหมายเลขสั่งซื้อ, ชื่อลูกค้า หรือเบอร์โทร..."
+            placeholder="ค้นหาด้วยหมายเลขสั่งซื้อ ชื่อ หรืออีเมลลูกค้า..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-slate-50 border-slate-200 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-900 placeholder-slate-400"
@@ -71,7 +71,7 @@ export const AdminOrderList: React.FC = () => {
             <TableHeader className="bg-slate-50 text-slate-600 uppercase font-semibold">
               <TableRow className="border-b border-slate-200 hover:bg-transparent">
                 <TableHead className="p-3.5 text-slate-600">หมายเลขสั่งซื้อ</TableHead>
-                <TableHead className="p-3.5 text-slate-600">ลูกค้า & ที่อยู่</TableHead>
+                <TableHead className="p-3.5 text-slate-600">ลูกค้า</TableHead>
                 <TableHead className="p-3.5 text-slate-600">รายการที่สั่ง</TableHead>
                 <TableHead className="p-3.5 text-slate-600">ยอดสุทธิ</TableHead>
                 <TableHead className="p-3.5 text-slate-600">การชำระเงิน</TableHead>
@@ -97,9 +97,8 @@ export const AdminOrderList: React.FC = () => {
 
                     <TableCell className="p-3.5">
                       <span className="font-bold text-slate-900 block">{ord.customer.name}</span>
-                      <span className="text-[10px] text-slate-500 block">{ord.customer.phone}</span>
-                      <span className="text-[10px] text-slate-400 truncate max-w-[180px] block">
-                        {ord.customer.province}
+                      <span className="text-[10px] text-slate-500 truncate max-w-[180px] block">
+                        {ord.customer.email}
                       </span>
                     </TableCell>
 
@@ -217,11 +216,9 @@ export const AdminOrderList: React.FC = () => {
 
             <div className="mt-4 space-y-4 text-xs">
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
-                <span className="font-bold text-slate-700 block">ข้อมูลผู้รับสินค้า:</span>
-                <p className="text-slate-900 font-semibold">{viewingOrder.customer.name} ({viewingOrder.customer.phone})</p>
-                <p className="text-slate-500">
-                  {viewingOrder.customer.address} {viewingOrder.customer.district} {viewingOrder.customer.province} {viewingOrder.customer.postalCode}
-                </p>
+                <span className="font-bold text-slate-700 block">ผู้สั่งซื้อ:</span>
+                <p className="text-slate-900 font-semibold">{viewingOrder.customer.name}</p>
+                <p className="text-slate-500">{viewingOrder.customer.email}</p>
                 {viewingOrder.customer.note && (
                   <p className="text-amber-600 text-[11px] pt-1">หมายเหตุ: {viewingOrder.customer.note}</p>
                 )}
@@ -253,10 +250,6 @@ export const AdminOrderList: React.FC = () => {
                     <span>-฿{viewingOrder.discount.toLocaleString()}</span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span>ค่าจัดส่ง:</span>
-                  <span>฿{viewingOrder.shippingFee}</span>
-                </div>
                 <div className="flex justify-between font-extrabold text-sm text-slate-900 pt-2 border-t border-slate-200">
                   <span>ยอดสุทธิทั้งสิ้น:</span>
                   <span className="text-emerald-600">฿{viewingOrder.totalAmount.toLocaleString()}</span>

@@ -16,7 +16,6 @@ export const CartDrawer: React.FC = () => {
     updateCartQuantity,
     cartSubtotal,
     discountAmount,
-    shippingFee,
     cartTotal,
     activeCoupon,
     applyCoupon,
@@ -204,16 +203,11 @@ export const CartDrawer: React.FC = () => {
                 </div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-emerald-600">
-                    <span>ส่วนลดโค้ดพิเศษ</span>
-                    <span>-฿{discountAmount.toLocaleString()}</span>
+                    <span>ส่วนลด</span>
+                    <span className="font-medium">-฿{discountAmount.toLocaleString()}</span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span>ค่าจัดส่ง</span>
-                  <span className={shippingFee === 0 ? 'text-emerald-600 font-bold' : 'text-slate-900'}>
-                    {shippingFee === 0 ? 'ฟรี (ส่งด่วน)' : `฿${shippingFee}`}
-                  </span>
-                </div>
+
                 <div className="flex justify-between text-base font-extrabold text-slate-900 border-t border-slate-200 pt-2">
                   <span>ยอดชำระสุทธิ</span>
                   <span className="text-indigo-600">฿{cartTotal.toLocaleString()}</span>

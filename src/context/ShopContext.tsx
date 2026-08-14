@@ -60,7 +60,6 @@ interface ShopContextType {
   clearCart: () => void;
   cartSubtotal: number;
   discountAmount: number;
-  shippingFee: number;
   cartTotal: number;
 
   // Wishlist actions
@@ -256,12 +255,8 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
     ? Math.round((cartSubtotal * activeCoupon.discountPercent) / 100)
     : 0;
 
-  const shippingFee =
-    cartSubtotal === 0 || cartSubtotal >= settings.freeShippingMin || activeCoupon?.freeShipping
-      ? 0
-      : settings.shippingFee;
-
-  const cartTotal = Math.max(0, cartSubtotal - discountAmount + shippingFee);
+  // ไม่มีค่าจัดส่ง สินค้าเป็นดิจิทัลส่งมอบทันที
+  const cartTotal = Math.max(0, cartSubtotal - discountAmount);
 
   // ── Cart actions ──────────────────────────────────────────────────────────
   const addToCart = (product: Product, quantity = 1, selectedColor?: string) => {
@@ -543,7 +538,6 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearCart,
         cartSubtotal,
         discountAmount,
-        shippingFee,
         cartTotal,
         toggleWishlist,
         isInWishlist,

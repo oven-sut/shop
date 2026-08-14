@@ -134,38 +134,16 @@ function StoreSettingsPanel() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">ส่งฟรีเมื่อยอดถึง (฿)</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.freeShippingMin}
-                    onChange={(e) => update('freeShippingMin', Number(e.target.value))}
-                    className="w-full bg-slate-50 border-slate-200 text-slate-900"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">ค่าจัดส่ง (฿)</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.shippingFee}
-                    onChange={(e) => update('shippingFee', Number(e.target.value))}
-                    className="w-full bg-slate-50 border-slate-200 text-slate-900"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">VAT (%)</label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={form.taxRate}
-                    onChange={(e) => update('taxRate', Number(e.target.value))}
-                    className="w-full bg-slate-50 border-slate-200 text-slate-900"
-                  />
-                </div>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">VAT (%)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={form.taxRate}
+                  onChange={(e) => update('taxRate', Number(e.target.value))}
+                  className="w-full sm:max-w-[200px] bg-slate-50 border-slate-200 text-slate-900"
+                />
               </div>
 
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
