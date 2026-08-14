@@ -73,7 +73,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Google Analytics</strong> — สถิติการใช้งานเว็บไซต์แบบไม่ระบุตัวตน
-            ทำงานเฉพาะเมื่อคุณกดยอมรับคุกกี้เพื่อการวิเคราะห์
+            จะเริ่มเก็บข้อมูลก็ต่อเมื่อคุณกดยอมรับคุกกี้เพื่อการวิเคราะห์เท่านั้น
           </li>
         </ul>
         <p className="text-neutral-500">

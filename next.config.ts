@@ -21,13 +21,26 @@ const supabaseOrigin = (() => {
   }
 })();
 
+/**
+ * Google Analytics เสิร์ฟไลบรารีจาก googletagmanager.com แล้วส่ง hit ไปที่
+ * google-analytics.com กับ analytics.google.com — ถ้าไม่ระบุไว้ CSP จะบล็อก
+ * ตั้งแต่โหลดสคริปต์ และ Google จะรายงานว่า "ตรวจไม่พบแท็กในเว็บไซต์"
+ */
+const gtagScript = "https://www.googletagmanager.com";
+const gtagConnect = [
+  "https://*.googletagmanager.com",
+  "https://www.google-analytics.com",
+  "https://*.google-analytics.com",
+  "https://*.analytics.google.com",
+].join(" ");
+
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isProd ? "" : " 'unsafe-eval'"}`,
+  `script-src 'self' 'unsafe-inline' ${gtagScript}${isProd ? "" : " 'unsafe-eval'"}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  `connect-src 'self' ${supabaseOrigin} ${supabaseOrigin.replace("https://", "wss://")}`.trim(),
+  `connect-src 'self' ${supabaseOrigin} ${supabaseOrigin.replace("https://", "wss://")} ${gtagConnect}`.trim(),
   "frame-ancestors 'none'",
   "form-action 'self'",
   "base-uri 'self'",

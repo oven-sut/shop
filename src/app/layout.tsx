@@ -68,14 +68,47 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Structured data ที่ Google ใช้ประกอบผลค้นหา — ชื่อร้าน โลโก้ และช่องค้นหา
+ * ในไซต์ ทำให้ผลลัพธ์แสดงเป็นแบรนด์แทนที่จะเป็นแค่ลิงก์เปล่า
+ */
+function structuredData(origin: string) {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${origin}/#organization`,
+        name: 'NEO APP',
+        url: origin,
+        logo: `${origin}/icon.png`,
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${origin}/#website`,
+        name: 'NEO APP',
+        url: origin,
+        inLanguage: 'th-TH',
+        publisher: { '@id': `${origin}/#organization` },
+      },
+    ],
+  };
+}
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Read once on the server from the cookie session so the first paint already
   // knows who is signed in (no logged-out flash, no localStorage).
   const user = await getSessionUser();
+  const origin = siteOrigin("http://localhost:3000");
 
   return (
     <html lang="th" className={`${sarabun.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans bg-white text-neutral-900 selection:bg-neutral-900 selection:text-white">
+        <script
+          type="application/ld+json"
+          // ค่ามาจากโค้ดฝั่งเราทั้งหมด ไม่มีอินพุตจากผู้ใช้
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData(origin)) }}
+        />
         <AuthProvider initialUser={user}>{children}</AuthProvider>
         <CookieConsent />
         <Analytics />

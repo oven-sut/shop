@@ -78,8 +78,9 @@ export default function CookiesPage() {
           </table>
         </div>
         <p className="text-neutral-500 text-xs">
-          คุกกี้ประเภท &quot;วิเคราะห์&quot; จะถูกตั้งก็ต่อเมื่อคุณกด &quot;ยอมรับทั้งหมด&quot; เท่านั้น
-          ถ้าเลือก &quot;เฉพาะที่จำเป็น&quot; สคริปต์ของ Google Analytics จะไม่ถูกโหลดเลย
+          สคริปต์ของ Google Analytics ถูกโหลดทุกครั้ง แต่ตั้งค่าเริ่มต้นไว้เป็น &quot;ไม่ยินยอม&quot;
+          ด้วย Google Consent Mode จึงยังไม่เขียนคุกกี้ _ga จนกว่าคุณจะกด &quot;ยอมรับทั้งหมด&quot;
+          ถ้าเลือก &quot;เฉพาะที่จำเป็น&quot; จะไม่มีคุกกี้เพื่อการวิเคราะห์ถูกตั้งเลย
           และเราไม่ได้ใช้คุกกี้เพื่อการโฆษณา
         </p>
       </section>
