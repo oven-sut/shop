@@ -16,6 +16,9 @@ export interface ConsentRecord {
   decidedAt: string;
 }
 
+/** ประกาศตอนผู้ใช้เพิ่งเลือก เพื่อให้สคริปต์วิเคราะห์เริ่ม/ไม่เริ่มได้ทันทีโดยไม่ต้องรีเฟรช */
+export const CONSENT_EVENT = 'neo:cookie-consent';
+
 export function readConsent(): ConsentRecord | null {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -58,6 +61,7 @@ export const CookieConsent: React.FC = () => {
       // Private mode with storage disabled: just close the notice for this visit.
     }
 
+    window.dispatchEvent(new CustomEvent<ConsentRecord>(CONSENT_EVENT, { detail: record }));
     setIsOpen(false);
   };
 
