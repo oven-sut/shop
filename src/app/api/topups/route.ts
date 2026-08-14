@@ -41,25 +41,45 @@ function receivingNumbers(settings: StoreSettings) {
   ].filter((value) => value.trim());
 }
 
+/** อย่างน้อยเท่านี้หลักถึงจะถือว่าเทียบได้ ต่ำกว่านี้ชนกันมั่ว */
+const MIN_REVEALED_DIGITS = 4;
+
 /**
- * Slips mask the destination: "นาย ส*** ใ***", "xxx-x-x1234-x". A masked value can
- * never equal the configured one, so match on what the bank does reveal.
+ * เทียบผู้รับในสลิปกับช่องทางของร้าน
+ *
+ * Slips mask the destination, and *which part* they mask differs by bank. KBank
+ * shows `xxx-x-x9947-x` — the middle four, with the last digit hidden — while
+ * others show the last four. So neither side can be compared whole, and taking
+ * the configured number's last four digits is wrong on its own: for a KBank slip
+ * those digits are never the ones on display.
+ *
+ * The rule that survives both styles: **whatever the bank reveals must appear
+ * inside the number the shop configured.** The reverse is kept as well, for the
+ * providers that hand back an unmasked account.
  *
  * Any of the shop's channels counts — a customer who paid the PromptPay QR and a
  * customer who transferred to the bank account both hold a slip for the same
  * shop, and the slip says nothing about which field an admin typed the number in.
  */
 function receiverMatches(slip: SlipDetails, settings: StoreSettings) {
-  const tails = receivingNumbers(settings)
+  const expected = receivingNumbers(settings)
     .map(digitsOnly)
-    .filter((digits) => digits.length >= 4)
-    .map((digits) => digits.slice(-4));
+    .filter((digits) => digits.length >= MIN_REVEALED_DIGITS);
 
-  if (tails.length) {
-    const candidates = [...slip.receiverAccounts, slip.receiverName ?? ''].map(digitsOnly);
-    return tails.some((tail) => candidates.some((candidate) => candidate.includes(tail)));
+  const revealed = [...slip.receiverAccounts, slip.receiverName ?? '']
+    .map(digitsOnly)
+    .filter((digits) => digits.length >= MIN_REVEALED_DIGITS);
+
+  if (expected.length && revealed.length) {
+    return expected.some((configured) =>
+      revealed.some(
+        (shown) => configured.includes(shown) || shown.includes(configured.slice(-4))
+      )
+    );
   }
 
+  // Nothing numeric to go on — either the shop set only a name, or the bank
+  // masked every digit. The name is then the only thing left to check.
   const expectedTokens = nameKey(settings.topupReceiverName);
   if (!expectedTokens.length) return false;
 

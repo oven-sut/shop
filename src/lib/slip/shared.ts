@@ -75,6 +75,39 @@ export function findNumber(source: unknown, keys: string[], depth = 0): number |
   return undefined;
 }
 
+/**
+ * ชื่อเจ้าของบัญชีจากฝั่ง sender/receiver
+ *
+ * Cannot go through {@link findString}: the bearer providers nest the name as
+ * `account.name.{th,en}`, and a depth-first search for "name" reaches
+ * `bank.name` first — which would file the bank's name as the customer's.
+ */
+function readPartyName(party: unknown): string | undefined {
+  if (!isRecord(party)) return undefined;
+
+  const account = isRecord(party.account) ? party.account : party;
+  const name = account.name ?? account.displayName;
+
+  if (typeof name === 'string' && name.trim()) return name.trim();
+
+  if (isRecord(name)) {
+    for (const key of ['th', 'en']) {
+      const value = name[key];
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+  }
+
+  return undefined;
+}
+
+/** ชื่อธนาคารของฝั่งนั้น — เจ้าที่บอกมาเป็น `sendingBank` ตรง ๆ จะใช้ค่านั้นก่อน */
+function readBankName(party: unknown): string | undefined {
+  if (!isRecord(party) || !isRecord(party.bank)) return undefined;
+
+  const name = party.bank.name ?? party.bank.short;
+  return typeof name === 'string' && name.trim() ? name.trim() : undefined;
+}
+
 /** Collects every account-ish identifier under `receiver` so any of them can be matched. */
 export function collectAccountIds(node: unknown, found: string[] = [], depth = 0): string[] {
   if (!isRecord(node) || depth > 4) return found;
@@ -152,10 +185,10 @@ export function normalise(
   return {
     transRef,
     amount: amountUnit === 'satang' ? amount / 100 : amount,
-    sendingBank: findString(body, ['sendingBank']),
-    receivingBank: findString(body, ['receivingBank']),
-    senderName: findString(sender, ['displayName', 'name', 'account']),
-    receiverName: findString(receiver, ['displayName', 'name', 'account']),
+    sendingBank: findString(body, ['sendingBank']) ?? readBankName(sender),
+    receivingBank: findString(body, ['receivingBank']) ?? readBankName(receiver),
+    senderName: readPartyName(sender) ?? findString(sender, ['displayName', 'name']),
+    receiverName: readPartyName(receiver) ?? findString(receiver, ['displayName', 'name']),
     receiverAccounts: collectAccountIds(receiver),
     transferredAt: toIsoTimestamp(body),
     raw: body,

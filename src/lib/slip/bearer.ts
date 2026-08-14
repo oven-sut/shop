@@ -43,8 +43,19 @@ const SHOP_PROBLEM_PATTERNS = [
   'not_verified',
 ];
 
+/**
+ * รหัสระดับ API ไม่ใช่คำตัดสินเรื่องสลิป
+ *
+ * `NOT_FOUND` = ไม่มี route นี้ (ยิงผิด path หรือผู้ให้บริการย้าย endpoint) ซึ่งเป็น
+ * ปัญหาฝั่งร้าน ต้องข้ามไปเจ้าถัดไป ต่างจาก `SLIP_NOT_FOUND` ที่แปลว่าธนาคารไม่รู้จัก
+ * สลิปใบนี้จริง ๆ — เคยจัดตัวแรกเป็นคำตัดสินของสลิป ทั้งเส้นเลยหยุดตายตรงนั้น
+ * ทั้งที่ยังมีเจ้าอื่นใช้ได้อยู่
+ */
+const API_LEVEL_CODES = new Set(['NOT_FOUND', 'METHOD_NOT_ALLOWED', 'INTERNAL_SERVER_ERROR']);
+
 function isShopProblem(code: string, status: number, codes: Set<string>): boolean {
   if (retryableStatus(status)) return true;
+  if (API_LEVEL_CODES.has(code.toUpperCase())) return true;
   if (codes.has(code.toUpperCase())) return true;
 
   const lowered = code.toLowerCase();
@@ -63,20 +74,25 @@ export function createBearerProvider(config: BearerProviderConfig): SlipProvider
       const base = (process.env[config.baseUrlEnv] || config.defaultBase).replace(/\/$/, '');
       const authorization = `Bearer ${process.env[config.tokenEnv]}`;
 
-      let url: string;
+      /**
+       * ทั้งสองแบบยิงไป `/verify/bank` เส้นเดียวกัน ต่างกันแค่ body
+       *
+       * เอกสารแยกหน้าเป็น `/verify/bank/image` แต่นั่นคือ path ของ *หน้าเอกสาร*
+       * ไม่ใช่ของ API — ยิงไปตามนั้นได้ 404 NOT_FOUND เหมือน path มั่ว ๆ
+       * และชื่อฟิลด์ไฟล์คือ `image` ไม่ใช่ `file`
+       */
+      const url = `${base}/verify/bank`;
       let request: RequestInit;
 
       if ('payload' in input) {
-        url = `${base}/verify/bank`;
         request = {
           method: 'POST',
           headers: { Authorization: authorization, 'Content-Type': 'application/json' },
           body: JSON.stringify({ payload: input.payload }),
         };
       } else {
-        url = `${base}/verify/bank/image`;
         const form = new FormData();
-        form.append('file', input.file);
+        form.append('image', input.file);
         // Content-Type ปล่อยว่างไว้ ให้ fetch ใส่ multipart boundary เอง
         request = { method: 'POST', headers: { Authorization: authorization }, body: form };
       }
