@@ -85,8 +85,29 @@ Postgres หรือ Redis โดยแก้แค่ `hit()` ที่เด�
 Steam Guard เพราะไม่มีซัพพลายเออร์ให้ขอ ส่วน `refund_order` จะคืนรหัสเข้าคลังและลบแถว
 ที่ส่งมอบทิ้ง ไม่งั้นลูกค้าจะยังเห็นรหัสที่ถูกเอาไปขายต่อให้คนอื่นแล้ว
 
-> รันสคีมาใหม่หลังดึงโค้ดนี้: `node scripts/apply-schema.mjs "<connection string>"`
-> ไฟล์รันซ้ำได้ แต่รอบนี้แก้ `place_order` ด้วย ถ้าไม่รัน การซื้อสินค้าที่ใส่รหัสไว้จะไม่ส่งมอบ
+ตรวจว่าทั้งหมดยังทำงานถูกได้ด้วย `node --env-file=.env scripts/verify-codes.mjs` — มันสร้าง
+สินค้ากับรหัสจริงในฐานข้อมูล ไล่ทดสอบทริกเกอร์ การจอง และการคืนเงิน แล้ว rollback ทิ้งทั้งหมด
+
+## รันสคีมาเข้า Supabase
+
+```bash
+# ใส่ DATABASE_URL ใน .env แล้วเรียก (รหัสผ่านจะได้ไม่ค้างใน shell history)
+node --env-file=.env scripts/apply-schema.mjs
+```
+
+ทั้งไฟล์ถูกครอบด้วยทรานแซกชันเดียว ล้มตรงไหนคือฐานข้อมูลไม่ถูกแก้เลย และไฟล์เขียนแบบ
+รันซ้ำได้ จึงรันกี่ครั้งก็ปลอดภัย
+
+**host ต้องเป็น pooler ไม่ใช่ `db.<ref>.supabase.co`** — โฮสต์ตรงมีแต่ระเบียน AAAA (IPv6
+ล้วน) เครื่องที่ไม่มีเน็ต IPv6 จะขึ้น `ENOTFOUND` ทั้งที่ชื่อโฮสต์ถูกแล้ว ให้ใช้ session pooler
+ซึ่งมี IPv4 แทน สังเกตว่า username เปลี่ยนเป็น `postgres.<ref>` ด้วย:
+
+```
+postgresql://postgres.<ref>:<DB_PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres
+```
+
+ต้องเป็นพอร์ต **5432** (session) ไม่ใช่ 6543 (transaction) เพราะ transaction mode รัน DDL
+ยาว ๆ ในทรานแซกชันเดียวไม่ได้ ส่วน `<region>` ดูได้จาก `SUPABASE_S3_REGION` ใน `.env`
 
 ## ระบบตรวจสลิป (สำรองหลายเจ้า)
 

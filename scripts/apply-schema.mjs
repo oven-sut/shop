@@ -21,7 +21,7 @@ const connectionString = process.argv[2] || process.env.DATABASE_URL;
 if (!connectionString) {
   console.error(
     'ต้องระบุ connection string\n' +
-      '  node scripts/apply-schema.mjs "postgresql://postgres:PASSWORD@db.<ref>.supabase.co:5432/postgres"'
+      '  node scripts/apply-schema.mjs "postgresql://postgres:SZfPzyQAB3dWMkF3@db.pfvzcuefnyevybbstlnt.supabase.co:5432/postgres"'
   );
   process.exit(1);
 }
