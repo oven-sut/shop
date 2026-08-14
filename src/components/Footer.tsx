@@ -4,10 +4,13 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export const Footer: React.FC = () => {
+  const { isAdmin } = useAuth();
+
   return (
     <footer className="bg-white border-t border-neutral-200 text-neutral-600 mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
@@ -53,11 +56,13 @@ export const Footer: React.FC = () => {
                   เติมเงิน &amp; ประวัติการเติม
                 </Link>
               </li>
-              <li>
-                <Link href="/admin" className="hover:text-neutral-900 transition-colors">
-                  หน้าจัดการหลังบ้าน
-                </Link>
-              </li>
+              {isAdmin && (
+                <li>
+                  <Link href="/admin" className="hover:text-neutral-900 transition-colors">
+                    หน้าจัดการหลังบ้าน
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 
