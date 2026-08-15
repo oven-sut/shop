@@ -208,7 +208,7 @@ export const Navbar: React.FC = () => {
 
         {/* Page Navigation — the account pages, pulled out of the profile dropdown */}
         {user && (
-          <nav className="flex items-center gap-1 overflow-x-auto py-2 no-scrollbar border-t border-neutral-100">
+          <nav className="flex items-center gap-2 overflow-x-auto py-2 no-scrollbar border-t border-neutral-100">
             {pageLinks.map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href;
               return (
@@ -216,10 +216,10 @@ export const Navbar: React.FC = () => {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`h-8 px-3 rounded-md text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                    className={`h-9 px-4 rounded-full text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 border ${
                       isActive
-                        ? 'bg-neutral-900 text-white hover:bg-neutral-900 font-medium'
-                        : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
+                        ? 'bg-neutral-900 text-white border-neutral-900 hover:bg-neutral-900 font-medium'
+                        : 'bg-neutral-100 text-neutral-700 border-neutral-200 hover:bg-neutral-200'
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
