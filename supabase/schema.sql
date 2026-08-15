@@ -99,6 +99,7 @@ alter table public.store_settings add column if not exists contact_line text not
 alter table public.store_settings add column if not exists contact_email text not null default '';
 alter table public.store_settings add column if not exists contact_phone text not null default '';
 alter table public.store_settings add column if not exists contact_facebook text not null default '';
+alter table public.store_settings add column if not exists contact_discord text not null default '';
 alter table public.store_settings add column if not exists contact_hours text not null default '';
 alter table public.store_settings add column if not exists contact_note text not null default '';
 

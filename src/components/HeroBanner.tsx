@@ -63,7 +63,7 @@ export const HeroBanner: React.FC = () => {
           </div>
 
           {/* Quick Metrics — counted from the catalogue, not written by hand */}
-          <dl className="pt-7 border-t border-neutral-200 grid grid-cols-3 gap-6">
+          <dl className="pt-7 border-t border-neutral-200 grid grid-cols-3 gap-3 sm:gap-6">
             {metrics.map((metric) => (
               <div key={metric.label}>
                 <dt className="sr-only">{metric.label}</dt>
@@ -73,7 +73,7 @@ export const HeroBanner: React.FC = () => {
                   {isLoading ? (
                     <Skeleton className="h-7 w-10" />
                   ) : (
-                    <span className="block text-2xl font-bold text-neutral-900">
+                    <span className="block text-xl sm:text-2xl font-bold text-neutral-900">
                       {metric.value}
                     </span>
                   )}

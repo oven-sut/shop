@@ -24,6 +24,7 @@ export interface StoreSettings {
   contactEmail: string;
   contactPhone: string;
   contactFacebook: string;
+  contactDiscord: string;
   contactHours: string;
   contactNote: string;
   taxRate: number;
@@ -56,6 +57,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   contactEmail: '',
   contactPhone: '',
   contactFacebook: '',
+  contactDiscord: '',
   contactHours: '',
   contactNote: '',
   taxRate: 7,
@@ -84,6 +86,7 @@ export function toSettings(row: Row | null | undefined): StoreSettings {
     contactEmail: (row.contact_email as string) ?? '',
     contactPhone: (row.contact_phone as string) ?? '',
     contactFacebook: (row.contact_facebook as string) ?? '',
+    contactDiscord: (row.contact_discord as string) ?? '',
     contactHours: (row.contact_hours as string) ?? '',
     contactNote: (row.contact_note as string) ?? '',
     taxRate: num(row.tax_rate, DEFAULT_SETTINGS.taxRate),
@@ -117,6 +120,7 @@ export function toSettingsRow(input: Record<string, unknown>): Row {
   set('contactEmail', 'contact_email', String);
   set('contactPhone', 'contact_phone', String);
   set('contactFacebook', 'contact_facebook', String);
+  set('contactDiscord', 'contact_discord', String);
   set('contactHours', 'contact_hours', String);
   set('contactNote', 'contact_note', String);
   set('taxRate', 'tax_rate', (v) => num(v, DEFAULT_SETTINGS.taxRate));

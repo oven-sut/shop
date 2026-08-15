@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const metadata: Metadata = {
   title: 'ติดต่อเรา',
-  description: 'ช่องทางติดต่อทีมงาน NEO APP — LINE, อีเมล, โทรศัพท์ และเวลาทำการ',
+  description: 'ช่องทางติดต่อทีมงาน NEO APP — LINE, Discord, อีเมล, โทรศัพท์ และเวลาทำการ',
   alternates: { canonical: '/contact' },
 };
 
@@ -15,6 +15,7 @@ const COLUMNS: Record<ContactField, string> = {
   contactEmail: 'contact_email',
   contactPhone: 'contact_phone',
   contactFacebook: 'contact_facebook',
+  contactDiscord: 'contact_discord',
   contactHours: 'contact_hours',
   contactNote: 'contact_note',
 };

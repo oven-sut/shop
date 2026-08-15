@@ -12,6 +12,7 @@ export type ContactField =
   | 'contactEmail'
   | 'contactPhone'
   | 'contactFacebook'
+  | 'contactDiscord'
   | 'contactHours'
   | 'contactNote';
 
@@ -30,6 +31,11 @@ export const CONTACT_CHANNELS: readonly ContactChannelSpec[] = [
   { field: 'contactEmail', label: 'อีเมล', placeholder: 'support@example.com' },
   { field: 'contactPhone', label: 'โทรศัพท์', placeholder: '08x-xxx-xxxx' },
   { field: 'contactFacebook', label: 'Facebook', placeholder: 'ชื่อเพจ หรือลิงก์ https://facebook.com/...' },
+  {
+    field: 'contactDiscord',
+    label: 'Discord',
+    placeholder: 'ลิงก์เชิญ https://discord.gg/xxxx หรือชื่อผู้ใช้',
+  },
   { field: 'contactHours', label: 'เวลาทำการ', placeholder: 'ทุกวัน 09:00 – 22:00', textOnly: true },
   {
     field: 'contactNote',
@@ -76,6 +82,11 @@ export function contactHref(field: ContactField, raw: string): string | null {
     case 'contactFacebook':
       if (isWebUrl(value)) return value;
       return isHandle(value) ? `https://facebook.com/${encodeURIComponent(value)}` : null;
+
+    case 'contactDiscord':
+      // ลิงก์เชิญกดได้เลย ส่วนชื่อผู้ใช้ Discord ไม่มี URL โปรไฟล์สาธารณะ
+      // จึงปล่อยเป็นข้อความให้ลูกค้าคัดลอกไปค้นในแอปเอง
+      return isWebUrl(value) ? value : null;
 
     default:
       return null;
