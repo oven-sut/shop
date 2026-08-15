@@ -18,21 +18,20 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function StorefrontContent() {
-  const { products, isLoading, searchQuery, selectedCategory, setSelectedCategory } = useShop();
+  const { products, isLoading, searchQuery, setSearchQuery } = useShop();
 
-  const filteredProducts = products.filter((p) => {
-    const matchesSearch =
+  // บริการ (เช่น รับทำเว็บไซต์) ไม่ใช่ของที่วางแคตาล็อกให้เลือกซื้อแบบสินค้าทั่วไป
+  // หมวดหมู่ต่าง ๆ แยกไปอยู่หน้า /category/[ชื่อ] ของตัวเอง หน้านี้จึงกรองแค่คำค้นหา
+  const catalogProducts = products.filter((p) => !p.isService);
+
+  const filteredProducts = catalogProducts.filter(
+    (p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchQuery.toLowerCase());
+      p.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-    const matchesCategory =
-      selectedCategory === 'ทั้งหมด' || p.category === selectedCategory;
-
-    return matchesSearch && matchesCategory;
-  });
-
-  const featuredProducts = products.filter((p) => p.isFeatured || p.badge === 'HOT');
+  const featuredProducts = catalogProducts.filter((p) => p.isFeatured || p.badge === 'HOT');
 
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col font-sans selection:bg-neutral-900 selection:text-white">
@@ -67,7 +66,7 @@ function StorefrontContent() {
           </section>
         )}
 
-        {!isLoading && !searchQuery && selectedCategory === 'ทั้งหมด' && featuredProducts.length > 0 && (
+        {!isLoading && !searchQuery && featuredProducts.length > 0 && (
           <section className="pt-16 space-y-6">
             <div className="flex items-end justify-between gap-4 border-b border-neutral-200 pb-4">
               <div>
@@ -99,11 +98,7 @@ function StorefrontContent() {
                 แคตตาล็อกสินค้าทั้งหมด
               </h2>
               <p className="text-xs text-neutral-500 mt-1">
-                หมวดหมู่{' '}
-                <strong className="font-semibold text-neutral-900">
-                  &quot;{selectedCategory}&quot;
-                </strong>{' '}
-                · {isLoading ? 'กำลังโหลด...' : `${filteredProducts.length} รายการ`}
+                {isLoading ? 'กำลังโหลด...' : `${filteredProducts.length} รายการ`}
               </p>
             </div>
             <span className="text-[11px] tracking-[0.2em] uppercase text-neutral-400 shrink-0 hidden sm:block">
@@ -126,7 +121,7 @@ function StorefrontContent() {
                 ลองค้นหาด้วยคำค้นอื่น หรือเลือกสลับหมวดหมู่สินค้าในเมนูด้านบน
               </p>
               <Button
-                onClick={() => setSelectedCategory('ทั้งหมด')}
+                onClick={() => setSearchQuery('')}
                 className="h-10 bg-neutral-900 hover:bg-neutral-700 text-white font-medium text-sm px-5 rounded-md transition-colors border-0"
               >
                 ดูสินค้าทั้งหมด

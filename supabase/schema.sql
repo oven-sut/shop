@@ -151,6 +151,10 @@ create index if not exists products_created_at_idx on public.products (created_a
 -- หน้าแรกดึงเฉพาะสินค้าแนะนำ — partial index เล็กกว่าและเร็วกว่า index เต็ม
 create index if not exists products_featured_idx on public.products (created_at desc) where is_featured;
 
+-- บริการ (เช่น รับทำเว็บไซต์) ไม่ใช่ของนับสต็อกได้จริง — ไม่โชว์ในแคตาล็อกหน้าแรก
+-- และไม่นับ stock ของแถวนี้รวมเข้ากับ "จำนวนสินค้าที่เหลือ" ของทั้งร้าน
+alter table public.products add column if not exists is_service boolean not null default false;
+
 drop trigger if exists products_touch_updated_at on public.products;
 create trigger products_touch_updated_at
   before update on public.products

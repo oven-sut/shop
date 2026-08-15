@@ -57,6 +57,7 @@ export function toProduct(row: Row): Product {
     badge: (optionalStr(row.badge) as Product['badge']) ?? undefined,
     reviews,
     isFeatured: Boolean(row.is_featured),
+    isService: Boolean(row.is_service),
   };
 }
 
@@ -141,6 +142,7 @@ export function toProductRow(input: Row): Row {
   if (input.gallery !== undefined) row.gallery = Array.isArray(input.gallery) ? input.gallery : [];
   if (input.badge !== undefined) row.badge = optionalStr(input.badge) ?? null;
   if (input.isFeatured !== undefined) row.is_featured = Boolean(input.isFeatured);
+  if (input.isService !== undefined) row.is_service = Boolean(input.isService);
 
   return row;
 }

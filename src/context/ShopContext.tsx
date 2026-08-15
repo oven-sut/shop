@@ -40,7 +40,6 @@ interface ShopContextType {
   cart: CartItem[];
   wishlist: string[];
   searchQuery: string;
-  selectedCategory: string;
   quickViewProduct: Product | null;
   isCartOpen: boolean;
   isCheckoutOpen: boolean;
@@ -56,7 +55,6 @@ interface ShopContextType {
 
   // Setters & Filters
   setSearchQuery: (query: string) => void;
-  setSelectedCategory: (cat: string) => void;
   setQuickViewProduct: (prod: Product | null) => void;
   setIsCartOpen: (isOpen: boolean) => void;
   setIsCheckoutOpen: (isOpen: boolean) => void;
@@ -149,7 +147,6 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isHydrated, setIsHydrated] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
   const [quickViewProductId, setQuickViewProductId] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -557,7 +554,6 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         cart,
         wishlist,
         searchQuery,
-        selectedCategory,
         quickViewProduct,
         isCartOpen,
         isCheckoutOpen,
@@ -569,7 +565,6 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         topUp,
         redeemVoucher,
         setSearchQuery,
-        setSelectedCategory,
         setQuickViewProduct,
         setIsCartOpen,
         setIsCheckoutOpen,

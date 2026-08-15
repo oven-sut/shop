@@ -7,11 +7,13 @@ import { useShop } from '../context/ShopContext';
 export const StoreStatsBar: React.FC = () => {
   const { products, storefrontStats } = useShop();
 
-  const totalStockRemaining = products.reduce((sum, p) => sum + p.stock, 0);
+  // บริการ (เช่น รับทำเว็บไซต์) ไม่ใช่ของนับสต็อกได้จริง — ไม่นับรวมในสถิติของร้าน
+  const catalogProducts = products.filter((p) => !p.isService);
+  const totalStockRemaining = catalogProducts.reduce((sum, p) => sum + p.stock, 0);
 
   const stats = [
     { label: 'จำนวนผู้ใช้งาน', value: storefrontStats.totalUsers, unit: 'คน', icon: Users },
-    { label: 'รายการสินค้า', value: products.length, unit: 'ชิ้น', icon: Package },
+    { label: 'รายการสินค้า', value: catalogProducts.length, unit: 'ชิ้น', icon: Package },
     { label: 'จำนวนสินค้าที่เหลือ', value: totalStockRemaining, unit: 'ชิ้น', icon: ListChecks },
     { label: 'ยอดขาย', value: storefrontStats.totalItemsSold, unit: 'ชิ้น', icon: CheckCircle2 },
   ];

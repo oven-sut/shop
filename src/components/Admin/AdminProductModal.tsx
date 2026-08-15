@@ -47,6 +47,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [description, setDescription] = useState(editingProduct?.description ?? '');
   const [image, setImage] = useState(editingProduct?.image ?? '');
   const [badge, setBadge] = useState<ProductBadge>(editingProduct ? editingProduct.badge : undefined);
+  const [isService, setIsService] = useState(editingProduct?.isService ?? false);
   const [specs, setSpecs] = useState<{ key: string; val: string }[]>(() =>
     editingProduct?.specs ? Object.entries(editingProduct.specs).map(([key, val]) => ({ key, val })) : []
   );
@@ -104,6 +105,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       description,
       image,
       badge,
+      isService,
       specs: specsObj,
     };
 
@@ -254,6 +256,30 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Service flag — a custom job (e.g. รับทำเว็บไซต์) isn't stock you count */}
+          <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-md flex items-start justify-between gap-3">
+            <div>
+              <span className="font-semibold text-neutral-900 block">เป็นบริการ ไม่ใช่สินค้านับสต็อก</span>
+              <span className="text-[11px] text-neutral-500">
+                จะไม่แสดงในแคตาล็อกหน้าแรก และไม่นับสต็อกรวมเข้ากับสถิติของร้าน
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isService}
+              aria-label="เป็นบริการ ไม่ใช่สินค้านับสต็อก"
+              onClick={() => setIsService((prev) => !prev)}
+              className={`shrink-0 px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all ${
+                isService
+                  ? 'bg-neutral-900 text-white border-neutral-900'
+                  : 'bg-white text-neutral-400 border-neutral-300'
+              }`}
+            >
+              {isService ? 'ใช่' : 'ไม่ใช่'}
+            </button>
           </div>
 
           {/* Product image — uploaded to Supabase Storage */}

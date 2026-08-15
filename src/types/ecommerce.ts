@@ -22,6 +22,8 @@ export interface Product {
   badge?: 'HOT' | 'NEW' | 'SALE' | 'LIMITED';
   reviews?: Review[];
   isFeatured?: boolean;
+  /** บริการ (เช่น รับทำเว็บไซต์) — ไม่แสดงในแคตาล็อกหน้าแรก และไม่นับ stock รวมของร้าน */
+  isService?: boolean;
 }
 
 /** A product in the cart — still linked to the live product record. */

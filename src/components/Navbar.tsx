@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname, useParams } from 'next/navigation';
 import { useShop } from '../context/ShopContext';
 import { useAuth } from '../context/AuthContext';
 import { ShoppingBag, Heart, Search, Package, Wallet as WalletIcon, User as UserIcon, LogOut, LayoutDashboard } from 'lucide-react';
@@ -30,16 +31,28 @@ export const Navbar: React.FC = () => {
     setSearchQuery,
     setIsCartOpen,
     cartTotal,
-    selectedCategory,
-    setSelectedCategory
   } = useShop();
 
   const { user, isAdmin, logout } = useAuth();
+  const pathname = usePathname();
+  const routeParams = useParams<{ slug?: string }>();
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Built from whatever the shop actually sells, not a fixed list.
-  const categories = ['ทั้งหมด', ...new Set(products.map((p) => p.category).filter(Boolean))];
+  // Built from whatever the shop actually sells in the catalog, not a fixed
+  // list — service listings do not appear there, so their categories are left out.
+  const categories = [
+    'ทั้งหมด',
+    ...new Set(products.filter((p) => !p.isService).map((p) => p.category).filter(Boolean)),
+  ];
+
+  // Each category is its own page (/category/[name]); "ทั้งหมด" is the homepage.
+  const activeCategory =
+    pathname === '/'
+      ? 'ทั้งหมด'
+      : routeParams?.slug
+        ? decodeURIComponent(routeParams.slug)
+        : null;
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-neutral-200">
@@ -228,24 +241,25 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Category Navigation */}
+        {/* Category Navigation — "ทั้งหมด" is the homepage, each other category is its own page */}
         <nav className="flex items-center gap-1 overflow-x-auto py-2 no-scrollbar border-t border-neutral-100">
           {categories.map((cat) => {
-            const isActive = selectedCategory === cat;
+            const isActive = activeCategory === cat;
+            const href = cat === 'ทั้งหมด' ? '/' : `/category/${encodeURIComponent(cat)}`;
             return (
-              <Button
-                key={cat}
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedCategory(cat)}
-                className={`h-8 px-3 rounded-md text-sm whitespace-nowrap transition-colors ${
-                  isActive
-                    ? 'bg-neutral-900 text-white hover:bg-neutral-900 font-medium'
-                    : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
-                }`}
-              >
-                {cat}
-              </Button>
+              <Link key={cat} href={href}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={`h-8 px-3 rounded-md text-sm whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'bg-neutral-900 text-white hover:bg-neutral-900 font-medium'
+                      : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
+                  }`}
+                >
+                  {cat}
+                </Button>
+              </Link>
             );
           })}
         </nav>
