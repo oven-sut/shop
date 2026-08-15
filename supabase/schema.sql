@@ -117,6 +117,14 @@ alter table public.store_settings add column if not exists announcement_link tex
 alter table public.store_settings add column if not exists hero_banner_image text not null default '';
 alter table public.store_settings add column if not exists hero_banner_link text not null default '';
 
+-- เปิด/ปิดเมนูใน navbar ทีละรายการ — ดู lib/nav-links.ts, เปิดทุกอันเป็นค่าเริ่มต้น
+alter table public.store_settings add column if not exists nav_home_enabled boolean not null default true;
+alter table public.store_settings add column if not exists nav_shop_enabled boolean not null default true;
+alter table public.store_settings add column if not exists nav_orders_enabled boolean not null default true;
+alter table public.store_settings add column if not exists nav_wallet_enabled boolean not null default true;
+alter table public.store_settings add column if not exists nav_reset_hwid_enabled boolean not null default true;
+alter table public.store_settings add column if not exists nav_contact_enabled boolean not null default true;
+
 insert into public.store_settings (id) values (true) on conflict (id) do nothing;
 
 drop trigger if exists store_settings_touch_updated_at on public.store_settings;
@@ -769,9 +777,80 @@ create index if not exists order_fulfillments_order_idx on public.order_fulfillm
 create index if not exists order_fulfillments_user_idx on public.order_fulfillments (user_id, created_at desc);
 
 -- รีเซ็ต HWID ของบัญชีที่ร้านลงเอง (supplier = 'manual') — ลูกค้ากดเองได้ทันที
--- ไม่จำกัดจำนวนครั้ง เก็บไว้แค่นับสถิติ/แสดงเวลารีเซ็ตล่าสุด ไม่ใช่ตัวจำกัดสิทธิ์
+-- ไม่จำกัดจำนวนครั้ง แต่เสียค่าบริการต่อครั้งผ่าน reset_hwid() ด้านล่าง
 alter table public.order_fulfillments add column if not exists hwid_reset_count integer not null default 0;
 alter table public.order_fulfillments add column if not exists hwid_reset_last_at timestamptz;
+
+-- ============================================================================
+-- รีเซ็ต HWID — ลูกค้ากรอก License Key (username ของบัญชีที่ซื้อ) หักเงินในกระเป๋า
+-- กับบันทึกการรีเซ็ตในทรานแซกชันเดียว กันเงินหักแล้วแต่ไม่บันทึก หรือรีเซ็ตฟรี
+-- ============================================================================
+create or replace function public.reset_hwid(p_license_key text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_user uuid := (select auth.uid());
+  v_fee numeric(12, 2) := 50;
+  v_fulfillment public.order_fulfillments;
+  v_balance numeric(12, 2);
+begin
+  if v_user is null then
+    raise exception 'not_authenticated' using errcode = '28000';
+  end if;
+
+  if p_license_key is null or length(trim(p_license_key)) = 0 then
+    raise exception 'invalid_license_key' using errcode = '22023';
+  end if;
+
+  -- ล็อกแถวไว้ก่อน กันกดรัว ๆ พร้อมกันสองรอบแล้วรีเซ็ตซ้ำ
+  select * into v_fulfillment
+  from public.order_fulfillments
+  where user_id = v_user
+    and supplier = 'manual'
+    and status = 'delivered'
+    and account_username = trim(p_license_key)
+  order by created_at desc
+  limit 1
+  for update;
+
+  if not found then
+    raise exception 'license_not_found' using errcode = '22023';
+  end if;
+
+  insert into public.wallets (user_id) values (v_user) on conflict (user_id) do nothing;
+  select balance into v_balance from public.wallets where user_id = v_user for update;
+
+  if v_balance < v_fee then
+    raise exception 'insufficient_balance:%:%', v_balance, v_fee using errcode = '22023';
+  end if;
+
+  update public.wallets
+  set balance = balance - v_fee, updated_at = now()
+  where user_id = v_user
+  returning balance into v_balance;
+
+  insert into public.wallet_transactions (user_id, kind, amount, balance_after, reference, note)
+  values (v_user, 'purchase', -v_fee, v_balance, v_fulfillment.order_id, 'รีเซ็ต HWID');
+
+  update public.order_fulfillments
+  set hwid_reset_count = hwid_reset_count + 1, hwid_reset_last_at = now()
+  where id = v_fulfillment.id
+  returning * into v_fulfillment;
+
+  return jsonb_build_object(
+    'balance', v_balance,
+    'gameTitle', v_fulfillment.game_title,
+    'hwidResetCount', v_fulfillment.hwid_reset_count,
+    'hwidResetLastAt', v_fulfillment.hwid_reset_last_at
+  );
+end;
+$$;
+
+revoke execute on function public.reset_hwid(text) from public, anon;
+grant execute on function public.reset_hwid(text) to authenticated;
 
 alter table public.order_fulfillments enable row level security;
 

@@ -35,6 +35,13 @@ export interface StoreSettings {
   /** แบนเนอร์รูปภาพบนสุดของหน้าแรก — ว่าง = ไม่แสดง */
   heroBannerImage: string;
   heroBannerLink: string;
+  /** เปิด/ปิดเมนูใน navbar ทีละรายการ — ดู lib/nav-links.ts */
+  navHomeEnabled: boolean;
+  navShopEnabled: boolean;
+  navOrdersEnabled: boolean;
+  navWalletEnabled: boolean;
+  navResetHwidEnabled: boolean;
+  navContactEnabled: boolean;
 }
 
 type Row = Record<string, unknown>;
@@ -73,6 +80,12 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   announcementLink: '',
   heroBannerImage: '',
   heroBannerLink: '',
+  navHomeEnabled: true,
+  navShopEnabled: true,
+  navOrdersEnabled: true,
+  navWalletEnabled: true,
+  navResetHwidEnabled: true,
+  navContactEnabled: true,
 };
 
 export function toSettings(row: Row | null | undefined): StoreSettings {
@@ -107,6 +120,12 @@ export function toSettings(row: Row | null | undefined): StoreSettings {
     announcementLink: (row.announcement_link as string) ?? '',
     heroBannerImage: (row.hero_banner_image as string) ?? '',
     heroBannerLink: (row.hero_banner_link as string) ?? '',
+    navHomeEnabled: row.nav_home_enabled !== false,
+    navShopEnabled: row.nav_shop_enabled !== false,
+    navOrdersEnabled: row.nav_orders_enabled !== false,
+    navWalletEnabled: row.nav_wallet_enabled !== false,
+    navResetHwidEnabled: row.nav_reset_hwid_enabled !== false,
+    navContactEnabled: row.nav_contact_enabled !== false,
   };
 }
 
@@ -146,6 +165,12 @@ export function toSettingsRow(input: Record<string, unknown>): Row {
   set('announcementLink', 'announcement_link', String);
   set('heroBannerImage', 'hero_banner_image', String);
   set('heroBannerLink', 'hero_banner_link', String);
+  set('navHomeEnabled', 'nav_home_enabled', Boolean);
+  set('navShopEnabled', 'nav_shop_enabled', Boolean);
+  set('navOrdersEnabled', 'nav_orders_enabled', Boolean);
+  set('navWalletEnabled', 'nav_wallet_enabled', Boolean);
+  set('navResetHwidEnabled', 'nav_reset_hwid_enabled', Boolean);
+  set('navContactEnabled', 'nav_contact_enabled', Boolean);
 
   return row;
 }

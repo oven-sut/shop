@@ -30,6 +30,7 @@ import {
 import { StoreSettings } from '../../lib/settings';
 import { CONTACT_CHANNELS } from '../../lib/contact';
 import { TOPUP_CHANNELS } from '../../lib/topup-channels';
+import { NAV_LINKS } from '../../lib/nav-links';
 
 /**
  * Rendered only once the settings row has loaded, so seeding the form from props
@@ -401,6 +402,46 @@ function StoreSettingsPanel() {
                           aria-checked={enabled}
                           aria-label={channel.label}
                           onClick={() => update(channel.field, !enabled)}
+                          className={`shrink-0 px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all ${
+                            enabled
+                              ? 'bg-neutral-900 text-white border-neutral-900'
+                              : 'bg-white text-neutral-400 border-neutral-300'
+                          }`}
+                        >
+                          {enabled ? 'เปิด' : 'ปิด'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Navbar menu — closes purely as a shortcut. The page itself still
+                  answers a direct URL, this only hides the pill in the navbar. */}
+              <div className="p-4 bg-neutral-100/60 rounded-md border border-neutral-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <ToggleLeft className="w-4 h-4 text-neutral-900" />
+                  <span className="font-bold text-neutral-900">เมนูใน Navbar</span>
+                </div>
+                <p className="text-[11px] text-neutral-500 -mt-1">
+                  ปิดเมนูไหน จะหายจาก navbar เท่านั้น หน้านั้นยังเข้าตรง URL ได้อยู่
+                </p>
+
+                <div className="space-y-2">
+                  {NAV_LINKS.map((link) => {
+                    const enabled = form[link.field];
+                    return (
+                      <div
+                        key={link.key}
+                        className="bg-white border border-neutral-200 rounded-md p-3 flex items-center justify-between gap-3"
+                      >
+                        <span className="font-semibold text-neutral-900">{link.label}</span>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={enabled}
+                          aria-label={link.label}
+                          onClick={() => update(link.field, !enabled)}
                           className={`shrink-0 px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all ${
                             enabled
                               ? 'bg-neutral-900 text-white border-neutral-900'

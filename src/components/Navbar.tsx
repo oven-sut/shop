@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useShop } from '../context/ShopContext';
 import { useAuth } from '../context/AuthContext';
+import { NAV_LINKS, type NavLinkKey } from '../lib/nav-links';
 import {
   ShoppingBag,
   Heart,
@@ -34,6 +35,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+const NAV_ICONS: Record<NavLinkKey, typeof Home> = {
+  home: Home,
+  shop: Store,
+  orders: Package,
+  wallet: WalletIcon,
+  resetHwid: RotateCcw,
+  contact: MessageCircle,
+};
+
 export const Navbar: React.FC = () => {
   const {
     cart,
@@ -43,6 +53,7 @@ export const Navbar: React.FC = () => {
     setSearchQuery,
     setIsCartOpen,
     cartTotal,
+    settings,
   } = useShop();
 
   const { user, isAdmin, logout } = useAuth();
@@ -51,12 +62,11 @@ export const Navbar: React.FC = () => {
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const pageLinks = [
-    { href: '/', label: 'หน้าแรก', icon: Home },
-    { href: '/#products-section', label: 'ร้านค้า', icon: Store },
-    { href: '/orders', label: 'บัญชีเกมที่ซื้อไว้', icon: Package },
-    { href: '/wallet', label: 'กระเป๋าเงิน', icon: WalletIcon },
-    { href: '/orders', label: 'Reset HWID', icon: RotateCcw },
-    { href: '/contact', label: 'ติดต่อเรา', icon: MessageCircle },
+    ...NAV_LINKS.filter((link) => settings[link.field]).map((link) => ({
+      href: link.href,
+      label: link.label,
+      icon: NAV_ICONS[link.key],
+    })),
     ...(isAdmin ? [{ href: '/admin', label: 'ระบบหลังบ้าน (Admin)', icon: LayoutDashboard }] : []),
   ];
 
