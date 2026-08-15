@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 const LINKS = [
+  { href: '/contact', label: 'ติดต่อเรา' },
   { href: '/terms', label: 'ข้อกำหนดการใช้งาน' },
   { href: '/privacy', label: 'นโยบายความเป็นส่วนตัว' },
   { href: '/cookies', label: 'นโยบายคุกกี้' },

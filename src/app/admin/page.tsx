@@ -9,7 +9,8 @@ import { AdminOrderList } from '../../components/Admin/AdminOrderList';
 import { AdminAnalytics } from '../../components/Admin/AdminAnalytics';
 import { AdminSupplier } from '../../components/Admin/AdminSupplier';
 import { ToastContainer } from '../../components/ToastContainer';
-import { Settings, Save, ToggleLeft, Wallet } from 'lucide-react';
+import Link from 'next/link';
+import { MessageCircle, Save, Settings, ToggleLeft, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LoadingBlock, Spinner } from '@/components/ui/spinner';
@@ -19,6 +20,7 @@ import {
   readPromptPayTarget,
 } from '../../lib/promptpay-id';
 import { StoreSettings } from '../../lib/settings';
+import { CONTACT_CHANNELS } from '../../lib/contact';
 import { TOPUP_CHANNELS } from '../../lib/topup-channels';
 
 /**
@@ -199,6 +201,49 @@ function StoreSettingsPanel() {
                   onChange={(e) => update('taxRate', Number(e.target.value))}
                   className="w-full sm:max-w-[200px] bg-neutral-50 border-neutral-200 text-neutral-900"
                 />
+              </div>
+
+              {/* Contact details — shown publicly on /contact, so anything typed
+                  here is visible to people who are not signed in. */}
+              <div className="p-4 bg-neutral-100/60 rounded-md border border-neutral-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-neutral-900" />
+                  <span className="font-bold text-neutral-900">ช่องทางติดต่อ</span>
+                </div>
+                <p className="text-[11px] text-neutral-500 -mt-1">
+                  แสดงที่หน้า{' '}
+                  <Link href="/contact" className="underline underline-offset-2 text-neutral-900">
+                    /contact
+                  </Link>{' '}
+                  ซึ่งเปิดให้คนที่ยังไม่ได้ล็อกอินเห็นด้วย เว้นว่างช่องไหนช่องนั้นจะไม่ถูกแสดง
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {CONTACT_CHANNELS.map((channel) => (
+                    <div key={channel.field} className={channel.multiline ? 'sm:col-span-2' : ''}>
+                      <label className="block font-semibold text-neutral-700 mb-1">
+                        {channel.label}
+                      </label>
+                      {channel.multiline ? (
+                        <textarea
+                          rows={2}
+                          placeholder={channel.placeholder}
+                          value={form[channel.field]}
+                          onChange={(e) => update(channel.field, e.target.value)}
+                          className="w-full bg-white border border-neutral-200 rounded-md px-3 py-2 text-neutral-900 text-xs"
+                        />
+                      ) : (
+                        <Input
+                          type="text"
+                          placeholder={channel.placeholder}
+                          value={form[channel.field]}
+                          onChange={(e) => update(channel.field, e.target.value)}
+                          className="w-full bg-white border-neutral-200 text-neutral-900"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Payment channels — each one is enforced in its own route handler

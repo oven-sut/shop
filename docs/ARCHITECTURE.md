@@ -14,8 +14,8 @@ Tailwind CSS 4, Base UI/shadcn, Supabase (Auth + Postgres + Storage) และ R
    │     • ต่ออายุ session cookie ของ Supabase
    │     • ยังไม่ล็อกอิน → page เด้งไป /login  |  /api/* ตอบ 401
    │     • /docs และ /openapi.json → 404 ถ้าไม่ใช่แอดมิน
-   │     • /login /auth/* /terms /privacy /cookies เปิดสาธารณะ
-│     • /api/topups/webhook/* เปิดสาธารณะ (เกตเวย์ไม่มีบัญชีในร้าน — body ไม่ถูกเชื่อถือ)
+   │     • /login /auth/* /terms /privacy /cookies /contact เปิดสาธารณะ
+   │     • /api/topups/webhook/* เปิดสาธารณะ (เกตเวย์ไม่มีบัญชีในร้าน — body ไม่ถูกเชื่อถือ)
    │
    ├─ Pages (Server Components + Client Components)
    │     • src/app/layout.tsx อ่าน user จาก cookie แล้วส่งเข้า AuthProvider
@@ -63,7 +63,7 @@ src/
 │  ├─ page.tsx                 ← หน้าร้าน
 │  ├─ wallet/page.tsx          ← กระเป๋าเงิน: ยอดคงเหลือ ซองอังเปา QR พร้อมเพย์ สลิป ประวัติ
 │  ├─ login/page.tsx           ← Google OAuth + email/password + สมัครสมาชิก
-│  ├─ (legal)/                 ← terms, privacy, cookies (เปิดสาธารณะ)
+│  ├─ (legal)/                 ← contact, terms, privacy, cookies (เปิดสาธารณะ)
 │  ├─ docs/                    ← Swagger UI (แอดมินเท่านั้น)
 │  ├─ admin/
 │  │  ├─ layout.tsx            ← ตรวจสิทธิ์ admin ฝั่ง server
@@ -93,6 +93,7 @@ src/
 │  ├─ truemoney.ts             ← ไถ่ซองอังเปา + แยก error ว่าซองถูกใช้ไปหรือยัง
 │  ├─ topup-charge.ts          ← เติมเงินจาก charge ที่เกตเวย์ยืนยันแล้ว (ใช้ร่วม 2 ทาง)
 │  ├─ topup-channels.ts        ← สวิตช์เปิด/ปิดช่องทางเติมเงิน (ใช้ร่วมทั้ง 3 ฝั่ง)
+│  ├─ contact.ts               ← ช่องทางติดต่อ + กฎว่าค่าไหนทำเป็นลิงก์ได้
 │  ├─ gateway/                 ← เกตเวย์รับชำระเงิน: types.ts, omise.ts, index.ts
 │  ├─ rdcw.ts                  ← เรียก RDCW Slip Verify และ normalise ผลลัพธ์
 │  └─ supabase/
@@ -121,6 +122,7 @@ src/
 | `/` | ล็อกอิน | หน้าร้าน แคตตาล็อก ตะกร้า เช็คเอาต์ |
 | `/wallet` | ล็อกอิน | ยอดเงิน เติมเงินด้วยสลิป ประวัติการเติม |
 | `/login` | เปิด | Google / email + password / สมัครสมาชิก |
+| `/contact` | เปิด | ช่องทางติดต่อร้าน (อ่านจาก store_settings เฉพาะคอลัมน์ contact_*) |
 | `/terms` `/privacy` `/cookies` | เปิด | นโยบายและข้อกำหนด |
 | `/auth/callback` | เปิด | ปลายทาง OAuth ของ Google |
 | `/admin` | admin | แดชบอร์ดหลังบ้าน |

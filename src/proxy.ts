@@ -30,6 +30,9 @@ const PUBLIC_PATHS = [
   '/terms',
   '/privacy',
   '/cookies',
+  // ต้องเปิดสาธารณะ: คนที่ยังไม่มีบัญชีก็ต้องติดต่อร้านได้ หน้านั้นอ่านเฉพาะคอลัมน์
+  // ช่องทางติดต่อด้วย service key ไม่ได้เปิด RLS ของ store_settings ให้ใคร
+  '/contact',
   '/sitemap.xml',
   '/robots.txt',
   '/opengraph-image',

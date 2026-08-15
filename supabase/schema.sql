@@ -92,6 +92,16 @@ alter table public.store_settings add column if not exists topup_truemoney_phone
 -- สวิตช์เปิด/ปิดช่องทางเติมเงิน แยกจากคอนฟิกของช่องนั้น
 -- เดิมปิดช่องได้ด้วยการลบคอนฟิกทิ้งอย่างเดียว ซึ่งลบข้อมูลที่ลูกค้าต้องเห็นไปด้วย
 -- และไม่มีทางปิดช่องสลิปได้เลย · default true = ของเดิมทำงานเหมือนเดิมหลัง migrate
+-- ช่องทางติดต่อร้าน แสดงที่หน้า /contact ซึ่งเปิดสาธารณะ
+-- หน้านั้นอ่านผ่าน service key และ select เฉพาะคอลัมน์ชุดนี้ เพราะ RLS ของตารางนี้
+-- ให้เฉพาะคนที่ล็อกอินอ่านได้ และแถวเดียวกันมีเลขบัญชีร้านอยู่ด้วย
+alter table public.store_settings add column if not exists contact_line text not null default '';
+alter table public.store_settings add column if not exists contact_email text not null default '';
+alter table public.store_settings add column if not exists contact_phone text not null default '';
+alter table public.store_settings add column if not exists contact_facebook text not null default '';
+alter table public.store_settings add column if not exists contact_hours text not null default '';
+alter table public.store_settings add column if not exists contact_note text not null default '';
+
 alter table public.store_settings add column if not exists topup_slip_enabled boolean not null default true;
 alter table public.store_settings add column if not exists topup_qr_enabled boolean not null default true;
 alter table public.store_settings add column if not exists topup_truemoney_enabled boolean not null default true;

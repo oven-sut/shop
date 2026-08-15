@@ -56,6 +56,11 @@ export const Footer: React.FC = () => {
                   เติมเงิน &amp; ประวัติการเติม
                 </Link>
               </li>
+              <li>
+                <Link href="/contact" className="hover:text-neutral-900 transition-colors">
+                  ติดต่อเรา
+                </Link>
+              </li>
               {isAdmin && (
                 <li>
                   <Link href="/admin" className="hover:text-neutral-900 transition-colors">
@@ -92,6 +97,9 @@ export const Footer: React.FC = () => {
         <div className="mt-12 pt-6 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between text-xs text-neutral-400 gap-3">
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1">
             <p>© 2026 NEO APP</p>
+            <Link href="/contact" className="hover:text-neutral-900 transition-colors">
+              ติดต่อเรา
+            </Link>
             <Link href="/terms" className="hover:text-neutral-900 transition-colors">
               ข้อกำหนดการใช้งาน
             </Link>

@@ -2981,6 +2981,30 @@
             "type": "boolean",
             "default": true,
             "description": "เปิดรับซองอังเปาทรูมันนี่ — ปิดแล้ว endpoint ของช่องนั้นตอบ 503 channel_disabled"
+          },
+          "contactLine": {
+            "type": "string",
+            "description": "LINE ของร้าน (ไอดี @xxx หรือลิงก์) — แสดงที่หน้า /contact ซึ่งเปิดสาธารณะ"
+          },
+          "contactEmail": {
+            "type": "string",
+            "description": "อีเมลติดต่อ — แสดงที่หน้า /contact ซึ่งเปิดสาธารณะ"
+          },
+          "contactPhone": {
+            "type": "string",
+            "description": "เบอร์โทรติดต่อ — แสดงที่หน้า /contact ซึ่งเปิดสาธารณะ"
+          },
+          "contactFacebook": {
+            "type": "string",
+            "description": "ชื่อเพจหรือลิงก์ Facebook — แสดงที่หน้า /contact ซึ่งเปิดสาธารณะ"
+          },
+          "contactHours": {
+            "type": "string",
+            "description": "เวลาทำการ (ข้อความล้วน) — แสดงที่หน้า /contact ซึ่งเปิดสาธารณะ"
+          },
+          "contactNote": {
+            "type": "string",
+            "description": "ข้อความเพิ่มเติมที่หน้า /contact — แสดงที่หน้า /contact ซึ่งเปิดสาธารณะ"
           }
         }
       },

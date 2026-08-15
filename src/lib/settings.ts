@@ -19,6 +19,13 @@ export interface StoreSettings {
   topupQrEnabled: boolean;
   topupTruemoneyEnabled: boolean;
   topupVoucherEnabled: boolean;
+  /** ช่องทางติดต่อที่แสดงหน้า /contact — ดู lib/contact.ts */
+  contactLine: string;
+  contactEmail: string;
+  contactPhone: string;
+  contactFacebook: string;
+  contactHours: string;
+  contactNote: string;
   taxRate: number;
 }
 
@@ -45,6 +52,12 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   topupQrEnabled: true,
   topupTruemoneyEnabled: true,
   topupVoucherEnabled: true,
+  contactLine: '',
+  contactEmail: '',
+  contactPhone: '',
+  contactFacebook: '',
+  contactHours: '',
+  contactNote: '',
   taxRate: 7,
 };
 
@@ -67,6 +80,12 @@ export function toSettings(row: Row | null | undefined): StoreSettings {
     topupQrEnabled: row.topup_qr_enabled !== false,
     topupTruemoneyEnabled: row.topup_truemoney_enabled !== false,
     topupVoucherEnabled: row.topup_voucher_enabled !== false,
+    contactLine: (row.contact_line as string) ?? '',
+    contactEmail: (row.contact_email as string) ?? '',
+    contactPhone: (row.contact_phone as string) ?? '',
+    contactFacebook: (row.contact_facebook as string) ?? '',
+    contactHours: (row.contact_hours as string) ?? '',
+    contactNote: (row.contact_note as string) ?? '',
     taxRate: num(row.tax_rate, DEFAULT_SETTINGS.taxRate),
   };
 }
@@ -94,6 +113,12 @@ export function toSettingsRow(input: Record<string, unknown>): Row {
   set('topupQrEnabled', 'topup_qr_enabled', Boolean);
   set('topupTruemoneyEnabled', 'topup_truemoney_enabled', Boolean);
   set('topupVoucherEnabled', 'topup_voucher_enabled', Boolean);
+  set('contactLine', 'contact_line', String);
+  set('contactEmail', 'contact_email', String);
+  set('contactPhone', 'contact_phone', String);
+  set('contactFacebook', 'contact_facebook', String);
+  set('contactHours', 'contact_hours', String);
+  set('contactNote', 'contact_note', String);
   set('taxRate', 'tax_rate', (v) => num(v, DEFAULT_SETTINGS.taxRate));
 
   return row;
