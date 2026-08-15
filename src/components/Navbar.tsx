@@ -3,6 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useShop } from '../context/ShopContext';
 import { useAuth } from '../context/AuthContext';
 import { ShoppingBag, Heart, Search, Package, Wallet as WalletIcon, User as UserIcon, LogOut, LayoutDashboard } from 'lucide-react';
@@ -32,8 +33,15 @@ export const Navbar: React.FC = () => {
   } = useShop();
 
   const { user, isAdmin, logout } = useAuth();
+  const pathname = usePathname();
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const pageLinks = [
+    { href: '/orders', label: 'บัญชีเกมที่ซื้อไว้', icon: Package },
+    { href: '/wallet', label: 'กระเป๋าเงิน', icon: WalletIcon },
+    ...(isAdmin ? [{ href: '/admin', label: 'ระบบหลังบ้าน (Admin)', icon: LayoutDashboard }] : []),
+  ];
 
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-neutral-200">
@@ -164,30 +172,6 @@ export const Navbar: React.FC = () => {
                     </DropdownMenuLabel>
                   </DropdownMenuGroup>
                   <DropdownMenuSeparator className="bg-neutral-100" />
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Link href="/orders" className="flex items-center gap-2 w-full text-neutral-700">
-                      <Package className="w-4 h-4" />
-                      บัญชีเกมที่ซื้อไว้
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="cursor-pointer">
-                    <Link href="/wallet" className="flex items-center justify-between gap-2 w-full">
-                      <span className="flex items-center gap-2 text-neutral-700">
-                        <WalletIcon className="w-4 h-4" />
-                        กระเป๋าเงิน
-                      </span>
-                      <span className="font-semibold text-neutral-900">฿{balance.toLocaleString()}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  {isAdmin && (
-                    <DropdownMenuItem className="cursor-pointer">
-                      <Link href="/admin" className="flex items-center gap-2 text-neutral-900 font-semibold w-full">
-                        <LayoutDashboard className="w-4 h-4" />
-                        <span>ระบบหลังบ้าน (Admin)</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator className="bg-neutral-100" />
                   <DropdownMenuItem onClick={logout} className="cursor-pointer text-neutral-500 focus:text-neutral-900">
                     <LogOut className="w-4 h-4 mr-2" />
                     <span>ออกจากระบบ</span>
@@ -221,6 +205,36 @@ export const Navbar: React.FC = () => {
             <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           </div>
         </div>
+
+        {/* Page Navigation — the account pages, pulled out of the profile dropdown */}
+        {user && (
+          <nav className="flex items-center gap-1 overflow-x-auto py-2 no-scrollbar border-t border-neutral-100">
+            {pageLinks.map(({ href, label, icon: Icon }) => {
+              const isActive = pathname === href;
+              return (
+                <Link key={href} href={href}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-8 px-3 rounded-md text-sm whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                      isActive
+                        ? 'bg-neutral-900 text-white hover:bg-neutral-900 font-medium'
+                        : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{label}</span>
+                    {href === '/wallet' && (
+                      <span className={isActive ? 'font-semibold' : 'font-semibold text-neutral-900'}>
+                        ฿{balance.toLocaleString()}
+                      </span>
+                    )}
+                  </Button>
+                </Link>
+              );
+            })}
+          </nav>
+        )}
       </div>
     </header>
   );
