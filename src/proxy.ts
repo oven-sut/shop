@@ -26,6 +26,11 @@ import { updateSession } from '@/lib/supabase/proxy';
 // so a forged post can achieve nothing beyond a wasted lookup.
 const PUBLIC_PATHS = [
   '/login',
+  '/forgot-password',
+  '/reset-password',
+  // คนที่ลืมรหัสผ่านยังล็อกอินไม่ได้ตามนิยาม เส้นนี้จึงต้องเรียกได้โดยไม่มี session
+  // (ตัว route กันการยิงรัวด้วย rate limit ต่อ IP อยู่แล้ว)
+  '/api/auth/forgot-password',
   '/auth',
   '/terms',
   '/privacy',

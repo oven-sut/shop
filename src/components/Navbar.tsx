@@ -73,9 +73,9 @@ export const Navbar: React.FC = () => {
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-neutral-200">
       {/* Notice strip — inverted rather than coloured. */}
-      <div className="bg-neutral-900 text-white text-xs py-2 px-4 text-center tracking-wide">
+      {/* <div className="bg-neutral-900 text-white text-xs py-2 px-4 text-center tracking-wide">
         เติมเงินเข้ากระเป๋า แล้วซื้อแอปได้ทันทีในคลิกเดียว
-      </div>
+      </div> */}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20 gap-6">

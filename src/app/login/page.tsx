@@ -203,7 +203,15 @@ function LoginContent() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1.5">รหัสผ่าน</label>
+                  <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                    <label className="block text-xs font-medium text-neutral-700">รหัสผ่าน</label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs text-neutral-400 hover:text-neutral-900 underline underline-offset-2 transition-colors"
+                    >
+                      ลืมรหัสผ่าน
+                    </Link>
+                  </div>
                   <div className="relative">
                     <Input
                       type="password"
