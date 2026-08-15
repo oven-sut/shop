@@ -19,15 +19,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <article className="group relative bg-white border border-neutral-200 rounded-md overflow-hidden hover:border-neutral-900 transition-colors flex flex-col h-full">
-      {/* Product Image Container */}
+      {/* Product Image Container
+          สินค้าเป็นโลโก้แอป/เกม ไม่ใช่ภาพถ่าย: กรอบสี่เหลี่ยมจัตุรัสเต็มความกว้าง
+          บวก object-cover ทำให้โลโก้ใหญ่จนล้นการ์ดและถูกครอบตัดขอบทิ้ง
+          กรอบเตี้ยลงเป็น 4:3 กับ object-contain จึงเห็นโลโก้ครบทั้งอันในขนาดที่พอดี */}
       <div
-        className="relative aspect-square overflow-hidden bg-neutral-50 cursor-pointer border-b border-neutral-200"
+        className="relative aspect-[4/3] overflow-hidden bg-neutral-50 cursor-pointer border-b border-neutral-200"
         onClick={() => setQuickViewProduct(product)}
       >
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain p-6"
         />
 
         {/* Badge — one flat treatment for every kind; the word carries the meaning. */}

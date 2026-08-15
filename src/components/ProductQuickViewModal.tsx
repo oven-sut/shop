@@ -63,7 +63,8 @@ export const ProductQuickViewModal: React.FC = () => {
               <img
                 src={mainImg}
                 alt={product.name}
-                className="w-full h-full object-cover"
+                // เหมือนการ์ดสินค้า: โลโก้ต้องเห็นครบ ไม่ใช่ถูกครอบตัดให้เต็มกรอบ
+                className="w-full h-full object-contain p-8"
               />
               {product.badge && (
                 <span className="absolute top-0 left-0 bg-neutral-900 text-white text-[10px] font-semibold tracking-[0.15em] px-2.5 py-1">
