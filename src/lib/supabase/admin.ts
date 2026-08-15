@@ -3,9 +3,11 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 /**
  * Service-role client. Bypasses RLS entirely — server-side only.
  *
- * Used for exactly one thing: crediting a wallet after a slip has been verified
- * with RDCW. That write must be impossible to trigger from the browser, so no
- * RLS policy allows it and the secret key never leaves the server.
+ * Two uses: crediting a wallet after a slip has been verified with RDCW (that
+ * write must be impossible to trigger from the browser, so no RLS policy
+ * allows it), and reading store-wide aggregate counts for the homepage stats
+ * banner (every table here is locked to "your own rows", but a plain count
+ * carries no PII so it is safe to read across all users).
  */
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

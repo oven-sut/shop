@@ -108,6 +108,11 @@ alter table public.store_settings add column if not exists topup_qr_enabled bool
 alter table public.store_settings add column if not exists topup_truemoney_enabled boolean not null default true;
 alter table public.store_settings add column if not exists topup_voucher_enabled boolean not null default true;
 
+-- แถบประกาศบนหน้าแรก — ปิดเป็นค่าเริ่มต้นเพราะยังไม่มีข้อความให้แสดง
+alter table public.store_settings add column if not exists announcement_enabled boolean not null default false;
+alter table public.store_settings add column if not exists announcement_text text not null default '';
+alter table public.store_settings add column if not exists announcement_link text not null default '';
+
 insert into public.store_settings (id) values (true) on conflict (id) do nothing;
 
 drop trigger if exists store_settings_touch_updated_at on public.store_settings;

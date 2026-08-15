@@ -24,12 +24,18 @@ export interface ActionResult {
   message: string;
 }
 
+interface StorefrontStats {
+  totalUsers: number;
+  totalItemsSold: number;
+}
+
 interface ShopContextType {
   products: Product[];
   orders: Order[];
   coupons: Coupon[];
   settings: StoreSettings;
   isLoading: boolean;
+  storefrontStats: StorefrontStats;
 
   cart: CartItem[];
   wishlist: string[];
@@ -128,6 +134,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [settings, setSettings] = useState<StoreSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
+  const [storefrontStats, setStorefrontStats] = useState<StorefrontStats>({
+    totalUsers: 0,
+    totalItemsSold: 0,
+  });
 
   const [balance, setBalance] = useState(0);
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
@@ -196,11 +206,12 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // The coupon list is admin-only — it is the full set of live discount
       // codes, and only the admin dashboard renders it. Asking as a customer
       // would just collect a 403.
-      const [productList, orderList, couponList, storeSettings] = await Promise.all([
+      const [productList, orderList, couponList, storeSettings, stats] = await Promise.all([
         callApi<Product[]>('/api/products'),
         callApi<Order[]>('/api/orders'),
         isAdmin ? callApi<Coupon[]>('/api/coupons') : Promise.resolve({ ok: true, data: [] }),
         callApi<StoreSettings>('/api/settings'),
+        callApi<StorefrontStats>('/api/stats/storefront'),
       ]);
 
       if (!active) return;
@@ -209,6 +220,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (orderList.data) setOrders(orderList.data);
       if (couponList.data) setCoupons(couponList.data);
       if (storeSettings.data) setSettings(storeSettings.data);
+      if (stats.data) setStorefrontStats(stats.data);
       setIsLoading(false);
     };
 
@@ -541,6 +553,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         coupons,
         settings,
         isLoading,
+        storefrontStats,
         cart,
         wishlist,
         searchQuery,

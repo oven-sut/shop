@@ -28,6 +28,10 @@ export interface StoreSettings {
   contactHours: string;
   contactNote: string;
   taxRate: number;
+  /** แถบประกาศหน้าแรก — ปิดไว้เป็นค่าเริ่มต้นจนกว่าแอดมินจะกรอกและเปิดเอง */
+  announcementEnabled: boolean;
+  announcementText: string;
+  announcementLink: string;
 }
 
 type Row = Record<string, unknown>;
@@ -61,6 +65,9 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   contactHours: '',
   contactNote: '',
   taxRate: 7,
+  announcementEnabled: false,
+  announcementText: '',
+  announcementLink: '',
 };
 
 export function toSettings(row: Row | null | undefined): StoreSettings {
@@ -90,6 +97,9 @@ export function toSettings(row: Row | null | undefined): StoreSettings {
     contactHours: (row.contact_hours as string) ?? '',
     contactNote: (row.contact_note as string) ?? '',
     taxRate: num(row.tax_rate, DEFAULT_SETTINGS.taxRate),
+    announcementEnabled: row.announcement_enabled === true,
+    announcementText: (row.announcement_text as string) ?? '',
+    announcementLink: (row.announcement_link as string) ?? '',
   };
 }
 
@@ -124,6 +134,9 @@ export function toSettingsRow(input: Record<string, unknown>): Row {
   set('contactHours', 'contact_hours', String);
   set('contactNote', 'contact_note', String);
   set('taxRate', 'tax_rate', (v) => num(v, DEFAULT_SETTINGS.taxRate));
+  set('announcementEnabled', 'announcement_enabled', Boolean);
+  set('announcementText', 'announcement_text', String);
+  set('announcementLink', 'announcement_link', String);
 
   return row;
 }

@@ -10,7 +10,7 @@ import { AdminAnalytics } from '../../components/Admin/AdminAnalytics';
 import { AdminSupplier } from '../../components/Admin/AdminSupplier';
 import { ToastContainer } from '../../components/ToastContainer';
 import Link from 'next/link';
-import { MessageCircle, Save, Settings, ToggleLeft, Wallet } from 'lucide-react';
+import { Megaphone, MessageCircle, Save, Settings, ToggleLeft, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LoadingBlock, Spinner } from '@/components/ui/spinner';
@@ -69,6 +69,56 @@ function StoreSettingsPanel() {
                   onChange={(e) => update('storeName', e.target.value)}
                   className="w-full bg-neutral-50 border-neutral-200 text-neutral-900"
                 />
+              </div>
+
+              {/* Homepage announcement banner */}
+              <div className="p-4 bg-neutral-100/60 rounded-md border border-neutral-200 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="w-4 h-4 text-neutral-900" />
+                    <span className="font-bold text-neutral-900">แถบประกาศหน้าแรก</span>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={form.announcementEnabled}
+                    aria-label="เปิด/ปิดแถบประกาศ"
+                    onClick={() => update('announcementEnabled', !form.announcementEnabled)}
+                    className={`shrink-0 px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all ${
+                      form.announcementEnabled
+                        ? 'bg-neutral-900 text-white border-neutral-900'
+                        : 'bg-white text-neutral-400 border-neutral-300'
+                    }`}
+                  >
+                    {form.announcementEnabled ? 'เปิด' : 'ปิด'}
+                  </button>
+                </div>
+                <p className="text-[11px] text-neutral-500 -mt-1">
+                  แสดงเป็นแถบ &quot;ประกาศ&quot; บนสุดของหน้าแรก เว้นข้อความว่างไว้จะไม่แสดงแม้เปิดสวิตช์
+                </p>
+
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">ข้อความประกาศ</label>
+                  <textarea
+                    rows={2}
+                    placeholder="เช่น ติดตามข่าวสารใหม่ได้ที่"
+                    value={form.announcementText}
+                    onChange={(e) => update('announcementText', e.target.value)}
+                    className="w-full bg-white border border-neutral-200 rounded-md px-3 py-2 text-neutral-900 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">
+                    ลิงก์แนบท้ายข้อความ (ถ้ามี)
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="เช่น https://discord.gg/xxxxxxx"
+                    value={form.announcementLink}
+                    onChange={(e) => update('announcementLink', e.target.value)}
+                    className="w-full bg-white border-neutral-200 text-neutral-900"
+                  />
+                </div>
               </div>
 
               {/* Top-up destination */}

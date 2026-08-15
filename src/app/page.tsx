@@ -4,6 +4,8 @@ import React from 'react';
 import { ShopProvider, useShop } from '../context/ShopContext';
 import { Navbar } from '../components/Navbar';
 import { HeroBanner } from '../components/HeroBanner';
+import { AnnouncementBanner } from '../components/AnnouncementBanner';
+import { StoreStatsBar } from '../components/StoreStatsBar';
 import { FeatureBar } from '../components/FeatureBar';
 import { ProductCard } from '../components/ProductCard';
 import { ProductGridSkeleton } from '../components/ProductCardSkeleton';
@@ -42,6 +44,10 @@ function StorefrontContent() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        {/* Announcement + Store Stats */}
+        <AnnouncementBanner />
+        <StoreStatsBar />
+
         {/* Hero Banner */}
         <HeroBanner />
 
