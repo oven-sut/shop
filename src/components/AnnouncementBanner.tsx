@@ -12,7 +12,7 @@ export const AnnouncementBanner: React.FC = () => {
   if (!settings.announcementEnabled || !text) return null;
 
   return (
-    <div className="mt-6 border border-neutral-200 rounded-md p-4 flex items-start gap-3 bg-white">
+    <div className="border border-neutral-200 rounded-md p-4 flex items-start gap-3 bg-white">
       <div className="w-9 h-9 shrink-0 rounded-md bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-900">
         <Megaphone className="w-4 h-4" />
       </div>

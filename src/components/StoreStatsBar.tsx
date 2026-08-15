@@ -17,11 +17,11 @@ export const StoreStatsBar: React.FC = () => {
   ];
 
   return (
-    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
       {stats.map(({ label, value, unit, icon: Icon }) => (
-        <div key={label} className="border border-neutral-200 rounded-md p-4 flex items-center gap-3 bg-white">
-          <div className="w-11 h-11 shrink-0 rounded-md bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-900">
-            <Icon className="w-5 h-5" />
+        <div key={label} className="border border-neutral-200 rounded-md p-3 sm:p-4 flex items-center gap-3 bg-white">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-md bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-900">
+            <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0">
             <span className="text-xs text-neutral-500 block">{label}</span>

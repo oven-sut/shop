@@ -44,15 +44,17 @@ function StorefrontContent() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-        {/* Hero image banner — topmost, admin-managed */}
-        <HeroImageBanner />
-
-        {/* Announcement + Store Stats */}
-        <AnnouncementBanner />
-        <StoreStatsBar />
+        {/* Hero image banner, announcement, store stats — topmost, admin-managed */}
+        <div className="pt-4 sm:pt-6 space-y-4 sm:space-y-6">
+          <HeroImageBanner />
+          <AnnouncementBanner />
+          <StoreStatsBar />
+        </div>
 
         {/* Feature Highlights */}
-        <FeatureBar />
+        <div className="pt-10 lg:pt-16">
+          <FeatureBar />
+        </div>
 
         {/* Hot / Featured Products Showcase */}
         {isLoading && (

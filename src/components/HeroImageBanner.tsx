@@ -11,26 +11,26 @@ export const HeroImageBanner: React.FC = () => {
 
   if (!image) return null;
 
+  // Fixed aspect ratio so the banner stays a wide, short strip no matter what
+  // dimensions the uploaded image itself has — object-cover crops the rest.
   const banner = (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={image} alt="" className="w-full h-auto rounded-md" />
+    <div className="w-full aspect-3/1 sm:aspect-7/2 rounded-md overflow-hidden bg-neutral-100">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={image} alt="" className="w-full h-full object-cover" />
+    </div>
   );
 
-  if (!link) return <div className="mt-6">{banner}</div>;
+  if (!link) return banner;
 
   const isExternal = link.startsWith('http');
 
-  return (
-    <div className="mt-6">
-      {isExternal ? (
-        <a href={link} target="_blank" rel="noopener noreferrer" className="block">
-          {banner}
-        </a>
-      ) : (
-        <Link href={link} className="block">
-          {banner}
-        </Link>
-      )}
-    </div>
+  return isExternal ? (
+    <a href={link} target="_blank" rel="noopener noreferrer" className="block">
+      {banner}
+    </a>
+  ) : (
+    <Link href={link} className="block">
+      {banner}
+    </Link>
   );
 };
