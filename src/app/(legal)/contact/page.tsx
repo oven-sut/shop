@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { ContactField, filledContacts } from '@/lib/contact';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -26,9 +27,13 @@ const COLUMNS: Record<ContactField, string> = {
  * The page is public (see PUBLIC_PATHS in proxy.ts) but RLS only lets signed-in
  * users read store_settings — and that row also holds the shop's bank account and
  * PromptPay id. Naming the columns keeps this page unable to leak them even if it
- * is changed carelessly later.
+ * is changed carelessly later. `nav_contact_enabled` rides along on the same
+ * read so the page can 404 itself when the admin turns this menu off.
  */
-async function loadContacts(): Promise<Record<ContactField, string>> {
+async function loadContacts(): Promise<{
+  contacts: Record<ContactField, string>;
+  navContactEnabled: boolean;
+}> {
   const empty = Object.fromEntries(
     Object.keys(COLUMNS).map((field) => [field, ''])
   ) as Record<ContactField, string>;
@@ -37,28 +42,32 @@ async function loadContacts(): Promise<Record<ContactField, string>> {
     const admin = createAdminClient();
     const { data } = await admin
       .from('store_settings')
-      .select(Object.values(COLUMNS).join(','))
+      .select(`${Object.values(COLUMNS).join(',')},nav_contact_enabled`)
       .maybeSingle();
 
-    if (!data) return empty;
+    if (!data) return { contacts: empty, navContactEnabled: true };
 
     // ผ่าน unknown เพราะ select() ที่ประกอบชื่อคอลัมน์ตอนรันทำให้ชนิดที่ได้เป็น union
     // กับ error object ของ PostgREST
     const row = data as unknown as Record<string, unknown>;
-    return Object.fromEntries(
+    const contacts = Object.fromEntries(
       Object.entries(COLUMNS).map(([field, column]) => [
         field,
         typeof row[column] === 'string' ? (row[column] as string) : '',
       ])
     ) as Record<ContactField, string>;
+
+    return { contacts, navContactEnabled: row.nav_contact_enabled !== false };
   } catch {
     // A contact page that 500s is worse than one that shows the fallback text.
-    return empty;
+    return { contacts: empty, navContactEnabled: true };
   }
 }
 
 export default async function ContactPage() {
-  const contacts = await loadContacts();
+  const { contacts, navContactEnabled } = await loadContacts();
+  if (!navContactEnabled) notFound();
+
   const channels = filledContacts(contacts);
 
   return (
