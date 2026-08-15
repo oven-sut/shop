@@ -73,8 +73,10 @@ export async function POST(request: NextRequest) {
     }
 
     // ── ส่งลิงก์ตั้งรหัสผ่านใหม่ทางอีเมล ────────────────────────────────
+    // ปลายทางหลังยืนยันตัวตนเสร็จ — เทมเพลตอีเมลควรชี้มาที่ /auth/confirm ซึ่ง
+    // ใช้ verifyOtp ค่านี้เป็นทางสำรองสำหรับเทมเพลตเริ่มต้นที่ยังส่งมาที่ callback
     const { error } = await admin.auth.resetPasswordForEmail(match.email, {
-      redirectTo: `${siteOrigin('http://localhost:3000')}/auth/callback?next=/reset-password`,
+      redirectTo: `${siteOrigin('http://localhost:3000')}/auth/confirm?next=/reset-password`,
     });
 
     if (error) {

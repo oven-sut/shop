@@ -27,6 +27,15 @@ export async function GET(request: Request) {
     })()
   );
 
+  // ลิงก์จากอีเมลบางเทมเพลตมาลงที่นี่พร้อม token_hash แทน code — ส่งต่อให้
+  // /auth/confirm ซึ่งใช้ verifyOtp ที่ไม่ต้องพึ่ง code_verifier ในเบราว์เซอร์
+  const tokenHash = searchParams.get('token_hash');
+  if (!providerError && tokenHash) {
+    const forward = new URL(`${redirectBase}/auth/confirm`);
+    searchParams.forEach((value, key) => forward.searchParams.set(key, value));
+    return NextResponse.redirect(forward);
+  }
+
   if (!providerError && code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
