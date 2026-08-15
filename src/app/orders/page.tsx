@@ -7,7 +7,7 @@ import { Navbar } from '../../components/Navbar';
 import { Footer } from '../../components/Footer';
 import { ToastContainer } from '../../components/ToastContainer';
 import { CartDrawer } from '../../components/CartDrawer';
-import { Copy, KeyRound } from 'lucide-react';
+import { Copy, KeyRound, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton, SkeletonRegion } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
@@ -45,6 +45,8 @@ interface Fulfillment {
   username: string;
   password: string;
   codeRequests: { used: number; max: number };
+  hwidResetCount: number;
+  hwidResetLastAt?: string;
   /** `manual` = รหัสจากคลังของร้าน ไม่มีซัพพลายเออร์ให้ขอรหัส Steam Guard ต่อ */
   source: 'supplier' | 'manual';
   /** `no_account` = ซื้อสำเร็จแต่เป็นสินค้าที่ไม่ต้องผูกบัญชีเกม */
@@ -111,6 +113,7 @@ function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => 
   const { showToast } = useShop();
   const [code, setCode] = useState<GuardCode | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const copy = async (label: string, value: string) => {
     try {
@@ -140,6 +143,22 @@ function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => 
     }
 
     setCode(body.data as GuardCode);
+    onUpdated();
+  };
+
+  const resetHwid = async () => {
+    setIsResetting(true);
+
+    const response = await fetch(`/api/orders/${item.orderId}/reset-hwid`, { method: 'POST' });
+    const body = await response.json().catch(() => ({}));
+    setIsResetting(false);
+
+    if (!body.success) {
+      showToast(body.message || 'รีเซ็ต HWID ไม่สำเร็จ', 'warning');
+      return;
+    }
+
+    showToast(body.message || 'รีเซ็ต HWID เรียบร้อยแล้ว', 'success');
     onUpdated();
   };
 
@@ -177,7 +196,8 @@ function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => 
 
   /*
    * รหัสจากคลังของร้าน — ส่งมอบครบตั้งแต่ตอนกดซื้อ ไม่มีซัพพลายเออร์อยู่เบื้องหลัง
-   * จึงไม่มีปุ่มขอรหัส Steam Guard ให้กดค้างไว้แล้วไม่เกิดอะไรขึ้น
+   * จึงไม่มีปุ่มขอรหัส Steam Guard ให้กดค้างไว้แล้วไม่เกิดอะไรขึ้น แต่มีปุ่มรีเซ็ต
+   * HWID แทน เพราะบัญชีจำพวกนี้ (Rockstar, บอท) ล็อกกับเครื่องที่ใช้งาน
    */
   if (item.source === 'manual') {
     return (
@@ -191,6 +211,30 @@ function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => 
             <SecretField label="ชื่อผู้ใช้" value={item.username} onCopy={copy} />
           )}
           <SecretField label="รหัส" value={item.password} onCopy={copy} />
+        </div>
+
+        <div className="border-t border-neutral-100 pt-4 flex items-center justify-between gap-3">
+          <div className="text-xs">
+            <span className="font-medium text-neutral-900 block">รีเซ็ต HWID</span>
+            <span className="text-[11px] text-neutral-400">
+              {item.hwidResetLastAt
+                ? `รีเซ็ตล่าสุด ${new Date(item.hwidResetLastAt).toLocaleString('th-TH')} · รวม ${item.hwidResetCount} ครั้ง`
+                : 'ยังไม่เคยรีเซ็ต — กดได้ทันทีเมื่อย้ายเครื่อง'}
+            </span>
+          </div>
+
+          <Button
+            onClick={resetHwid}
+            disabled={isResetting}
+            className="h-10 bg-neutral-900 hover:bg-neutral-700 text-white font-medium text-xs px-4 rounded-md border-0 disabled:opacity-40 shrink-0"
+          >
+            {isResetting ? (
+              <Spinner className="mr-1.5" />
+            ) : (
+              <RotateCcw className="w-4 h-4 mr-1.5" />
+            )}
+            {isResetting ? 'กำลังรีเซ็ต...' : 'รีเซ็ต HWID'}
+          </Button>
         </div>
       </div>
     );

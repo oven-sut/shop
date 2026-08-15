@@ -768,6 +768,11 @@ create table if not exists public.order_fulfillments (
 create index if not exists order_fulfillments_order_idx on public.order_fulfillments (order_id);
 create index if not exists order_fulfillments_user_idx on public.order_fulfillments (user_id, created_at desc);
 
+-- รีเซ็ต HWID ของบัญชีที่ร้านลงเอง (supplier = 'manual') — ลูกค้ากดเองได้ทันที
+-- ไม่จำกัดจำนวนครั้ง เก็บไว้แค่นับสถิติ/แสดงเวลารีเซ็ตล่าสุด ไม่ใช่ตัวจำกัดสิทธิ์
+alter table public.order_fulfillments add column if not exists hwid_reset_count integer not null default 0;
+alter table public.order_fulfillments add column if not exists hwid_reset_last_at timestamptz;
+
 alter table public.order_fulfillments enable row level security;
 
 -- บัญชีเกมเป็นข้อมูลอ่อนไหว: เจ้าของคำสั่งซื้อและแอดมินเท่านั้นที่อ่านได้

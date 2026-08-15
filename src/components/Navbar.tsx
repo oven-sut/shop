@@ -6,7 +6,20 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useShop } from '../context/ShopContext';
 import { useAuth } from '../context/AuthContext';
-import { ShoppingBag, Heart, Search, Package, Wallet as WalletIcon, User as UserIcon, LogOut, LayoutDashboard } from 'lucide-react';
+import {
+  ShoppingBag,
+  Heart,
+  Search,
+  Home,
+  Store,
+  Package,
+  Wallet as WalletIcon,
+  RotateCcw,
+  MessageCircle,
+  User as UserIcon,
+  LogOut,
+  LayoutDashboard,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -38,8 +51,12 @@ export const Navbar: React.FC = () => {
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const pageLinks = [
+    { href: '/', label: 'หน้าแรก', icon: Home },
+    { href: '/#products-section', label: 'ร้านค้า', icon: Store },
     { href: '/orders', label: 'บัญชีเกมที่ซื้อไว้', icon: Package },
     { href: '/wallet', label: 'กระเป๋าเงิน', icon: WalletIcon },
+    { href: '/orders', label: 'Reset HWID', icon: RotateCcw },
+    { href: '/contact', label: 'ติดต่อเรา', icon: MessageCircle },
     ...(isAdmin ? [{ href: '/admin', label: 'ระบบหลังบ้าน (Admin)', icon: LayoutDashboard }] : []),
   ];
 
@@ -206,13 +223,13 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Page Navigation — the account pages, pulled out of the profile dropdown */}
+        {/* Page Navigation — site sections plus the account pages pulled out of the profile dropdown */}
         {user && (
           <nav className="flex items-center gap-2 overflow-x-auto py-2 no-scrollbar border-t border-neutral-100">
             {pageLinks.map(({ href, label, icon: Icon }) => {
-              const isActive = pathname === href;
+              const isActive = href === '/' ? pathname === '/' : pathname === href;
               return (
-                <Link key={href} href={href}>
+                <Link key={label} href={href}>
                   <Button
                     variant="ghost"
                     size="sm"
