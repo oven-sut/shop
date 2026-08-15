@@ -15,7 +15,6 @@ import { CheckoutModal } from '../components/CheckoutModal';
 import { ToastContainer } from '../components/ToastContainer';
 import { Footer } from '../components/Footer';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 
 function StorefrontContent() {
   const { products, isLoading, searchQuery, setSearchQuery } = useShop();
@@ -30,8 +29,6 @@ function StorefrontContent() {
       p.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const featuredProducts = catalogProducts.filter((p) => p.isFeatured || p.badge === 'HOT');
 
   return (
     <div className="min-h-screen bg-white text-neutral-900 flex flex-col font-sans selection:bg-neutral-900 selection:text-white">
@@ -55,43 +52,8 @@ function StorefrontContent() {
           <FeatureBar />
         </div>
 
-        {/* Hot / Featured Products Showcase */}
-        {isLoading && (
-          <section className="pt-16 space-y-6">
-            <div className="border-b border-neutral-200 pb-4 space-y-2">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-3 w-72" />
-            </div>
-            <ProductGridSkeleton count={4} />
-          </section>
-        )}
-
-        {!isLoading && !searchQuery && featuredProducts.length > 0 && (
-          <section className="pt-16 space-y-6">
-            <div className="flex items-end justify-between gap-4 border-b border-neutral-200 pb-4">
-              <div>
-                <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
-                  สินค้าฮิตติดเทรนด์
-                </h2>
-                <p className="text-xs text-neutral-500 mt-1">
-                  สินค้าขายดีที่มีผู้สนใจสั่งซื้อมากที่สุดในขณะนี้
-                </p>
-              </div>
-              <span className="text-[11px] tracking-[0.2em] uppercase text-neutral-400 shrink-0 hidden sm:block">
-                Hot deals
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {featuredProducts.slice(0, 4).map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* All Products Catalog */}
-        <section id="products-section" className="pt-16 space-y-6">
+        <section id="products-section" className="pt-10 lg:pt-16 space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 border-b border-neutral-200 pb-4">
             <div>
               <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
@@ -118,7 +80,7 @@ function StorefrontContent() {
             <div className="border border-neutral-200 rounded-md p-16 text-center space-y-4">
               <h3 className="text-base font-semibold text-neutral-900">ไม่พบสินค้าที่คุณค้นหา</h3>
               <p className="text-xs text-neutral-500 max-w-sm mx-auto">
-                ลองค้นหาด้วยคำค้นอื่น หรือเลือกสลับหมวดหมู่สินค้าในเมนูด้านบน
+                ลองค้นหาด้วยคำค้นอื่น
               </p>
               <Button
                 onClick={() => setSearchQuery('')}
