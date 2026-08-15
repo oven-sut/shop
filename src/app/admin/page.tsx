@@ -10,7 +10,15 @@ import { AdminAnalytics } from '../../components/Admin/AdminAnalytics';
 import { AdminSupplier } from '../../components/Admin/AdminSupplier';
 import { ToastContainer } from '../../components/ToastContainer';
 import Link from 'next/link';
-import { Megaphone, MessageCircle, Save, Settings, ToggleLeft, Wallet } from 'lucide-react';
+import {
+  Image as ImageIcon,
+  Megaphone,
+  MessageCircle,
+  Save,
+  Settings,
+  ToggleLeft,
+  Wallet,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LoadingBlock, Spinner } from '@/components/ui/spinner';
@@ -28,10 +36,11 @@ import { TOPUP_CHANNELS } from '../../lib/topup-channels';
  * at mount is enough — no effect needed to refill it later.
  */
 function StoreSettingsPanel() {
-  const { settings, saveSettings, showToast } = useShop();
+  const { settings, saveSettings, showToast, uploadProductImage } = useShop();
 
   const [form, setForm] = useState<StoreSettings>(settings);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   const update = <K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -48,6 +57,18 @@ function StoreSettingsPanel() {
     const result = await saveSettings(form);
     setIsSaving(false);
     showToast(result.message, result.success ? 'success' : 'warning');
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingBanner(true);
+    const url = await uploadProductImage(file);
+    setIsUploadingBanner(false);
+
+    if (url) update('heroBannerImage', url);
+    e.target.value = '';
   };
 
   return (
@@ -69,6 +90,58 @@ function StoreSettingsPanel() {
                   onChange={(e) => update('storeName', e.target.value)}
                   className="w-full bg-neutral-50 border-neutral-200 text-neutral-900"
                 />
+              </div>
+
+              {/* Hero image banner — topmost of the homepage */}
+              <div className="p-4 bg-neutral-100/60 rounded-md border border-neutral-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-neutral-900" />
+                  <span className="font-bold text-neutral-900">แบนเนอร์รูปภาพบนสุดของหน้าแรก</span>
+                </div>
+                <p className="text-[11px] text-neutral-500 -mt-1">
+                  ไม่อัปโหลดรูป = ไม่แสดงแบนเนอร์ อัตราส่วนรูปกว้างจะแสดงผลได้ดีที่สุด
+                </p>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-24 h-16 shrink-0 rounded-md border border-neutral-200 bg-white overflow-hidden flex items-center justify-center">
+                    {form.heroBannerImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={form.heroBannerImage} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-neutral-300" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/avif,image/gif"
+                      disabled={isUploadingBanner}
+                      onChange={handleBannerUpload}
+                      className="w-full text-[11px] text-neutral-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-neutral-100 file:text-neutral-700 file:font-bold file:text-[11px] hover:file:bg-neutral-200 cursor-pointer"
+                    />
+                    <Input
+                      type="url"
+                      placeholder="หรือวาง URL รูปภาพ"
+                      value={form.heroBannerImage}
+                      onChange={(e) => update('heroBannerImage', e.target.value)}
+                      className="w-full bg-white border-neutral-200 text-neutral-900"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">
+                    ลิงก์เมื่อคลิกแบนเนอร์ (ถ้ามี)
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="เช่น /wallet หรือ https://..."
+                    value={form.heroBannerLink}
+                    onChange={(e) => update('heroBannerLink', e.target.value)}
+                    className="w-full bg-white border-neutral-200 text-neutral-900"
+                  />
+                </div>
               </div>
 
               {/* Homepage announcement banner */}

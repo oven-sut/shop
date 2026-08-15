@@ -32,6 +32,9 @@ export interface StoreSettings {
   announcementEnabled: boolean;
   announcementText: string;
   announcementLink: string;
+  /** แบนเนอร์รูปภาพบนสุดของหน้าแรก — ว่าง = ไม่แสดง */
+  heroBannerImage: string;
+  heroBannerLink: string;
 }
 
 type Row = Record<string, unknown>;
@@ -68,6 +71,8 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   announcementEnabled: false,
   announcementText: '',
   announcementLink: '',
+  heroBannerImage: '',
+  heroBannerLink: '',
 };
 
 export function toSettings(row: Row | null | undefined): StoreSettings {
@@ -100,6 +105,8 @@ export function toSettings(row: Row | null | undefined): StoreSettings {
     announcementEnabled: row.announcement_enabled === true,
     announcementText: (row.announcement_text as string) ?? '',
     announcementLink: (row.announcement_link as string) ?? '',
+    heroBannerImage: (row.hero_banner_image as string) ?? '',
+    heroBannerLink: (row.hero_banner_link as string) ?? '',
   };
 }
 
@@ -137,6 +144,8 @@ export function toSettingsRow(input: Record<string, unknown>): Row {
   set('announcementEnabled', 'announcement_enabled', Boolean);
   set('announcementText', 'announcement_text', String);
   set('announcementLink', 'announcement_link', String);
+  set('heroBannerImage', 'hero_banner_image', String);
+  set('heroBannerLink', 'hero_banner_link', String);
 
   return row;
 }

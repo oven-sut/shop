@@ -113,6 +113,10 @@ alter table public.store_settings add column if not exists announcement_enabled 
 alter table public.store_settings add column if not exists announcement_text text not null default '';
 alter table public.store_settings add column if not exists announcement_link text not null default '';
 
+-- แบนเนอร์รูปภาพบนสุดของหน้าแรก — ว่าง = ยังไม่แสดง
+alter table public.store_settings add column if not exists hero_banner_image text not null default '';
+alter table public.store_settings add column if not exists hero_banner_link text not null default '';
+
 insert into public.store_settings (id) values (true) on conflict (id) do nothing;
 
 drop trigger if exists store_settings_touch_updated_at on public.store_settings;
