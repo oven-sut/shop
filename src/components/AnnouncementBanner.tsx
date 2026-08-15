@@ -13,13 +13,13 @@ export const AnnouncementBanner: React.FC = () => {
 
   return (
     <div className="mt-6 border border-neutral-200 rounded-md p-4 flex items-start gap-3 bg-white">
-      <div className="w-9 h-9 shrink-0 rounded-md bg-red-50 flex items-center justify-center text-red-500">
+      <div className="w-9 h-9 shrink-0 rounded-md bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-900">
         <Megaphone className="w-4 h-4" />
       </div>
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-red-500 text-sm">ประกาศ</span>
-          <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+          <span className="font-bold text-neutral-900 text-sm">ประกาศ</span>
+          <span className="bg-neutral-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
             NEW
           </span>
         </div>
