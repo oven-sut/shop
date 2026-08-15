@@ -19,10 +19,9 @@ function CategoryContent() {
   const categoryName = decodeURIComponent(slug);
   const { products, isLoading, searchQuery } = useShop();
 
-  // บริการ (เช่น รับทำเว็บไซต์) ไม่ใช่ของที่วางแคตาล็อกให้เลือกซื้อแบบสินค้าทั่วไป
-  const categoryProducts = products.filter(
-    (p) => !p.isService && p.category === categoryName
-  );
+  // ต่างจากหน้าแรก: หน้าหมวดหมู่แสดงสินค้าประเภทบริการด้วย เพราะเป็นที่เดียวที่
+  // ยังเรียกดูได้ — ที่ถูกซ่อนคือหน้าแคตาล็อกรวมกับสถิติของร้านเท่านั้น
+  const categoryProducts = products.filter((p) => p.category === categoryName);
 
   const filteredProducts = categoryProducts.filter(
     (p) =>

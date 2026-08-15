@@ -39,12 +39,10 @@ export const Navbar: React.FC = () => {
 
   const totalCartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Built from whatever the shop actually sells in the catalog, not a fixed
-  // list — service listings do not appear there, so their categories are left out.
-  const categories = [
-    'ทั้งหมด',
-    ...new Set(products.filter((p) => !p.isService).map((p) => p.category).filter(Boolean)),
-  ];
+  // Built from every category the shop actually has, including ones that only
+  // hold service listings — those are excluded from the homepage catalog and
+  // stats, but their category still needs to stay browsable on its own page.
+  const categories = ['ทั้งหมด', ...new Set(products.map((p) => p.category).filter(Boolean))];
 
   // Each category is its own page (/category/[name]); "ทั้งหมด" is the homepage.
   const activeCategory =
