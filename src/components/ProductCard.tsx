@@ -30,7 +30,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-contain p-6"
+          className="w-full h-full object-contain p-4 sm:p-6"
         />
 
         {/* Badge — one flat treatment for every kind; the word carries the meaning. */}
@@ -63,10 +63,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       </div>
 
       {/* Product Details */}
-      <div className="p-4 flex flex-col flex-1 justify-between gap-3">
+      {/* Two cards sit side by side on a phone, so the inner padding and the gaps
+          come down a step to leave the name and price room to breathe. */}
+      <div className="p-3 sm:p-4 flex flex-col flex-1 justify-between gap-3">
         <div>
           {/* Category & Stock */}
-          <div className="flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs">
             <span className="text-neutral-400 truncate">{product.category}</span>
             {isOutOfStock ? (
               <span className="text-neutral-400 line-through shrink-0">หมดสต็อก</span>
@@ -98,8 +100,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Pricing & Add to Cart Action */}
         <div className="pt-3 border-t border-neutral-100 flex items-center justify-between gap-2 mt-auto">
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-bold text-neutral-900">
+          <div className="flex items-baseline flex-wrap gap-x-2 min-w-0">
+            <span className="text-sm sm:text-base font-bold text-neutral-900">
               ฿{product.price.toLocaleString()}
             </span>
             {product.originalPrice && product.originalPrice > product.price && (
@@ -115,8 +117,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             size="icon"
             className={
               isOutOfStock
-                ? 'size-9 rounded-md bg-neutral-100 text-neutral-300 border border-neutral-200'
-                : 'size-9 rounded-md bg-neutral-900 hover:bg-neutral-700 text-white border-0'
+                ? 'size-9 shrink-0 rounded-md bg-neutral-100 text-neutral-300 border border-neutral-200'
+                : 'size-9 shrink-0 rounded-md bg-neutral-900 hover:bg-neutral-700 text-white border-0'
             }
             title={isOutOfStock ? 'สินค้าหมด' : 'หยิบใส่ตะกร้า'}
           >

@@ -34,7 +34,7 @@ function CategoryContent() {
       <ToastContainer />
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 border-b border-neutral-200 pb-4">
           <div>
             <h1 className="text-xl font-bold text-neutral-900 tracking-tight">{categoryName}</h1>
@@ -50,7 +50,7 @@ function CategoryContent() {
         {isLoading ? (
           <ProductGridSkeleton />
         ) : filteredProducts.length === 0 ? (
-          <div className="border border-neutral-200 rounded-md p-16 text-center space-y-4">
+          <div className="border border-neutral-200 rounded-md p-8 sm:p-16 text-center space-y-4">
             <h3 className="text-base font-semibold text-neutral-900">
               ยังไม่มีสินค้าในหมวดหมู่นี้
             </h3>
@@ -64,7 +64,7 @@ function CategoryContent() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

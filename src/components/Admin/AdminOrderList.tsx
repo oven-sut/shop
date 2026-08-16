@@ -9,6 +9,127 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const STATUSES: OrderStatus[] = [
+  'รอดำเนินการ',
+  'กำลังจัดเตรียม',
+  'จัดส่งแล้ว',
+  'สำเร็จ',
+  'ยกเลิก',
+];
+
+/** The status dropdown, shared by the table row and the card. */
+const StatusSelect: React.FC<{
+  value: OrderStatus;
+  onChange: (status: OrderStatus) => void;
+  className?: string;
+}> = ({ value, onChange, className = '' }) => (
+  <select
+    value={value}
+    onChange={(e) => onChange(e.target.value as OrderStatus)}
+    aria-label="สถานะคำสั่งซื้อ"
+    className={`text-[10px] font-bold px-2 py-1 rounded-lg border bg-neutral-50 text-neutral-700 border-neutral-200 focus:outline-none ${className}`}
+  >
+    {STATUSES.map((status) => (
+      <option key={status} value={status}>
+        {status}
+      </option>
+    ))}
+  </select>
+);
+
+/**
+ * One order as a block — the layout below `lg`.
+ *
+ * The table carries eight columns; on a phone that becomes a sideways scroll
+ * with the status dropdown and the tracking field parked past the right edge,
+ * which are the two things this screen exists to change.
+ */
+const OrderCard: React.FC<{
+  order: Order;
+  tracking: string;
+  onTrackingChange: (value: string) => void;
+  onTrackingSubmit: () => void;
+  onStatusChange: (status: OrderStatus) => void;
+  onView: () => void;
+}> = ({ order, tracking, onTrackingChange, onTrackingSubmit, onStatusChange, onView }) => (
+  <li className="p-4 space-y-3 text-xs">
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <span className="font-mono font-bold text-neutral-900 block truncate">#{order.id}</span>
+        <span className="text-[10px] text-neutral-400">{order.createdAt}</span>
+      </div>
+      <StatusSelect value={order.status} onChange={onStatusChange} className="shrink-0" />
+    </div>
+
+    <div className="border-y border-neutral-100 py-3 space-y-1.5">
+      <div className="flex justify-between gap-3">
+        <span className="text-neutral-400">ลูกค้า</span>
+        <span className="text-right min-w-0">
+          <span className="font-bold text-neutral-900 block truncate">{order.customer.name}</span>
+          <span className="text-[10px] text-neutral-500 block truncate">
+            {order.customer.email}
+          </span>
+        </span>
+      </div>
+      <div className="flex justify-between gap-3">
+        <span className="text-neutral-400">รายการ</span>
+        <span className="text-neutral-800 text-right truncate">
+          {order.items.length} รายการ ({order.items.reduce((s, i) => s + i.quantity, 0)} ชิ้น)
+        </span>
+      </div>
+      <div className="flex justify-between gap-3">
+        <span className="text-neutral-400">ยอดสุทธิ</span>
+        <span className="font-bold text-neutral-900">฿{order.totalAmount.toLocaleString()}</span>
+      </div>
+      <div className="flex justify-between gap-3">
+        <span className="text-neutral-400">การชำระเงิน</span>
+        <span className="text-neutral-700">
+          <span className="uppercase font-mono text-[10px]">{order.paymentMethod}</span>
+          {' · '}
+          {order.isPaid ? 'ชำระแล้ว' : 'รอชำระ'}
+        </span>
+      </div>
+    </div>
+
+    <div className="flex items-center gap-2">
+      {order.trackingNumber ? (
+        <span className="flex-1 font-mono text-[11px] bg-neutral-50 px-2 py-1.5 rounded border border-neutral-200 text-neutral-700 truncate">
+          {order.trackingNumber}
+        </span>
+      ) : (
+        <>
+          <Input
+            type="text"
+            placeholder="กรอกเลขพัสดุ..."
+            value={tracking}
+            onChange={(e) => onTrackingChange(e.target.value)}
+            className="flex-1 bg-neutral-50 border-neutral-200 rounded px-2 py-1 text-[11px] text-neutral-900 h-8"
+          />
+          <Button
+            size="icon-sm"
+            onClick={onTrackingSubmit}
+            className="bg-neutral-900 text-white hover:bg-neutral-700 border-0 shrink-0"
+            title="บันทึกและเปลี่ยนสถานะเป็นจัดส่ง"
+            aria-label="บันทึกเลขพัสดุ"
+          >
+            <Send className="w-3.5 h-3.5" />
+          </Button>
+        </>
+      )}
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onView}
+        className="shrink-0 bg-neutral-50 hover:bg-neutral-100 text-neutral-900 border-neutral-200 inline-flex items-center gap-1 text-[10px] font-bold"
+      >
+        <FileText className="w-3.5 h-3.5" />
+        <span>ใบเสร็จ</span>
+      </Button>
+    </div>
+  </li>
+);
+
 export const AdminOrderList: React.FC = () => {
   const { orders, isLoading, updateOrderStatus } = useShop();
 
@@ -65,9 +186,37 @@ export const AdminOrderList: React.FC = () => {
         </div>
       </div>
 
-      {/* Orders Table */}
       <div className="bg-white border border-neutral-200 rounded-md overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Below lg: one card per order */}
+        <ul className="lg:hidden divide-y divide-neutral-100">
+          {isLoading ? (
+            Array.from({ length: 4 }, (_, index) => (
+              <li key={index} className="p-4 space-y-3">
+                <Skeleton className="h-4 w-2/5" />
+                <Skeleton className="h-16 w-full" />
+              </li>
+            ))
+          ) : filteredOrders.length === 0 ? (
+            <li className="p-8 text-center text-neutral-400">ไม่พบข้อมูลคำสั่งซื้อที่ค้นหา</li>
+          ) : (
+            filteredOrders.map((ord) => (
+              <OrderCard
+                key={ord.id}
+                order={ord}
+                tracking={trackingInputs[ord.id] || ''}
+                onTrackingChange={(value) =>
+                  setTrackingInputs({ ...trackingInputs, [ord.id]: value })
+                }
+                onTrackingSubmit={() => handleTrackingSubmit(ord.id)}
+                onStatusChange={(status) => updateOrderStatus(ord.id, status)}
+                onView={() => setViewingOrder(ord)}
+              />
+            ))
+          )}
+        </ul>
+
+        {/* Orders Table */}
+        <div className="hidden lg:block overflow-x-auto">
           <Table className="w-full text-left text-xs text-neutral-700">
             <TableHeader className="bg-neutral-50 text-neutral-600 uppercase font-semibold">
               <TableRow className="border-b border-neutral-200 hover:bg-transparent">
@@ -135,25 +284,10 @@ export const AdminOrderList: React.FC = () => {
 
                     {/* Status dropdown selector */}
                     <TableCell className="p-3.5">
-                      <select
+                      <StatusSelect
                         value={ord.status}
-                        onChange={(e) => updateOrderStatus(ord.id, e.target.value as OrderStatus)}
-                        className={`text-[10px] font-bold px-2 py-1 rounded-lg border focus:outline-none ${
-                          ord.status === 'สำเร็จ'
-                            ? 'bg-neutral-100 text-neutral-700 border-neutral-300'
-                            : ord.status === 'จัดส่งแล้ว'
-                            ? 'bg-neutral-100 text-neutral-700 border-neutral-300'
-                            : ord.status === 'กำลังจัดเตรียม'
-                            ? 'bg-neutral-50 text-neutral-700 border-neutral-400'
-                            : 'bg-neutral-50 text-neutral-700 border-neutral-200'
-                        }`}
-                      >
-                        <option value="รอดำเนินการ">รอดำเนินการ</option>
-                        <option value="กำลังจัดเตรียม">กำลังจัดเตรียม</option>
-                        <option value="จัดส่งแล้ว">จัดส่งแล้ว</option>
-                        <option value="สำเร็จ">สำเร็จ</option>
-                        <option value="ยกเลิก">ยกเลิก</option>
-                      </select>
+                        onChange={(status) => updateOrderStatus(ord.id, status)}
+                      />
                     </TableCell>
 
                     {/* Tracking Number Input */}
@@ -209,7 +343,7 @@ export const AdminOrderList: React.FC = () => {
       {viewingOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm">
           <div
-            className="relative bg-white border border-neutral-200 rounded-md max-w-lg w-full p-6 shadow-2xl text-neutral-900 animate-in fade-in zoom-in-95"
+            className="relative bg-white border border-neutral-200 rounded-md max-w-lg w-full max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:p-6 shadow-2xl text-neutral-900 animate-in fade-in zoom-in-95"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-4 border-b border-neutral-100">

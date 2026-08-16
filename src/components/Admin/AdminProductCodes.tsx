@@ -98,7 +98,7 @@ export const AdminProductCodes: React.FC<Props> = ({ productId, onStockChange })
 
   return (
     <div className="border-t border-neutral-100 pt-4 space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <label className="font-semibold text-neutral-700">คลังรหัสสำหรับขาย</label>
           <p className="text-[11px] text-neutral-400 mt-0.5">
@@ -136,7 +136,7 @@ export const AdminProductCodes: React.FC<Props> = ({ productId, onStockChange })
           placeholder={'user1|pass1\nuser2|pass2\nXXXX-YYYY-ZZZZ'}
           className="w-full bg-neutral-50 border border-neutral-200 rounded-md p-3 font-mono text-neutral-900 focus:outline-none focus:border-neutral-900"
         />
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-[11px] text-neutral-400">
             รหัสที่มีอยู่แล้วในสินค้าชิ้นนี้จะถูกข้าม ไม่นับซ้ำ
           </span>

@@ -112,7 +112,7 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-neutral-900 flex flex-col justify-center items-center p-4 font-sans selection:bg-neutral-900 selection:text-white">
+    <div className="min-h-dvh bg-white text-neutral-900 flex flex-col justify-center items-center p-4 font-sans selection:bg-neutral-900 selection:text-white">
       <ToastContainer />
 
       {/* Header Logo */}

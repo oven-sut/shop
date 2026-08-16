@@ -9,7 +9,7 @@ import { LoadingBlock } from '@/components/ui/spinner';
  */
 export default function Loading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-dvh flex items-center justify-center bg-white">
       <LoadingBlock label="กำลังเปิดหน้า..." />
     </div>
   );

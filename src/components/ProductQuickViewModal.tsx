@@ -55,16 +55,18 @@ export const ProductQuickViewModal: React.FC = () => {
           <X className="w-4 h-4" />
         </button>
 
-        <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-8">
+        <div className="p-4 sm:p-6 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
 
           {/* Left: Gallery & Image Preview */}
           <div className="md:col-span-6 space-y-3">
-            <div className="relative aspect-square overflow-hidden bg-neutral-50 border border-neutral-200 rounded-md">
+            {/* 4:3 on a phone — a full-width square pushed the name, the price and
+                the buy button below the fold on every product. */}
+            <div className="relative aspect-4/3 md:aspect-square overflow-hidden bg-neutral-50 border border-neutral-200 rounded-md">
               <img
                 src={mainImg}
                 alt={product.name}
                 // เหมือนการ์ดสินค้า: โลโก้ต้องเห็นครบ ไม่ใช่ถูกครอบตัดให้เต็มกรอบ
-                className="w-full h-full object-contain p-8"
+                className="w-full h-full object-contain p-6 sm:p-8"
               />
               {product.badge && (
                 <span className="absolute top-0 left-0 bg-neutral-900 text-white text-[10px] font-semibold tracking-[0.15em] px-2.5 py-1">
@@ -164,7 +166,9 @@ export const ProductQuickViewModal: React.FC = () => {
 
                   <Button
                     onClick={() => addToCart(product, quantity)}
-                    className="flex-1 h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md transition-colors flex items-center justify-center gap-2 border-0"
+                    // Its own row on a phone: sharing one with the stepper and the
+                    // heart left it too narrow for its own label.
+                    className="order-last sm:order-none basis-full sm:basis-auto sm:flex-1 h-11 bg-neutral-900 hover:bg-neutral-700 text-white font-semibold text-sm rounded-md transition-colors flex items-center justify-center gap-2 border-0"
                   >
                     <ShoppingBag className="w-4 h-4" />
                     <span>เพิ่มลงในตะกร้า</span>
@@ -186,7 +190,7 @@ export const ProductQuickViewModal: React.FC = () => {
             </div>
 
             {/* Quick Guarantee Badges */}
-            <div className="grid grid-cols-2 gap-3 text-xs text-neutral-500 pt-5 border-t border-neutral-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs text-neutral-500 pt-5 border-t border-neutral-100">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-neutral-900 shrink-0" strokeWidth={1.5} />
                 <span>ตรวจสอบก่อนส่งมอบทุกครั้ง</span>
@@ -200,8 +204,8 @@ export const ProductQuickViewModal: React.FC = () => {
         </div>
 
         {/* Tabbed Specs & Reviews Section */}
-        <div className="p-6 md:p-8 bg-neutral-50 border-t border-neutral-200">
-          <div className="flex border-b border-neutral-200 gap-6 mb-6">
+        <div className="p-4 sm:p-6 md:p-8 bg-neutral-50 border-t border-neutral-200">
+          <div className="flex border-b border-neutral-200 gap-4 sm:gap-6 mb-6 overflow-x-auto no-scrollbar">
             {([
               { id: 'specs', label: 'ข้อมูลทางเทคนิค' },
               { id: 'reviews', label: `รีวิวจากผู้ใช้ (${product.reviewsCount})` },

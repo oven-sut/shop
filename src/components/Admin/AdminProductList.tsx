@@ -72,13 +72,125 @@ export const AdminProductList: React.FC = () => {
           className="bg-neutral-900 hover:bg-neutral-700 text-white font-bold text-xs px-4 py-2.5 rounded-md transition-all flex items-center justify-center gap-2 shrink-0 active:scale-95 border-0"
         >
           <Plus className="w-4 h-4" />
-          <span>เพิ่มสินค้าใหม่ (Add Product)</span>
+          <span className="sm:hidden">เพิ่มสินค้าใหม่</span>
+          <span className="hidden sm:inline">เพิ่มสินค้าใหม่ (Add Product)</span>
         </Button>
       </div>
 
-      {/* Product Table using shadcn Table */}
       <div className="bg-white border border-neutral-200 rounded-md overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Below lg: one card per product, so the stock steppers and the edit and
+            delete buttons stay on screen instead of past the right edge. */}
+        <ul className="lg:hidden divide-y divide-neutral-100">
+          {isLoading ? (
+            Array.from({ length: 4 }, (_, index) => (
+              <li key={index} className="p-4 flex gap-3">
+                <Skeleton className="w-12 h-12 rounded-lg shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/5" />
+                  <Skeleton className="h-3 w-2/5" />
+                </div>
+              </li>
+            ))
+          ) : filteredProducts.length === 0 ? (
+            <li className="p-8 text-center text-neutral-400">ไม่พบรายการสินค้าที่ค้นหา</li>
+          ) : (
+            filteredProducts.map((p) => (
+              <li key={p.id} className="p-4 space-y-3 text-xs">
+                <div className="flex items-start gap-3">
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    className="w-12 h-12 object-cover rounded-lg border border-neutral-200 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="font-bold text-neutral-900 block truncate">{p.name}</span>
+                    <span className="text-[10px] text-neutral-400 block">
+                      {p.category || 'ไม่มีหมวดหมู่'} · คะแนน {p.rating} ({p.reviewsCount})
+                    </span>
+                  </div>
+                  {p.badge && (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 bg-neutral-100 text-neutral-700 border-neutral-300 px-2 py-0.5 text-[10px] font-bold"
+                    >
+                      {p.badge}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-3 border-t border-neutral-100 pt-3">
+                  <span className="font-bold text-neutral-900">
+                    ฿{p.price.toLocaleString()}
+                    {p.originalPrice && (
+                      <span className="ml-2 text-[10px] text-neutral-400 line-through font-normal">
+                        ฿{p.originalPrice.toLocaleString()}
+                      </span>
+                    )}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      className={`font-bold px-2 py-0.5 rounded text-[11px] border-0 ${
+                        p.stock <= 5
+                          ? 'bg-neutral-50 text-neutral-900 border border-neutral-400'
+                          : 'bg-neutral-100 text-neutral-700'
+                      }`}
+                    >
+                      {p.stock} ชิ้น
+                    </Badge>
+                    <div className="flex items-center bg-neutral-50 border border-neutral-200 rounded">
+                      <button
+                        onClick={() => handleStockAdjustment(p, -1)}
+                        className="px-2 py-1 hover:bg-neutral-200 text-neutral-600"
+                        aria-label={`ลดสต็อก ${p.name}`}
+                      >
+                        -
+                      </button>
+                      <button
+                        onClick={() => handleStockAdjustment(p, 1)}
+                        className="px-2 py-1 hover:bg-neutral-200 text-neutral-600 border-l border-neutral-200"
+                        aria-label={`เพิ่มสต็อก ${p.name}`}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingProduct(p);
+                      setIsModalOpen(true);
+                    }}
+                    className="bg-neutral-50 hover:bg-neutral-100 text-neutral-900 border-neutral-200 text-[10px] font-bold"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 mr-1" />
+                    แก้ไข
+                  </Button>
+                  <Button
+                    size="icon-xs"
+                    variant="outline"
+                    onClick={() => {
+                      if (confirm(`ยืนยันการลบสินค้า "${p.name}" จากร้านค้าใช่หรือไม่?`)) {
+                        deleteProduct(p.id);
+                      }
+                    }}
+                    className="bg-neutral-50 hover:bg-neutral-50 text-neutral-500 hover:text-neutral-900 border-neutral-200"
+                    aria-label={`ลบสินค้า ${p.name}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </li>
+            ))
+          )}
+        </ul>
+
+        {/* Product Table using shadcn Table */}
+        <div className="hidden lg:block overflow-x-auto">
           <Table className="w-full text-left text-xs text-neutral-700">
             <TableHeader className="bg-neutral-50 text-neutral-600 uppercase font-semibold">
               <TableRow className="border-b border-neutral-200 hover:bg-transparent">

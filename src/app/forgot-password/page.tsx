@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4 bg-white">
+    <div className="min-h-dvh flex flex-col justify-center items-center p-4 bg-white">
       <Link href="/" className="flex items-center gap-2.5 mb-8">
         <Image src="/logo-mark.png" alt="" width={470} height={462} className="h-9 w-auto" />
         <span className="text-lg font-bold tracking-tight">

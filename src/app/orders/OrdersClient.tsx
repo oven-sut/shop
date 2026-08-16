@@ -15,7 +15,7 @@ import { Spinner } from '@/components/ui/spinner';
 /** Traces AccountCard: title, order line, two secret boxes, the code row. */
 function AccountCardSkeleton() {
   return (
-    <div className="bg-white border border-neutral-200 rounded-md p-5 space-y-4">
+    <div className="bg-white border border-neutral-200 rounded-md p-4 sm:p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-2 min-w-0 flex-1">
           <Skeleton className="h-4 w-2/5" />
@@ -148,7 +148,7 @@ function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => 
   /* ซื้อสำเร็จแต่ไม่มีบัญชีเกมให้ส่งมอบ — แสดงเป็นรายการคำสั่งซื้อเฉย ๆ */
   if (item.status === 'no_account') {
     return (
-      <div className="bg-white border border-neutral-200 rounded-md p-5 flex items-start justify-between gap-3">
+      <div className="bg-white border border-neutral-200 rounded-md p-4 sm:p-5 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-semibold text-neutral-900 truncate">
             {item.gameTitle || 'คำสั่งซื้อ'}
@@ -167,7 +167,7 @@ function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => 
   /* Failures are marked with a heavy left rule instead of a red card. */
   if (item.status === 'failed') {
     return (
-      <div className="bg-white border border-neutral-200 border-l-2 border-l-neutral-900 rounded-md p-5 space-y-1">
+      <div className="bg-white border border-neutral-200 border-l-2 border-l-neutral-900 rounded-md p-4 sm:p-5 space-y-1">
         <span className="text-xs font-semibold text-neutral-900">
           ส่งมอบไม่สำเร็จ · คืนเงินแล้ว
         </span>
@@ -185,7 +185,7 @@ function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => 
    */
   if (item.source === 'manual') {
     return (
-      <div className="bg-white border border-neutral-200 rounded-md p-5 space-y-4">
+      <div className="bg-white border border-neutral-200 rounded-md p-4 sm:p-5 space-y-4">
         <CardHeader item={item} />
 
         <div
@@ -213,7 +213,7 @@ function AccountCard({ item, onUpdated }: { item: Fulfillment; onUpdated: () => 
   const remaining = item.codeRequests.max - item.codeRequests.used;
 
   return (
-    <div className="bg-white border border-neutral-200 rounded-md p-5 space-y-4">
+    <div className="bg-white border border-neutral-200 rounded-md p-4 sm:p-5 space-y-4">
       <CardHeader item={item} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -288,7 +288,7 @@ function OrdersContent() {
       <ToastContainer />
       <Navbar />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-6">
         <div className="border-b border-neutral-200 pb-4">
           <h1 className="text-xl font-bold tracking-tight">ประวัติการซื้อ</h1>
           <p className="text-xs text-neutral-500 mt-1">

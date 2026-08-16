@@ -18,7 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (user.role !== 'admin') {
     return (
-      <div className="min-h-screen bg-neutral-50 text-neutral-900 flex flex-col justify-center items-center p-4 font-sans">
+      <div className="min-h-dvh bg-neutral-50 text-neutral-900 flex flex-col justify-center items-center p-4 font-sans">
         <div className="max-w-md w-full bg-white border border-neutral-200 shadow-xl rounded-md p-8 text-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-900 mx-auto flex items-center justify-center shadow">
             <ShieldAlert className="w-8 h-8" />

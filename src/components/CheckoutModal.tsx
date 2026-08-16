@@ -49,8 +49,11 @@ export const CheckoutModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/50 overflow-y-auto">
-      <div className="relative bg-white border border-neutral-200 rounded-md max-w-lg w-full p-6 sm:p-8 text-neutral-900 animate-in fade-in duration-150">
+    /* Centring with `items-center` on the scroll container clips the top of a
+       panel taller than the screen and makes it unreachable. The panel scrolls
+       inside itself instead, which a short phone screen in landscape needs. */
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/50">
+      <div className="relative bg-white border border-neutral-200 rounded-md max-w-lg w-full max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:p-8 text-neutral-900 animate-in fade-in duration-150">
         <div className="flex items-start justify-between pb-5 border-b border-neutral-200">
           <div>
             <span className="text-[11px] tracking-[0.2em] uppercase text-neutral-400">

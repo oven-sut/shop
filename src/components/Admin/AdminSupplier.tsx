@@ -95,7 +95,7 @@ export const AdminSupplier: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <Card className="bg-white border-neutral-200 rounded-md p-5 shadow-sm">
+      <Card className="bg-white border-neutral-200 rounded-md p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-md bg-neutral-100 border border-neutral-200 text-neutral-900 flex items-center justify-center">
@@ -172,7 +172,7 @@ export const AdminSupplier: React.FC = () => {
       {isLoading && !items.length ? (
         <SkeletonRegion
           label="กำลังโหลดแคตตาล็อกของซัพพลายเออร์"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
         >
           {Array.from({ length: 6 }, (_, index) => (
             <div key={index} className="border border-neutral-200 rounded-md overflow-hidden">
@@ -186,7 +186,7 @@ export const AdminSupplier: React.FC = () => {
           ))}
         </SkeletonRegion>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {items.map((item) => (
             <Card
               key={item.productId}

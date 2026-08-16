@@ -44,10 +44,10 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
     <div className="space-y-8 animate-in fade-in duration-300">
       
       {/* Overview Stats Cards using shadcn UI Card */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         
         {/* Total Revenue */}
-        <Card className="bg-white border-neutral-200 p-5 rounded-md relative overflow-hidden shadow-sm">
+        <Card className="bg-white border-neutral-200 p-4 sm:p-5 rounded-md relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-neutral-500">ยอดขายรวมสุทธิ</span>
             <div className="w-10 h-10 rounded-md bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-900">
@@ -55,7 +55,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             </div>
           </div>
           <div className="mt-3">
-            <h3 className="text-2xl font-bold text-neutral-900">
+            <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">
               ฿{totalRevenue.toLocaleString()}
             </h3>
             <div className="flex items-center gap-1 text-[11px] text-neutral-900 font-semibold mt-1">
@@ -66,7 +66,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         </Card>
 
         {/* Total Orders */}
-        <Card className="bg-white border-neutral-200 p-5 rounded-md relative overflow-hidden shadow-sm">
+        <Card className="bg-white border-neutral-200 p-4 sm:p-5 rounded-md relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-neutral-500">คำสั่งซื้อทั้งหมด</span>
             <div className="w-10 h-10 rounded-md bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-900">
@@ -74,7 +74,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             </div>
           </div>
           <div className="mt-3">
-            <h3 className="text-2xl font-bold text-neutral-900">
+            <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">
               {totalOrdersCount} รายการ
             </h3>
             <div className="flex items-center gap-1 text-[11px] text-neutral-900 font-semibold mt-1">
@@ -85,7 +85,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         </Card>
 
         {/* Total Products */}
-        <Card className="bg-white border-neutral-200 p-5 rounded-md relative overflow-hidden shadow-sm">
+        <Card className="bg-white border-neutral-200 p-4 sm:p-5 rounded-md relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-neutral-500">รายการสินค้าในร้าน</span>
             <div className="w-10 h-10 rounded-md bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-900">
@@ -93,7 +93,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             </div>
           </div>
           <div className="mt-3">
-            <h3 className="text-2xl font-bold text-neutral-900">
+            <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">
               {totalProductsCount} รายการ
             </h3>
             <span className="text-[11px] text-neutral-500 mt-1 block">พร้อมวางจำหน่ายหน้าร้าน</span>
@@ -101,7 +101,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
         </Card>
 
         {/* Low Stock Alert */}
-        <Card className="bg-white border-neutral-200 p-5 rounded-md relative overflow-hidden shadow-sm">
+        <Card className="bg-white border-neutral-200 p-4 sm:p-5 rounded-md relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-neutral-500">สินค้าสต็อกต่ำ (&le; 5)</span>
             <div className="w-10 h-10 rounded-md bg-neutral-50 border border-neutral-200 flex items-center justify-center text-neutral-900">
@@ -109,7 +109,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
             </div>
           </div>
           <div className="mt-3">
-            <h3 className="text-2xl font-bold text-neutral-900">
+            <h3 className="text-xl sm:text-2xl font-bold text-neutral-900">
               {lowStockProducts.length} รายการ
             </h3>
             <Button
@@ -126,8 +126,8 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
       </div>
 
       {/* Sales Trend Bar Chart */}
-      <Card className="bg-white border-neutral-200 p-6 rounded-md space-y-4 shadow-sm">
-        <div className="flex items-center justify-between">
+      <Card className="bg-white border-neutral-200 p-4 sm:p-6 rounded-md space-y-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-bold text-neutral-900">แนวโน้มยอดขายรายเดือน (Sales Growth)</h3>
             <p className="text-xs text-neutral-500">ภาพรวมสถิติรายได้การจำหน่ายสินค้าไอที</p>
@@ -161,8 +161,8 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
       </Card>
 
       {/* Recent Orders Section using shadcn Table */}
-      <Card className="bg-white border-neutral-200 p-6 rounded-md space-y-4 shadow-sm">
-        <div className="flex items-center justify-between">
+      <Card className="bg-white border-neutral-200 p-4 sm:p-6 rounded-md space-y-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-base font-bold text-neutral-900">คำสั่งซื้อล่าสุด (Recent Orders)</h3>
             <p className="text-xs text-neutral-500">รายการสั่งซื้อที่ลูกค้ารายการล่าสุดกดสั่งซื้อเข้ามา</p>
@@ -184,11 +184,11 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
               <TableRow className="border-b border-neutral-200 hover:bg-transparent">
                 <TableHead className="p-3 text-neutral-600">หมายเลขคำสั่งซื้อ</TableHead>
                 <TableHead className="p-3 text-neutral-600">ชื่อลูกค้า</TableHead>
-                <TableHead className="p-3 text-neutral-600">วันที่/เวลา</TableHead>
+                <TableHead className="p-3 text-neutral-600 hidden md:table-cell">วันที่/เวลา</TableHead>
                 <TableHead className="p-3 text-neutral-600">ยอดชำระ</TableHead>
-                <TableHead className="p-3 text-neutral-600">วิธีชำระ</TableHead>
+                <TableHead className="p-3 text-neutral-600 hidden lg:table-cell">วิธีชำระ</TableHead>
                 <TableHead className="p-3 text-neutral-600">สถานะ</TableHead>
-                <TableHead className="p-3 text-right text-neutral-600">จัดการ</TableHead>
+                <TableHead className="p-3 text-right text-neutral-600 hidden sm:table-cell">จัดการ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-neutral-100">
@@ -196,9 +196,9 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                 <TableRow key={ord.id} className="hover:bg-neutral-50 border-b border-neutral-100">
                   <TableCell className="p-3 font-mono font-bold text-neutral-900">#{ord.id}</TableCell>
                   <TableCell className="p-3 font-semibold text-neutral-900">{ord.customer.name}</TableCell>
-                  <TableCell className="p-3 text-neutral-500">{ord.createdAt}</TableCell>
+                  <TableCell className="p-3 text-neutral-500 hidden md:table-cell">{ord.createdAt}</TableCell>
                   <TableCell className="p-3 font-bold text-neutral-900">฿{ord.totalAmount.toLocaleString()}</TableCell>
-                  <TableCell className="p-3 uppercase text-[10px] font-mono text-neutral-500">{ord.paymentMethod}</TableCell>
+                  <TableCell className="p-3 uppercase text-[10px] font-mono text-neutral-500 hidden lg:table-cell">{ord.paymentMethod}</TableCell>
                   <TableCell className="p-3">
                     <Badge
                       className={`px-2.5 py-1 rounded-full text-[10px] font-bold inline-block border-0 ${
@@ -214,7 +214,7 @@ export const AdminOverview: React.FC<AdminOverviewProps> = ({
                       {ord.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="p-3 text-right">
+                  <TableCell className="p-3 text-right hidden sm:table-cell">
                     {ord.status !== 'สำเร็จ' && ord.status !== 'จัดส่งแล้ว' && (
                       <Button
                         size="xs"

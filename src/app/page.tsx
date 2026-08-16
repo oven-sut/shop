@@ -77,7 +77,7 @@ function StorefrontContent() {
           {isLoading ? (
             <ProductGridSkeleton />
           ) : filteredProducts.length === 0 ? (
-            <div className="border border-neutral-200 rounded-md p-16 text-center space-y-4">
+            <div className="border border-neutral-200 rounded-md p-8 sm:p-16 text-center space-y-4">
               <h3 className="text-base font-semibold text-neutral-900">ไม่พบสินค้าที่คุณค้นหา</h3>
               <p className="text-xs text-neutral-500 max-w-sm mx-auto">
                 ลองค้นหาด้วยคำค้นอื่น
@@ -90,7 +90,10 @@ function StorefrontContent() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            /* Two across on a phone: one column made each card taller than the
+               screen, so the catalogue read as a list of adverts to scroll past
+               rather than a grid to browse. */
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
               {filteredProducts.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

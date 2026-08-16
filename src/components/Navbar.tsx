@@ -78,10 +78,13 @@ export const Navbar: React.FC = () => {
       </div> */}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-6">
+        {/* gap-6 at every width pushed the brand and the action buttons past the
+            edge of a 360px screen — worst when signed out, where the login button
+            carries a word rather than an avatar. */}
+        <div className="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-6">
 
           {/* Brand Logo */}
-          <Link href="/" className="flex items-center gap-3 shrink-0">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
             <Image
               src="/logo-mark.png"
               alt=""
@@ -126,15 +129,16 @@ export const Navbar: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
-            {/* Wishlist */}
-            <div className="relative">
+            {/* Wishlist — the least urgent control here, so it is the one that
+                gives up its space on a phone. */}
+            <div className="relative hidden sm:block">
               <Button
                 variant="outline"
                 size="icon"
                 title="รายการโปรด"
                 className="size-10 rounded-md bg-white hover:bg-neutral-100 text-neutral-700 border-neutral-200"
               >
-                <Heart className="w-[18px] h-[18px]" />
+                <Heart className="w-4.5 h-4.5" />
                 {wishlist.length > 0 && (
                   <Badge className="absolute -top-1.5 -right-1.5 bg-neutral-900 text-white text-[10px] font-semibold w-5 h-5 rounded-full p-0 flex items-center justify-center ring-2 ring-white">
                     {wishlist.length}
@@ -146,10 +150,10 @@ export const Navbar: React.FC = () => {
             {/* Cart Button */}
             <Button
               onClick={() => setIsCartOpen(true)}
-              className="h-10 flex items-center gap-2.5 bg-neutral-900 hover:bg-neutral-700 text-white px-4 rounded-md transition-colors border-0"
+              className="h-10 flex items-center gap-2.5 bg-neutral-900 hover:bg-neutral-700 text-white px-3 sm:px-4 rounded-md transition-colors border-0"
             >
               <div className="relative">
-                <ShoppingBag className="w-[18px] h-[18px]" />
+                <ShoppingBag className="w-4.5 h-4.5" />
                 {totalCartCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-white text-neutral-900 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {totalCartCount}
@@ -209,10 +213,12 @@ export const Navbar: React.FC = () => {
               <Link href="/login">
                 <Button
                   variant="outline"
-                  className="h-10 flex items-center gap-2 bg-white hover:bg-neutral-100 text-neutral-900 border-neutral-200 px-4 rounded-md text-sm font-medium"
+                  // The label is hidden below sm, so the icon needs a name of its own.
+                  aria-label="เข้าสู่ระบบ"
+                  className="h-10 flex items-center gap-2 bg-white hover:bg-neutral-100 text-neutral-900 border-neutral-200 px-3 sm:px-4 rounded-md text-sm font-medium"
                 >
                   <UserIcon className="w-4 h-4" />
-                  <span>เข้าสู่ระบบ</span>
+                  <span className="hidden sm:inline">เข้าสู่ระบบ</span>
                 </Button>
               </Link>
             )}

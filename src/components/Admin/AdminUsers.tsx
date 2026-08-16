@@ -50,6 +50,165 @@ const ROLE_FILTERS: { value: 'all' | UserRole; label: string }[] = [
 ];
 
 /**
+ * Controls shared by the table (lg and up) and the card list (below it).
+ *
+ * Written once each because the two layouts are the same actions in a different
+ * shape — duplicating them is how a "ระงับ" button ends up working on a laptop
+ * and doing nothing on a phone.
+ */
+interface RowProps {
+  account: AdminUser;
+  isSelf: boolean;
+  isBusy: boolean;
+  onRole: (role: UserRole) => void;
+  onToggleBan: () => void;
+  onAdjust: () => void;
+  onDelete: () => void;
+}
+
+const RoleSelect: React.FC<Pick<RowProps, 'account' | 'isSelf' | 'isBusy' | 'onRole'>> = ({
+  account,
+  isSelf,
+  isBusy,
+  onRole,
+}) => (
+  <select
+    value={account.role}
+    disabled={isSelf || isBusy}
+    onChange={(e) => onRole(e.target.value as UserRole)}
+    title={isSelf ? 'เปลี่ยนสิทธิ์ของตัวเองไม่ได้' : undefined}
+    aria-label={`สิทธิ์ของ ${account.email}`}
+    className="text-[10px] font-bold px-2 py-1 rounded-lg border bg-neutral-50 text-neutral-700 border-neutral-200 focus:outline-none disabled:opacity-50"
+  >
+    <option value="customer">ลูกค้า</option>
+    <option value="admin">ผู้ดูแลระบบ</option>
+  </select>
+);
+
+const StatusBadge: React.FC<{ account: AdminUser }> = ({ account }) =>
+  account.isBanned ? (
+    <Badge className="bg-neutral-900 text-white border-0 text-[10px] font-bold">
+      ระงับการใช้งาน
+    </Badge>
+  ) : (
+    <Badge variant="outline" className="border-neutral-200 text-neutral-600 text-[10px] font-bold">
+      ปกติ
+    </Badge>
+  );
+
+const RowActions: React.FC<Omit<RowProps, 'onRole' | 'onAdjust'>> = ({
+  account,
+  isSelf,
+  isBusy,
+  onToggleBan,
+  onDelete,
+}) => (
+  <>
+    <Button
+      variant="outline"
+      size="xs"
+      disabled={isSelf || isBusy}
+      onClick={onToggleBan}
+      title={
+        isSelf
+          ? 'ระงับบัญชีของตัวเองไม่ได้'
+          : account.isBanned
+            ? 'ให้กลับมาเข้าสู่ระบบได้'
+            : 'ห้ามบัญชีนี้เข้าสู่ระบบ'
+      }
+      className="bg-neutral-50 hover:bg-neutral-100 text-neutral-900 border-neutral-200 text-[10px] font-bold"
+    >
+      {account.isBanned ? (
+        <CircleCheck className="w-3.5 h-3.5 mr-1" />
+      ) : (
+        <Ban className="w-3.5 h-3.5 mr-1" />
+      )}
+      {account.isBanned ? 'ปลดระงับ' : 'ระงับ'}
+    </Button>
+
+    <Button
+      variant="outline"
+      size="icon-xs"
+      disabled={isSelf || isBusy}
+      onClick={onDelete}
+      title={isSelf ? 'ลบบัญชีของตัวเองไม่ได้' : 'ลบบัญชีถาวร'}
+      aria-label={`ลบบัญชี ${account.email}`}
+      className="bg-neutral-50 hover:bg-neutral-100 text-neutral-900 border-neutral-200"
+    >
+      <Trash2 className="w-3.5 h-3.5" />
+    </Button>
+  </>
+);
+
+/** One account as a block — the layout below `lg`, where seven columns cannot fit. */
+const UserCard: React.FC<RowProps> = (props) => {
+  const { account, isSelf, isBusy, onAdjust } = props;
+
+  return (
+    <li className="p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <span className="font-bold text-neutral-900 block truncate">
+            {account.name}
+            {isSelf && (
+              <Badge className="ml-2 bg-neutral-900 text-white border-0 text-[10px] font-bold">
+                บัญชีของคุณ
+              </Badge>
+            )}
+          </span>
+          <span className="text-[11px] text-neutral-500 block break-all">{account.email}</span>
+        </div>
+        <div className="shrink-0 flex flex-col items-end gap-1.5">
+          <StatusBadge account={account} />
+          <RoleSelect {...props} />
+        </div>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-[11px] border-y border-neutral-100 py-3">
+        <div>
+          <dt className="text-neutral-400">กระเป๋าเงิน</dt>
+          <dd className="font-bold text-neutral-900">{money(account.balance)}</dd>
+        </div>
+        <div>
+          <dt className="text-neutral-400">คำสั่งซื้อ</dt>
+          <dd className="font-semibold text-neutral-800">
+            {account.ordersCount.toLocaleString()} รายการ · {money(account.totalSpent)}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-neutral-400">สมัคร</dt>
+          <dd className="text-neutral-700">{formatDate(account.createdAt)}</dd>
+        </div>
+        <div>
+          <dt className="text-neutral-400">เข้าใช้ล่าสุด</dt>
+          <dd className="text-neutral-700">
+            {formatDate(account.lastSignInAt)}
+            {!account.emailConfirmedAt && (
+              <span className="block text-neutral-400">ยังไม่ยืนยันอีเมล</span>
+            )}
+          </dd>
+        </div>
+      </dl>
+
+      <div className="flex items-center justify-end gap-1.5">
+        {isBusy && <Spinner className="size-3.5 text-neutral-900 mr-auto" />}
+        <Button
+          variant="outline"
+          size="xs"
+          disabled={isBusy}
+          onClick={onAdjust}
+          className="bg-neutral-50 hover:bg-neutral-100 text-neutral-900 border-neutral-200 text-[10px] font-bold"
+        >
+          <Coins className="w-3 h-3 mr-1" />
+          ปรับยอด
+        </Button>
+        <RowActions {...props} />
+      </div>
+    </li>
+  );
+};
+
+/**
  * จัดการผู้ใช้งาน — ค้นหา ปรับสิทธิ์ ระงับบัญชี ปรับยอดเงิน และลบบัญชี
  *
  * ข้อมูลทั้งหน้าอ่านผ่าน /api/users ซึ่งใช้ service key หลังผ่าน requireAdmin()
@@ -151,14 +310,25 @@ export const AdminUsers: React.FC = () => {
   const from = total === 0 ? 0 : offset + 1;
   const to = offset + users.length;
 
+  /** Everything a row needs, built once and handed to whichever layout is on. */
+  const rowProps = (account: AdminUser): RowProps => ({
+    account,
+    isSelf: account.id === currentUser?.id,
+    isBusy: busyId === account.id,
+    onRole: (role) => patchUser(account, { role }),
+    onToggleBan: () => patchUser(account, { banned: !account.isBanned }),
+    onAdjust: () => setAdjustTarget(account),
+    onDelete: () => setDeleteTarget(account),
+  });
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Toolbar */}
-      <Card className="bg-white border-neutral-200 rounded-md p-5 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <Card className="bg-white border-neutral-200 rounded-md p-4 sm:p-5 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-md bg-neutral-100 border border-neutral-200 text-neutral-900 flex items-center justify-center">
-              <Users className="w-6 h-6" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-md bg-neutral-100 border border-neutral-200 text-neutral-900 flex items-center justify-center">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
               <h2 className="font-bold text-neutral-900">จัดการผู้ใช้งาน</h2>
@@ -172,19 +342,19 @@ export const AdminUsers: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               onClick={refresh}
               disabled={isLoading}
-              className="text-xs font-bold border-neutral-300 rounded-md"
+              className="flex-1 sm:flex-none text-xs font-bold border-neutral-300 rounded-md"
             >
               <RefreshCw className="w-4 h-4 mr-1.5" />
               รีเฟรช
             </Button>
             <Button
               onClick={() => setIsCreating(true)}
-              className="bg-neutral-900 hover:bg-neutral-700 text-white text-xs font-bold rounded-md border-0"
+              className="flex-1 sm:flex-none bg-neutral-900 hover:bg-neutral-700 text-white text-xs font-bold rounded-md border-0"
             >
               <UserPlus className="w-4 h-4 mr-1.5" />
               สร้างบัญชีใหม่
@@ -236,9 +406,28 @@ export const AdminUsers: React.FC = () => {
         </Card>
       )}
 
-      {/* Users table */}
       <div className="bg-white border border-neutral-200 rounded-md overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Below lg: one card per account. Seven columns cannot be made to fit a
+            phone, and a sideways-scrolling table hides the actions off the right
+            edge — which is where every button on this page lives. */}
+        <ul className="lg:hidden divide-y divide-neutral-100">
+          {isLoading && !users.length ? (
+            Array.from({ length: 4 }, (_, index) => (
+              <li key={index} className="p-4 space-y-3">
+                <Skeleton className="h-4 w-2/5" />
+                <Skeleton className="h-3 w-3/5" />
+                <Skeleton className="h-12 w-full" />
+              </li>
+            ))
+          ) : users.length === 0 ? (
+            <li className="p-8 text-center text-neutral-400">ไม่พบผู้ใช้งานที่ค้นหา</li>
+          ) : (
+            users.map((account) => <UserCard key={account.id} {...rowProps(account)} />)
+          )}
+        </ul>
+
+        {/* Users table */}
+        <div className="hidden lg:block overflow-x-auto">
           <Table className="w-full text-left text-xs text-neutral-700">
             <TableHeader className="bg-neutral-50 text-neutral-600 uppercase font-semibold">
               <TableRow className="border-b border-neutral-200 hover:bg-transparent">
@@ -271,8 +460,8 @@ export const AdminUsers: React.FC = () => {
                 </TableRow>
               ) : (
                 users.map((account) => {
-                  const isSelf = account.id === currentUser?.id;
-                  const isBusy = busyId === account.id;
+                  const props = rowProps(account);
+                  const { isSelf, isBusy } = props;
 
                   return (
                     <TableRow
@@ -298,16 +487,7 @@ export const AdminUsers: React.FC = () => {
 
                       {/* สิทธิ์ — ตัวเองแก้ไม่ได้ กันล็อกตัวเองออกจากหลังบ้าน */}
                       <TableCell className="p-3.5">
-                        <select
-                          value={account.role}
-                          disabled={isSelf || isBusy}
-                          onChange={(e) => patchUser(account, { role: e.target.value })}
-                          title={isSelf ? 'เปลี่ยนสิทธิ์ของตัวเองไม่ได้' : undefined}
-                          className="text-[10px] font-bold px-2 py-1 rounded-lg border bg-neutral-50 text-neutral-700 border-neutral-200 focus:outline-none disabled:opacity-50"
-                        >
-                          <option value="customer">ลูกค้า</option>
-                          <option value="admin">ผู้ดูแลระบบ</option>
-                        </select>
+                        <RoleSelect {...props} />
                       </TableCell>
 
                       <TableCell className="p-3.5">
@@ -321,7 +501,7 @@ export const AdminUsers: React.FC = () => {
                           variant="outline"
                           size="xs"
                           disabled={isBusy}
-                          onClick={() => setAdjustTarget(account)}
+                          onClick={props.onAdjust}
                           className="mt-1 bg-neutral-50 hover:bg-neutral-100 text-neutral-900 border-neutral-200 text-[10px] font-bold"
                         >
                           <Coins className="w-3 h-3 mr-1" />
@@ -347,18 +527,7 @@ export const AdminUsers: React.FC = () => {
 
                       <TableCell className="p-3.5">
                         <div className="flex flex-col items-start gap-1">
-                          {account.isBanned ? (
-                            <Badge className="bg-neutral-900 text-white border-0 text-[10px] font-bold">
-                              ระงับการใช้งาน
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="border-neutral-200 text-neutral-600 text-[10px] font-bold"
-                            >
-                              ปกติ
-                            </Badge>
-                          )}
+                          <StatusBadge account={account} />
                           {!account.emailConfirmedAt && (
                             <span className="text-[10px] text-neutral-400">ยังไม่ยืนยันอีเมล</span>
                           )}
@@ -368,39 +537,7 @@ export const AdminUsers: React.FC = () => {
                       <TableCell className="p-3.5">
                         <div className="flex items-center justify-end gap-1.5">
                           {isBusy && <Spinner className="size-3.5 text-neutral-900" />}
-
-                          <Button
-                            variant="outline"
-                            size="xs"
-                            disabled={isSelf || isBusy}
-                            onClick={() => patchUser(account, { banned: !account.isBanned })}
-                            title={
-                              isSelf
-                                ? 'ระงับบัญชีของตัวเองไม่ได้'
-                                : account.isBanned
-                                  ? 'ให้กลับมาเข้าสู่ระบบได้'
-                                  : 'ห้ามบัญชีนี้เข้าสู่ระบบ'
-                            }
-                            className="bg-neutral-50 hover:bg-neutral-100 text-neutral-900 border-neutral-200 text-[10px] font-bold"
-                          >
-                            {account.isBanned ? (
-                              <CircleCheck className="w-3.5 h-3.5 mr-1" />
-                            ) : (
-                              <Ban className="w-3.5 h-3.5 mr-1" />
-                            )}
-                            {account.isBanned ? 'ปลดระงับ' : 'ระงับ'}
-                          </Button>
-
-                          <Button
-                            variant="outline"
-                            size="icon-xs"
-                            disabled={isSelf || isBusy}
-                            onClick={() => setDeleteTarget(account)}
-                            title={isSelf ? 'ลบบัญชีของตัวเองไม่ได้' : 'ลบบัญชีถาวร'}
-                            className="bg-neutral-50 hover:bg-neutral-100 text-neutral-900 border-neutral-200"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          <RowActions {...props} />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -488,7 +625,9 @@ const Modal: React.FC<{
   children: React.ReactNode;
 }> = ({ title, subtitle, onClose, children }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm">
-    <div className="relative bg-white border border-neutral-200 rounded-md max-w-md w-full p-6 shadow-2xl text-neutral-900 animate-in fade-in zoom-in-95">
+    {/* Scrolls inside itself — the adjust and delete dialogs are taller than a
+        phone screen once the warning list and the form are both on it. */}
+    <div className="relative bg-white border border-neutral-200 rounded-md max-w-md w-full max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:p-6 shadow-2xl text-neutral-900 animate-in fade-in zoom-in-95">
       <div className="flex items-start justify-between gap-3 pb-4 border-b border-neutral-100">
         <div>
           <h3 className="text-base font-bold text-neutral-900">{title}</h3>

@@ -130,7 +130,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/60 backdrop-blur-sm overflow-y-auto">
       <div
-        className="relative bg-white border border-neutral-200 rounded-md max-w-2xl w-full p-6 sm:p-8 shadow-2xl text-neutral-900 animate-in fade-in zoom-in-95 duration-200"
+        className="relative bg-white border border-neutral-200 rounded-md max-w-2xl w-full max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:p-8 shadow-2xl text-neutral-900 animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-4 border-b border-neutral-100">

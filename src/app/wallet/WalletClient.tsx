@@ -298,24 +298,26 @@ function WalletContent() {
       <ToastContainer />
       <Navbar />
 
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-5 sm:space-y-6">
         {/* Balance — the one inverted block on the page, so it reads first. */}
-        <div className="bg-neutral-900 text-white rounded-md p-8">
+        <div className="bg-neutral-900 text-white rounded-md p-6 sm:p-8">
           <span className="text-[11px] uppercase tracking-[0.25em] text-neutral-400">
             ยอดเงินคงเหลือ
           </span>
           {/* ฿0.00 and "not loaded yet" must not look the same on a wallet. */}
           {isLoading ? (
-            <Skeleton className="h-10 w-48 mt-2 bg-neutral-700" />
+            <Skeleton className="h-10 w-40 sm:w-48 mt-2 bg-neutral-700" />
           ) : (
-            <p className="text-4xl font-extrabold tracking-tight mt-2">{money(balance)}</p>
+            <p className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-2 break-all">
+              {money(balance)}
+            </p>
           )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top up — one section, three ways in. They differ in what proves the
               money arrived, which is what the copy in each tab has to say. */}
-          <section className="border border-neutral-200 rounded-md p-6 space-y-5">
+          <section className="border border-neutral-200 rounded-md p-4 sm:p-6 space-y-5">
             {firstOpenTab === 'none' && (
               <p className="border-l-2 border-neutral-900 pl-3 text-xs text-neutral-600 leading-relaxed">
                 ร้านปิดรับการเติมเงินทุกช่องทางชั่วคราว — ลองใหม่ภายหลัง หรือติดต่อผู้ดูแลร้าน
@@ -741,7 +743,7 @@ function WalletContent() {
           </section>
 
           {/* Movements */}
-          <section className="border border-neutral-200 rounded-md p-6 space-y-3">
+          <section className="border border-neutral-200 rounded-md p-4 sm:p-6 space-y-3">
             <h2 className="text-base font-semibold border-b border-neutral-100 pb-3">
               ความเคลื่อนไหวล่าสุด
             </h2>
@@ -808,7 +810,7 @@ function WalletContent() {
         </div>
 
         {/* Verified slips */}
-        <section className="border border-neutral-200 rounded-md p-6 space-y-3">
+        <section className="border border-neutral-200 rounded-md p-4 sm:p-6 space-y-3">
           <h2 className="text-base font-semibold border-b border-neutral-100 pb-3">
             ประวัติการเติมเงิน
           </h2>
@@ -822,32 +824,56 @@ function WalletContent() {
           ) : history.length === 0 ? (
             <p className="text-xs text-neutral-400 py-6 text-center">ยังไม่มีการเติมเงิน</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-left text-neutral-400 border-b border-neutral-200">
-                    <th className="py-2.5 font-medium">วันที่</th>
-                    <th className="py-2.5 font-medium">จำนวน</th>
-                    <th className="py-2.5 font-medium">ผู้โอน</th>
-                    <th className="py-2.5 font-medium">เลขอ้างอิงสลิป</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-100">
-                  {history.map((row) => (
-                    <tr key={row.id}>
-                      <td className="py-2.5 text-neutral-500">
+            <>
+              {/* Four columns will not fit a phone, and a slip reference is a long
+                  unbreakable token — so below sm each row becomes its own block
+                  instead of a table squeezed sideways. */}
+              <ul className="sm:hidden divide-y divide-neutral-100">
+                {history.map((row) => (
+                  <li key={row.id} className="py-3 space-y-1 text-xs">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="font-semibold text-neutral-900">{money(row.amount)}</span>
+                      <span className="text-[11px] text-neutral-400 shrink-0">
                         {new Date(row.createdAt).toLocaleString('th-TH')}
-                      </td>
-                      <td className="py-2.5 font-semibold text-neutral-900">{money(row.amount)}</td>
-                      <td className="py-2.5 text-neutral-700">{row.senderName || '—'}</td>
-                      <td className="py-2.5 font-mono text-[11px] text-neutral-400">
-                        {row.transRef}
-                      </td>
+                      </span>
+                    </div>
+                    <div className="text-neutral-500">ผู้โอน {row.senderName || '—'}</div>
+                    <div className="font-mono text-[11px] text-neutral-400 break-all">
+                      {row.transRef}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-neutral-400 border-b border-neutral-200">
+                      <th className="py-2.5 font-medium">วันที่</th>
+                      <th className="py-2.5 font-medium">จำนวน</th>
+                      <th className="py-2.5 font-medium">ผู้โอน</th>
+                      <th className="py-2.5 font-medium">เลขอ้างอิงสลิป</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {history.map((row) => (
+                      <tr key={row.id}>
+                        <td className="py-2.5 text-neutral-500">
+                          {new Date(row.createdAt).toLocaleString('th-TH')}
+                        </td>
+                        <td className="py-2.5 font-semibold text-neutral-900">
+                          {money(row.amount)}
+                        </td>
+                        <td className="py-2.5 text-neutral-700">{row.senderName || '—'}</td>
+                        <td className="py-2.5 font-mono text-[11px] text-neutral-400">
+                          {row.transRef}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       </main>

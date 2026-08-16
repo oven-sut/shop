@@ -14,7 +14,10 @@ export const ToastContainer: React.FC = () => {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    /* Pinned to both edges on a phone: `right-6 w-full` resolves the width
+       against the viewport, so on a 360px screen the box started 24px off the
+       left edge and took the page's horizontal scrollbar with it. */
+    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-6 sm:right-6 z-50 flex flex-col gap-2 sm:w-full sm:max-w-sm pointer-events-none">
       {toasts.map((toast) => (
         <div
           key={toast.id}

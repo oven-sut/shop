@@ -74,7 +74,7 @@ function StoreSettingsPanel() {
   };
 
   return (
-    <div className="bg-white border border-neutral-200 p-6 rounded-md max-w-2xl mx-auto space-y-6 shadow-sm animate-in fade-in">
+    <div className="bg-white border border-neutral-200 p-4 sm:p-6 rounded-md max-w-2xl mx-auto space-y-6 shadow-sm animate-in fade-in">
             <div className="flex items-center gap-3 border-b border-neutral-100 pb-4">
               <Settings className="w-6 h-6 text-neutral-900" />
               <div>
@@ -501,7 +501,7 @@ function AdminContent() {
       <ToastContainer />
       <AdminHeader activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6">
         {activeTab === 'overview' && (
           <AdminOverview
             onNavigateToProducts={() => setActiveTab('products')}
