@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin } from '@/lib/api-auth';
+import { recordAudit } from '@/lib/audit';
 import { badRequest, serverError } from '@/lib/api-response';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -54,6 +55,19 @@ export async function POST(
     }
 
     const balance = Number((data as { balance: string | number } | null)?.balance ?? 0);
+
+    await recordAudit({
+      action: 'user.wallet.adjust',
+      actor: user,
+      targetType: 'user',
+      targetId: id,
+      summary:
+        amount > 0
+          ? `เพิ่มเงิน ฿${amount.toLocaleString()} ให้ผู้ใช้ (คงเหลือ ฿${balance.toLocaleString()})`
+          : `หักเงิน ฿${Math.abs(amount).toLocaleString()} จากผู้ใช้ (คงเหลือ ฿${balance.toLocaleString()})`,
+      meta: { amount, balanceAfter: balance, note },
+      request,
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, requireApiUser } from '@/lib/api-auth';
+import { recordAudit } from '@/lib/audit';
 import { badRequest, dbError, serverError } from '@/lib/api-response';
 import { toOrder } from '@/lib/mappers';
 import { createRouteClient } from '@/lib/supabase/server';
@@ -39,7 +40,7 @@ export async function PATCH(
   // Moving an order's status is an admin action, and the orders RLS policy
   // agrees — but a handler that states its own rule cannot be opened up by an
   // unrelated change to the policies.
-  const { response: denied } = await requireAdmin();
+  const { user, response: denied } = await requireAdmin();
   if (denied) return denied;
 
   try {
@@ -68,6 +69,16 @@ export async function PATCH(
 
     if (error) return dbError(error, 403);
     if (!data) return notFound(id);
+
+    await recordAudit({
+      action: 'order.status',
+      actor: user,
+      targetType: 'order',
+      targetId: id,
+      summary: `เปลี่ยนสถานะคำสั่งซื้อ #${id} เป็น ${body.status}`,
+      meta: { status: body.status, trackingNumber: patch.tracking_number ?? null },
+      request,
+    });
 
     return NextResponse.json({
       success: true,

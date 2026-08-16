@@ -1,5 +1,6 @@
 import { ChargeStatus, GatewayCharge, GatewayError } from './gateway';
 import { createAdminClient } from './supabase/admin';
+import { recordAudit } from './audit';
 
 /**
  * เติมเงินจากรายการที่เกตเวย์ยืนยันแล้ว
@@ -100,6 +101,16 @@ export async function settleCharge(
   }
 
   const balance = Number((data as { balance: string | number } | null)?.balance ?? 0);
+
+  // ไม่มี actor: ผู้เรียกอาจเป็น webhook ของเกตเวย์ซึ่งไม่มีบัญชีในร้าน
+  // เจ้าของเงินอยู่ใน target แทน
+  await recordAudit({
+    action: 'topup.gateway',
+    targetType: 'user',
+    targetId: charge.userId,
+    summary: `เติมเงิน ฿${charge.amount.toLocaleString()} ผ่าน ${channel} (${gatewayName})`,
+    meta: { amount: charge.amount, balanceAfter: balance, chargeId: charge.id, method: charge.method },
+  });
 
   return { status: 'paid', amount: charge.amount, balance };
 }

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
+import { recordAudit } from '@/lib/audit';
 import { dbError, serverError } from '@/lib/api-response';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { loadSettings } from '@/lib/settings';
@@ -104,6 +105,16 @@ export async function POST(request: NextRequest) {
     }
 
     const balance = Number((data as { balance: string | number } | null)?.balance ?? 0);
+
+    await recordAudit({
+      action: 'topup.voucher',
+      actor: user,
+      targetType: 'topup',
+      targetId: transRef,
+      summary: `เติมเงิน ฿${voucher.amount.toLocaleString()} ด้วยซองอังเปาทรูมันนี่`,
+      meta: { amount: voucher.amount, balanceAfter: balance, ownerName: voucher.ownerName },
+      request,
+    });
 
     return NextResponse.json(
       {

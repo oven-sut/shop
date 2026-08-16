@@ -1235,3 +1235,54 @@ $$;
 revoke execute on function public.admin_adjust_wallet(uuid, numeric, text)
   from public, anon, authenticated;
 grant execute on function public.admin_adjust_wallet(uuid, numeric, text) to service_role;
+
+-- ============================================================================
+-- บันทึกระบบ (audit log) — ใครทำอะไรกับอะไร เมื่อไหร่
+-- ============================================================================
+-- เขียนจากฝั่งเซิร์ฟเวอร์ด้วย service key เท่านั้น ไม่มี policy ให้ client เขียน
+-- เพราะบันทึกที่ผู้ถูกบันทึกแก้เองได้ก็ไม่ใช่บันทึก
+create table if not exists public.audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  -- ใครทำ: null ได้ เช่น webhook ของเกตเวย์ที่ไม่มีบัญชีในร้าน
+  actor_id uuid references auth.users (id) on delete set null,
+  actor_email text,
+  actor_role text,
+  -- ทำอะไร: 'order.status', 'user.role', 'topup.credit' … ตั้งชื่อแบบ <โดเมน>.<การกระทำ>
+  action text not null,
+  -- กับอะไร: ประเภทกับ id ของสิ่งที่ถูกกระทำ
+  target_type text,
+  target_id text,
+  -- สรุปเป็นภาษาคนสำหรับหน้าแอดมิน จะได้ไม่ต้องอ่าน jsonb ทุกครั้ง
+  summary text not null,
+  -- รายละเอียดที่เหลือ เช่น ค่าก่อน/หลัง
+  meta jsonb not null default '{}'::jsonb,
+  ip text,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists audit_logs_created_idx on public.audit_logs (created_at desc);
+create index if not exists audit_logs_actor_idx on public.audit_logs (actor_id, created_at desc);
+create index if not exists audit_logs_action_idx on public.audit_logs (action, created_at desc);
+create index if not exists audit_logs_target_idx on public.audit_logs (target_type, target_id);
+
+alter table public.audit_logs enable row level security;
+
+-- อ่านได้เฉพาะแอดมิน และไม่มีใครเขียน/แก้/ลบผ่าน client ได้เลย
+drop policy if exists audit_logs_admin_select on public.audit_logs;
+create policy audit_logs_admin_select on public.audit_logs
+  for select to authenticated
+  using ((select private.is_admin()));
+
+grant select on public.audit_logs to authenticated;
+
+-- ============================================================================
+-- Storage — ไฟล์สำรองข้อมูลรายวัน
+-- ============================================================================
+-- private: ไฟล์สำรองคือฐานข้อมูลทั้งก้อนในไฟล์เดียว หลุดออกไปคือหลุดทุกอย่าง
+-- เข้าถึงได้เฉพาะ service key (route ฝั่งเซิร์ฟเวอร์) ไม่มี policy ให้ client เลย
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('backups', 'backups', false, 104857600)
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit;

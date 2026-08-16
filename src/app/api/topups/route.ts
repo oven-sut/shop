@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireApiUser } from '@/lib/api-auth';
+import { recordAudit } from '@/lib/audit';
 import { dbError, serverError } from '@/lib/api-response';
 import { toTopup } from '@/lib/mappers';
 import { enforceRateLimit } from '@/lib/rate-limit';
@@ -243,6 +244,22 @@ export async function POST(request: NextRequest) {
     }
 
     const balance = Number((data as { balance: string | number } | null)?.balance ?? 0);
+
+    await recordAudit({
+      action: 'topup.slip',
+      actor: user,
+      targetType: 'topup',
+      targetId: slip.transRef,
+      summary: `เติมเงิน ฿${slip.amount.toLocaleString()} ด้วยสลิป (ตรวจโดย ${slip.provider})`,
+      meta: {
+        amount: slip.amount,
+        balanceAfter: balance,
+        provider: slip.provider,
+        senderName: slip.senderName,
+        sendingBank: slip.sendingBank,
+      },
+      request,
+    });
 
     return NextResponse.json(
       {

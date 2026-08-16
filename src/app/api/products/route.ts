@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, requireApiUser } from '@/lib/api-auth';
+import { recordAudit } from '@/lib/audit';
 import { badRequest, dbError, quoteFilterValue, serverError } from '@/lib/api-response';
 import { toProduct, toProductRow } from '@/lib/mappers';
 import { createRouteClient } from '@/lib/supabase/server';
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // Admin twice over: here, and again in the products RLS policy.
-  const { response: denied } = await requireAdmin();
+  const { user, response: denied } = await requireAdmin();
   if (denied) return denied;
 
   try {
@@ -74,6 +75,16 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) return dbError(error, 403);
+
+    await recordAudit({
+      action: 'product.create',
+      actor: user,
+      targetType: 'product',
+      targetId: String(data.id),
+      summary: `เพิ่มสินค้า ${data.name} — ฿${Number(data.price).toLocaleString()} สต็อก ${data.stock}`,
+      meta: { price: data.price, stock: data.stock },
+      request,
+    });
 
     return NextResponse.json(
       { success: true, message: 'เพิ่มสินค้าสำเร็จ', data: toProduct(data) },

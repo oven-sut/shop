@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, requireApiUser } from '@/lib/api-auth';
+import { recordAudit, diffFields } from '@/lib/audit';
 import { badRequest, dbError, serverError } from '@/lib/api-response';
 import { loadSettings, toSettings, toSettingsRow } from '@/lib/settings';
 import { createRouteClient } from '@/lib/supabase/server';
@@ -17,7 +18,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  const { response: denied } = await requireAdmin();
+  const { user, response: denied } = await requireAdmin();
   if (denied) return denied;
 
   try {
@@ -28,6 +29,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     const supabase = await createRouteClient();
+
+    // อ่านค่าก่อนแก้ไว้เทียบ — บันทึกระบบจะได้บอกว่า "อะไรเปลี่ยนจากอะไรเป็นอะไร"
+    // ไม่ใช่แค่ว่ามีคนกดบันทึก
+    const { data: before } = await supabase.from('store_settings').select('*').maybeSingle();
+
     const { data, error } = await supabase
       .from('store_settings')
       .update(patch)
@@ -36,6 +42,17 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error) return dbError(error);
+
+    const changes = diffFields((before ?? {}) as Record<string, unknown>, patch);
+
+    await recordAudit({
+      action: 'settings.update',
+      actor: user,
+      targetType: 'store_settings',
+      summary: `แก้ตั้งค่าร้าน: ${Object.keys(changes).join(', ') || 'ไม่มีค่าที่เปลี่ยน'}`,
+      meta: { changes },
+      request,
+    });
 
     return NextResponse.json({
       success: true,

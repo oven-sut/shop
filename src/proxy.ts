@@ -43,6 +43,9 @@ const PUBLIC_PATHS = [
   '/opengraph-image',
   '/twitter-image',
   '/api/topups/webhook',
+  // ตัวตั้งเวลา (Vercel Cron, GitHub Actions, crontab) ไม่มี session เช่นกัน
+  // ที่กันไว้คือ secret ในพาธ ซึ่งเป็นด่านเดียวจริง ๆ ของเส้นนี้
+  '/api/cron',
 ];
 
 /**

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin } from '@/lib/api-auth';
+import { recordAudit } from '@/lib/audit';
 import { badRequest, forbidden, serverError } from '@/lib/api-response';
 import { roleFromAppMetadata } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -75,6 +76,16 @@ export async function PATCH(
       name !== null ? 'เปลี่ยนชื่อที่แสดง' : null,
     ].filter(Boolean);
 
+    await recordAudit({
+      action: 'user.update',
+      actor: user,
+      targetType: 'user',
+      targetId: id,
+      summary: `${changes.join(' · ')} — ${updated.email ?? id}`,
+      meta: { role, banned, renamed: name !== null, targetEmail: updated.email },
+      request,
+    });
+
     return NextResponse.json({
       success: true,
       message: `${changes.join(' · ')} — ${updated.email ?? id} เรียบร้อยแล้ว`,
@@ -120,6 +131,18 @@ export async function DELETE(
       console.error('[api:users:delete]', error.message);
       return badRequest('ลบบัญชีไม่สำเร็จ', 'delete_failed');
     }
+
+    // ต้องบันทึกให้ครบที่สุดตรงนี้ เพราะทุกอย่างของบัญชีนั้น cascade หายไปหมดแล้ว
+    // เหลือแค่บรรทัดนี้ที่บอกได้ว่าเคยมีใครและใครลบ (actor_id เก็บของแอดมิน ไม่ใช่คนถูกลบ)
+    await recordAudit({
+      action: 'user.delete',
+      actor: user,
+      targetType: 'user',
+      targetId: id,
+      summary: `ลบบัญชี ${data.user?.email ?? id} พร้อมประวัติทั้งหมด`,
+      meta: { targetEmail: data.user?.email ?? null, createdAt: data.user?.created_at ?? null },
+      request,
+    });
 
     return NextResponse.json({
       success: true,
