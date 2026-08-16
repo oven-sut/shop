@@ -67,7 +67,7 @@ src/
 │  ├─ docs/                    ← Swagger UI (แอดมินเท่านั้น)
 │  ├─ admin/
 │  │  ├─ layout.tsx            ← ตรวจสิทธิ์ admin ฝั่ง server
-│  │  └─ page.tsx              ← ภาพรวม/สินค้า/คำสั่งซื้อ/วิเคราะห์/ตั้งค่าร้าน
+│  │  └─ page.tsx              ← ภาพรวม/สินค้า/คำสั่งซื้อ/ผู้ใช้งาน/วิเคราะห์/ตั้งค่าร้าน
 │  ├─ auth/callback/route.ts   ← Google ส่งกลับ → แลก code เป็น session cookie
 │  └─ api/
 │     ├─ health, products, products/[id], products/[id]/reviews
@@ -79,6 +79,8 @@ src/
 │     ├─ topups/charges        GET มีเกตเวย์ไหม | POST เปิดรายการ QR
 │     │  └─ [id]               GET สถานะ + เติมถ้าจ่ายแล้ว | [id]/qr รูป QR
 │     ├─ topups/webhook/[secret] POST เกตเวย์แจ้งว่าจ่ายแล้ว (เปิดสาธารณะ)
+│     ├─ users                 GET รายชื่อผู้ใช้ | POST สร้างบัญชี (แอดมิน)
+│     │  └─ [id]               PATCH สิทธิ์/ระงับ/ชื่อ | DELETE ลบถาวร | [id]/wallet POST ปรับยอดเงิน
 │     ├─ settings              GET อ่าน | PATCH แก้ (แอดมิน)
 │     └─ uploads               POST อัปโหลดรูปสินค้า (แอดมิน)
 │
@@ -107,7 +109,7 @@ src/
 ├─ components/
 │  ├─ CookieConsent.tsx        ← แถบยินยอมคุกกี้
 │  ├─ Navbar, HeroBanner, FeatureBar, ProductCard, CartDrawer, CheckoutModal, ...
-│  ├─ Admin/                   ← Header, Overview, ProductList, ProductModal, OrderList, Analytics
+│  ├─ Admin/                   ← Header, Overview, ProductList, ProductModal, OrderList, Users, Analytics
 │  └─ ui/                      ← shadcn/Base UI
 │
 └─ types/                      ← auth.ts, ecommerce.ts
@@ -299,3 +301,33 @@ npm run lint     # ESLint
 
 **คีย์ปัจจุบันเป็น test key** (`499k_test_`) สั่งซื้อได้เฉพาะสินค้า sandbox/rental และไม่มีการตัดเงินจริง
 เปลี่ยนเป็น `499k_live_` ใน `.env` เมื่อพร้อมขายจริง
+
+---
+
+## 12. จัดการผู้ใช้งาน (`/admin` → ผู้ใช้งาน)
+
+รายชื่อผู้ใช้อยู่ใน `auth.users` ซึ่ง PostgREST ไม่เปิดให้ query ตรง และไม่มี RLS policy ไหน
+ให้ใครเห็นบัญชีของคนอื่น ทุกเส้นในหมวดนี้จึงเป็นแบบเดียวกัน: `requireAdmin()` ที่ handler
+แล้วค่อยทำงานด้วย service key
+
+| ทำอะไร | เส้นทาง | ทำงานผ่าน |
+| --- | --- | --- |
+| ค้นหา/แบ่งหน้า + ยอดเงิน + สถิติคำสั่งซื้อ | `GET /api/users` | `admin_list_users()` — คิวรีเดียวจบ |
+| สร้างบัญชีให้ (ยืนยันอีเมลให้เลย) | `POST /api/users` | `auth.admin.createUser()` |
+| ปรับสิทธิ์ / ระงับ / เปลี่ยนชื่อ | `PATCH /api/users/{id}` | `auth.admin.updateUserById()` |
+| ลบบัญชีถาวร | `DELETE /api/users/{id}` | `auth.admin.deleteUser()` |
+| เพิ่ม/หักเงินในกระเป๋า | `POST /api/users/{id}/wallet` | `admin_adjust_wallet()` |
+
+ข้อควรรู้
+
+- **แอดมินทำอะไรกับบัญชีตัวเองไม่ได้** (ปรับสิทธิ์ ระงับ ลบ) — กันล็อกตัวเองออกจากหลังบ้าน
+  ซึ่งเป็นความผิดพลาดเดียวในหน้านี้ที่แก้จากในแอปไม่ได้
+- **สิทธิ์กับการระงับอยู่ใน JWT** ไม่ได้อยู่ในตารางที่แอปอ่านทุกรีเควสต์ ผลจึงมีตอนที่ access token
+  ของคนนั้นถูก refresh รอบถัดไป (ไม่เกิน 1 ชั่วโมง) หรือตอนล็อกอินใหม่
+- **การลบ cascade ทั้งสาย** — คำสั่งซื้อ กระเป๋าเงิน ledger การเติมเงิน และบัญชีที่ส่งมอบไปแล้ว
+  หายตามไปหมด (ยอดขายในรายงานก็หายด้วย) อยากแค่ห้ามเข้าใช้งานให้ใช้ "ระงับ"
+- **รหัสในคลังที่ขายให้คนนั้นจะกลับมาขายได้อีก** เพราะ `product_codes.order_id` เป็น
+  `on delete set null` พอคำสั่งซื้อหาย รหัสก็ว่างและทริกเกอร์ `sync_code_stock` บวกสต็อกคืน
+  ทั้งที่ของอยู่ในมือลูกค้าไปแล้ว — ถ้าไม่ต้องการให้ลบรหัสพวกนั้นทิ้งเองก่อนลบบัญชี
+- **ปรับยอดเงินต้องมีเหตุผลเสมอ** ข้อความจะถูกบันทึกลง `wallet_transactions` พร้อมอีเมลแอดมินที่ทำ
+  และลูกค้าเห็นบรรทัดนี้ในหน้ากระเป๋าเงินของตัวเอง

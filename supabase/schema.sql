@@ -1013,3 +1013,168 @@ end;
 $$;
 
 revoke execute on function public.refund_order(text, text) from public, anon, authenticated;
+
+-- ============================================================================
+-- จัดการผู้ใช้งาน — หน้าแอดมิน → ผู้ใช้งาน
+--
+-- รายชื่อผู้ใช้อยู่ใน auth.users ซึ่ง PostgREST ไม่เปิดให้ query ตรง ๆ และ
+-- supabase.auth.admin.listUsers() ก็ค้นหา/แบ่งหน้าตามเงื่อนไขของร้านไม่ได้
+-- (ค้นด้วยอีเมล/ชื่อ กรองตามบทบาท เรียงตามวันสมัคร) แถมยังต้องยิงอีกหลายรอบ
+-- เพื่อเอายอดเงินกับสถิติคำสั่งซื้อมาต่อท้าย
+--
+-- ฟังก์ชันนี้จึงรวมทุกอย่างไว้ในคิวรีเดียว เรียกได้จากฝั่งเซิร์ฟเวอร์ด้วย
+-- secret key เท่านั้น (route handler เช็ค requireAdmin() มาก่อนแล้ว)
+-- ============================================================================
+create or replace function public.admin_list_users(
+  p_search text default null,
+  p_role text default null,
+  p_limit integer default 50,
+  p_offset integer default 0
+)
+returns table (
+  id uuid,
+  email text,
+  name text,
+  role text,
+  banned_until timestamptz,
+  created_at timestamptz,
+  last_sign_in_at timestamptz,
+  email_confirmed_at timestamptz,
+  balance numeric,
+  orders_count bigint,
+  total_spent numeric,
+  total_topup numeric,
+  total_rows bigint
+)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  with base as (
+    select
+      u.id,
+      coalesce(u.email, '') as email,
+      -- ชื่อที่โชว์: ตั้งไว้ตอนสมัคร → ชื่อจาก Google → หน้าอีเมล
+      coalesce(
+        nullif(trim(u.raw_user_meta_data ->> 'full_name'), ''),
+        nullif(trim(u.raw_user_meta_data ->> 'name'), ''),
+        nullif(split_part(coalesce(u.email, ''), '@', 1), ''),
+        'ผู้ใช้งาน'
+      ) as name,
+      -- ตรงกับ private.is_admin(): อ่านจาก app_metadata เท่านั้น
+      case when u.raw_app_meta_data ->> 'role' = 'admin' then 'admin' else 'customer' end as role,
+      u.banned_until,
+      u.created_at,
+      u.last_sign_in_at,
+      u.email_confirmed_at
+    from auth.users u
+    -- บัญชีที่ลบแบบ soft delete ไปแล้วไม่ต้องแสดง
+    where u.deleted_at is null
+  ),
+  filtered as (
+    select * from base
+    where (
+        p_search is null or trim(p_search) = ''
+        or base.email ilike '%' || trim(p_search) || '%'
+        or base.name ilike '%' || trim(p_search) || '%'
+        or base.id::text = trim(p_search)
+      )
+      and (p_role is null or p_role = '' or base.role = p_role)
+  )
+  select
+    f.id,
+    f.email,
+    f.name,
+    f.role,
+    f.banned_until,
+    f.created_at,
+    f.last_sign_in_at,
+    f.email_confirmed_at,
+    coalesce(w.balance, 0) as balance,
+    o.orders_count,
+    o.total_spent,
+    t.total_topup,
+    -- window function ทำงานก่อน limit/offset จึงได้จำนวนทั้งหมดของผลลัพธ์ที่กรองแล้ว
+    -- ไม่ใช่แค่จำนวนแถวในหน้านี้ (ใช้ทำตัวแบ่งหน้า)
+    count(*) over () as total_rows
+  from filtered f
+  left join public.wallets w on w.user_id = f.id
+  left join lateral (
+    select count(*) as orders_count, coalesce(sum(ord.total_amount), 0) as total_spent
+    from public.orders ord
+    -- ที่ยกเลิก/คืนเงินไปแล้วไม่นับเป็นยอดซื้อ
+    where ord.user_id = f.id and ord.status <> 'ยกเลิก'
+  ) o on true
+  left join lateral (
+    select coalesce(sum(tp.amount), 0) as total_topup
+    from public.topups tp
+    where tp.user_id = f.id
+  ) t on true
+  order by f.created_at desc
+  limit greatest(1, least(coalesce(p_limit, 50), 200))
+  offset greatest(0, coalesce(p_offset, 0));
+$$;
+
+revoke execute on function public.admin_list_users(text, text, integer, integer)
+  from public, anon, authenticated;
+grant execute on function public.admin_list_users(text, text, integer, integer) to service_role;
+
+-- ============================================================================
+-- แอดมินปรับยอดเงินในกระเป๋าลูกค้า (เติมให้เอง / หักคืน)
+--
+-- ไม่ใช้ credit_topup เพราะนั่นบังคับให้มี trans_ref ของสลิปและบันทึกลงตาราง
+-- topups ด้วย — การปรับยอดด้วยมือไม่มีสลิปให้อ้าง และต้องหักลบได้ด้วย
+-- ============================================================================
+create or replace function public.admin_adjust_wallet(
+  p_user_id uuid,
+  p_amount numeric,
+  p_note text default null
+)
+returns public.wallets
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_wallet public.wallets;
+begin
+  if p_amount is null or p_amount = 0 then
+    raise exception 'invalid_amount' using errcode = '22023';
+  end if;
+
+  if not exists (select 1 from auth.users where id = p_user_id and deleted_at is null) then
+    raise exception 'user_not_found' using errcode = '22023';
+  end if;
+
+  insert into public.wallets (user_id) values (p_user_id) on conflict (user_id) do nothing;
+
+  -- ล็อกแถวไว้ก่อน กันแอดมินสองคนกดพร้อมกันแล้วยอดเพี้ยน
+  select * into v_wallet from public.wallets where user_id = p_user_id for update;
+
+  if v_wallet.balance + p_amount < 0 then
+    raise exception 'insufficient_balance:%:%', v_wallet.balance, -p_amount using errcode = '22023';
+  end if;
+
+  update public.wallets
+  set balance = balance + p_amount, updated_at = now()
+  where user_id = p_user_id
+  returning * into v_wallet;
+
+  -- ลูกค้าเห็นรายการนี้ในหน้ากระเป๋าเงินของตัวเอง จึงต้องมีเหตุผลกำกับเสมอ
+  insert into public.wallet_transactions (user_id, kind, amount, balance_after, reference, note)
+  values (
+    p_user_id, 'adjustment', p_amount, v_wallet.balance, null,
+    coalesce(
+      nullif(trim(p_note), ''),
+      case when p_amount > 0 then 'แอดมินเพิ่มเงินให้' else 'แอดมินหักเงินออก' end
+    )
+  );
+
+  return v_wallet;
+end;
+$$;
+
+revoke execute on function public.admin_adjust_wallet(uuid, numeric, text)
+  from public, anon, authenticated;
+grant execute on function public.admin_adjust_wallet(uuid, numeric, text) to service_role;

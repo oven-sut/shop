@@ -1,3 +1,4 @@
+import { AdminUser } from '../types/auth';
 import {
   Coupon,
   Order,
@@ -121,6 +122,29 @@ export function toTopup(row: Row): Topup {
     receiverName: optionalStr(row.receiver_name),
     transferredAt: optionalStr(row.transferred_at),
     createdAt: str(row.created_at),
+  };
+}
+
+/** One row of `admin_list_users()`. */
+export function toAdminUser(row: Row): AdminUser {
+  const bannedUntil = optionalStr(row.banned_until);
+
+  return {
+    id: str(row.id),
+    email: str(row.email),
+    name: str(row.name, 'ผู้ใช้งาน'),
+    role: row.role === 'admin' ? 'admin' : 'customer',
+    // Postgres keeps the timestamp of an expired ban, so the date alone does not
+    // say whether the account is suspended right now.
+    isBanned: Boolean(bannedUntil) && new Date(bannedUntil as string).getTime() > Date.now(),
+    bannedUntil,
+    createdAt: optionalStr(row.created_at),
+    lastSignInAt: optionalStr(row.last_sign_in_at),
+    emailConfirmedAt: optionalStr(row.email_confirmed_at),
+    balance: num(row.balance),
+    ordersCount: num(row.orders_count),
+    totalSpent: num(row.total_spent),
+    totalTopup: num(row.total_topup),
   };
 }
 

@@ -62,7 +62,10 @@ try {
 
   const { rows: functions } = await client.query(`
     select routine_name from information_schema.routines
-    where routine_schema = 'public' and routine_name in ('place_order', 'credit_topup', 'refund_order')
+    where routine_schema = 'public' and routine_name in (
+      'place_order', 'credit_topup', 'refund_order', 'reset_hwid',
+      'admin_list_users', 'admin_adjust_wallet'
+    )
     order by routine_name
   `);
   console.log('\nฟังก์ชัน:', functions.map((row) => row.routine_name).join(', ') || 'ไม่พบ');

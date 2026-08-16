@@ -6,6 +6,7 @@ import { AdminHeader } from '../../components/Admin/AdminHeader';
 import { AdminOverview } from '../../components/Admin/AdminOverview';
 import { AdminProductList } from '../../components/Admin/AdminProductList';
 import { AdminOrderList } from '../../components/Admin/AdminOrderList';
+import { AdminUsers } from '../../components/Admin/AdminUsers';
 import { AdminAnalytics } from '../../components/Admin/AdminAnalytics';
 import { AdminSupplier } from '../../components/Admin/AdminSupplier';
 import { ToastContainer } from '../../components/ToastContainer';
@@ -492,7 +493,7 @@ function StoreSettingsPanel() {
 function AdminContent() {
   const { isLoading } = useShop();
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'supplier' | 'orders' | 'analytics' | 'settings'
+    'overview' | 'products' | 'supplier' | 'orders' | 'users' | 'analytics' | 'settings'
   >('overview');
 
   return (
@@ -513,6 +514,8 @@ function AdminContent() {
         {activeTab === 'supplier' && <AdminSupplier />}
 
         {activeTab === 'orders' && <AdminOrderList />}
+
+        {activeTab === 'users' && <AdminUsers />}
 
         {activeTab === 'analytics' && <AdminAnalytics />}
 
