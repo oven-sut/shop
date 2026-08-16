@@ -48,6 +48,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
   const [image, setImage] = useState(editingProduct?.image ?? '');
   const [badge, setBadge] = useState<ProductBadge>(editingProduct ? editingProduct.badge : undefined);
   const [isService, setIsService] = useState(editingProduct?.isService ?? false);
+  const [isUnlimited, setIsUnlimited] = useState(editingProduct?.isUnlimited ?? false);
   const [specs, setSpecs] = useState<{ key: string; val: string }[]>(() =>
     editingProduct?.specs ? Object.entries(editingProduct.specs).map(([key, val]) => ({ key, val })) : []
   );
@@ -82,9 +83,12 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
     e.target.value = '';
   };
 
+  /** สต็อกถูกคุมโดยคลังรหัส หรือไม่มีความหมายเลยเพราะขายไม่จำกัด */
+  const stockIsAutomatic = isUnlimited || codeStock.managed;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || price === '' || stock === '') return;
+    if (!name || price === '' || (!stockIsAutomatic && stock === '')) return;
 
     const specsObj: Record<string, string> = {};
     specs.forEach((s) => {
@@ -101,11 +105,13 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
       price: Number(price),
       originalPrice: originalPrice !== '' ? Number(originalPrice) : undefined,
       // สินค้าที่ขายจากคลังรหัสไม่ส่ง stock ไป ปล่อยให้ฐานข้อมูลคำนวณเอง
-      stock: codeStock.managed ? undefined : Number(stock),
+      // ส่วนของที่ขายไม่จำกัดไม่มีสต็อกให้เก็บตั้งแต่แรก
+      stock: stockIsAutomatic ? undefined : Number(stock),
       description,
       image,
       badge,
       isService,
+      isUnlimited,
       specs: specsObj,
     };
 
@@ -220,19 +226,29 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
               <label className="block font-semibold text-neutral-700 mb-1">
                 จำนวนสต็อก (ชิ้น) <span className="text-neutral-900">*</span>
               </label>
-              <Input
-                type="number"
-                required={!codeStock.managed}
-                disabled={codeStock.managed}
-                min={0}
-                value={codeStock.managed ? codeStock.available : stock}
-                onChange={(e) => setStock(e.target.value ? Number(e.target.value) : '')}
-                className="w-full bg-neutral-50 border-neutral-200 text-neutral-900 disabled:opacity-60"
-              />
-              {codeStock.managed && (
-                <p className="mt-1 text-[11px] text-neutral-400">
-                  นับจากรหัสที่ยังไม่ถูกขายในคลังด้านล่าง
-                </p>
+              {isUnlimited ? (
+                <div className="w-full h-9 flex items-center px-3 rounded-md border border-neutral-200 bg-neutral-100 text-neutral-500">
+                  ไม่จำกัด
+                </div>
+              ) : (
+                <Input
+                  type="number"
+                  required={!codeStock.managed}
+                  disabled={codeStock.managed}
+                  min={0}
+                  value={codeStock.managed ? codeStock.available : stock}
+                  onChange={(e) => setStock(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full bg-neutral-50 border-neutral-200 text-neutral-900 disabled:opacity-60"
+                />
+              )}
+              {isUnlimited ? (
+                <p className="mt-1 text-[11px] text-neutral-400">ขายได้เรื่อย ๆ ไม่มีวันหมด</p>
+              ) : (
+                codeStock.managed && (
+                  <p className="mt-1 text-[11px] text-neutral-400">
+                    นับจากรหัสที่ยังไม่ถูกขายในคลังด้านล่าง
+                  </p>
+                )
               )}
             </div>
           </div>
@@ -256,6 +272,31 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Unlimited flag — one code handed to everyone, nothing ever runs out */}
+          <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-md flex items-start justify-between gap-3">
+            <div>
+              <span className="font-semibold text-neutral-900 block">ขายได้ไม่จำกัด</span>
+              <span className="text-[11px] text-neutral-500">
+                ลูกค้าทุกคนได้รหัสใบแรกในคลังด้านล่าง โดยรหัสไม่ถูกตัดออก สต็อกจึงไม่มีวันหมด
+                — เหมาะกับลิงก์ดาวน์โหลด คีย์ที่ใช้ร่วมกันได้ หรือรหัสส่วนลด
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isUnlimited}
+              aria-label="ขายได้ไม่จำกัด"
+              onClick={() => setIsUnlimited((prev) => !prev)}
+              className={`shrink-0 px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all ${
+                isUnlimited
+                  ? 'bg-neutral-900 text-white border-neutral-900'
+                  : 'bg-white text-neutral-400 border-neutral-300'
+              }`}
+            >
+              {isUnlimited ? 'ใช่' : 'ไม่ใช่'}
+            </button>
           </div>
 
           {/* Service flag — a custom job (e.g. รับทำเว็บไซต์) isn't stock you count */}
@@ -389,6 +430,7 @@ export const AdminProductModal: React.FC<AdminProductModalProps> = ({
           {editingProduct && (
             <AdminProductCodes
               productId={editingProduct.id}
+              isUnlimited={isUnlimited}
               onStockChange={handleStockChange}
             />
           )}

@@ -14,8 +14,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart, toggleWishlist, isInWishlist, setQuickViewProduct } = useShop();
 
   const isWishlisted = isInWishlist(product.id);
-  const isOutOfStock = product.stock <= 0;
-  const isLowStock = product.stock > 0 && product.stock <= 5;
+  // ของที่ขายไม่จำกัดไม่มีวันหมด — คอลัมน์ stock ของมันเป็นเลขที่ไม่ได้ใช้
+  const isOutOfStock = !product.isUnlimited && product.stock <= 0;
+  const isLowStock = !product.isUnlimited && product.stock > 0 && product.stock <= 5;
 
   return (
     <article className="group relative bg-white border border-neutral-200 rounded-md overflow-hidden hover:border-neutral-900 transition-colors flex flex-col h-full">
@@ -72,6 +73,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <span className="text-neutral-400 truncate">{product.category}</span>
             {isOutOfStock ? (
               <span className="text-neutral-400 line-through shrink-0">หมดสต็อก</span>
+            ) : product.isUnlimited ? (
+              <span className="text-neutral-400 shrink-0">พร้อมส่งทันที</span>
             ) : isLowStock ? (
               <span className="text-neutral-900 font-medium shrink-0">
                 เหลือ {product.stock} ชิ้น

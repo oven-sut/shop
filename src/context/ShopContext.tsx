@@ -19,6 +19,17 @@ interface Toast {
   type: 'success' | 'info' | 'warning';
 }
 
+/** เพดานต่อรายการที่ `POST /api/orders` ตัดให้อยู่แล้ว — ตะกร้าใช้ตัวเดียวกัน */
+const MAX_PER_LINE = 100;
+
+/**
+ * จำนวนสูงสุดที่ใส่ตะกร้าได้ต่อหนึ่งรายการ
+ *
+ * ปกติคือสต็อกที่เหลือ ส่วนของที่ขายไม่จำกัดไม่มีสต็อกให้อ้าง (คอลัมน์นั้นมักเป็น 0)
+ * ถ้าเอา stock มาคำนวณตรง ๆ จะได้ตะกร้าที่มีของจำนวนศูนย์ชิ้น
+ */
+const lineCap = (product: Product) => (product.isUnlimited ? MAX_PER_LINE : product.stock);
+
 export interface ActionResult {
   success: boolean;
   message: string;
@@ -276,7 +287,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ── Cart actions ──────────────────────────────────────────────────────────
   const addToCart = (product: Product, quantity = 1, selectedColor?: string) => {
-    if (product.stock <= 0) {
+    if (!product.isUnlimited && product.stock <= 0) {
       showToast('สินค้าชิ้นนี้หมดสต็อกชั่วคราว', 'warning');
       return;
     }
@@ -288,12 +299,12 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const newQty = updated[existingIndex].quantity + quantity;
         updated[existingIndex] = {
           ...updated[existingIndex],
-          quantity: Math.min(newQty, product.stock),
+          quantity: Math.min(newQty, lineCap(product)),
           selectedColor: selectedColor || updated[existingIndex].selectedColor,
         };
         return updated;
       }
-      return [...prev, { product, quantity: Math.min(quantity, product.stock), selectedColor }];
+      return [...prev, { product, quantity: Math.min(quantity, lineCap(product)), selectedColor }];
     });
 
     showToast(`เพิ่ม "${product.name}" เข้าตะกร้าเรียบร้อยแล้ว`, 'success');
@@ -312,7 +323,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const newQty = item.quantity + delta;
       if (newQty <= 0) return [];
-      return [{ ...item, quantity: Math.min(newQty, item.product.stock) }];
+      return [{ ...item, quantity: Math.min(newQty, lineCap(item.product)) }];
     });
 
     setCart(nextCart);

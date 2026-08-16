@@ -24,6 +24,8 @@ export const ProductQuickViewModal: React.FC = () => {
   const isWishlisted = isInWishlist(product.id);
   const mainImg = selectedImage || product.image;
   const galleryImages = [product.image, ...(product.gallery || [])];
+  /** ของที่ขายไม่จำกัดไม่มีวันหมด คอลัมน์ stock ของมันไม่ได้ถูกใช้ */
+  const inStock = product.isUnlimited || product.stock > 0;
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,8 +103,16 @@ export const ProductQuickViewModal: React.FC = () => {
               <div className="flex items-center gap-2 text-[11px] tracking-[0.15em] uppercase text-neutral-400">
                 <span>{product.category}</span>
                 <span>·</span>
-                <span className={product.stock > 0 ? 'text-neutral-900' : 'text-neutral-400 line-through'}>
-                  {product.stock > 0 ? `คงเหลือ ${product.stock} ชิ้น` : 'สินค้าหมด'}
+                <span
+                  className={
+                    inStock ? 'text-neutral-900' : 'text-neutral-400 line-through'
+                  }
+                >
+                  {product.isUnlimited
+                    ? 'พร้อมส่งทันที'
+                    : inStock
+                      ? `คงเหลือ ${product.stock} ชิ้น`
+                      : 'สินค้าหมด'}
                 </span>
               </div>
 
@@ -142,7 +152,7 @@ export const ProductQuickViewModal: React.FC = () => {
               </p>
 
               {/* Quantity Selector & Add to Cart */}
-              {product.stock > 0 && (
+              {inStock && (
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <div className="flex items-center h-11 border border-neutral-300 rounded-md">
                     <button
@@ -156,7 +166,9 @@ export const ProductQuickViewModal: React.FC = () => {
                       {quantity}
                     </span>
                     <button
-                      onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+                      onClick={() =>
+                        setQuantity((q) => (product.isUnlimited ? q + 1 : Math.min(product.stock, q + 1)))
+                      }
                       className="px-3 h-full text-neutral-500 hover:text-neutral-900 transition-colors"
                       aria-label="เพิ่มจำนวน"
                     >

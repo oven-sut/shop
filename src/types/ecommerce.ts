@@ -24,6 +24,13 @@ export interface Product {
   isFeatured?: boolean;
   /** บริการ (เช่น รับทำเว็บไซต์) — ไม่แสดงในแคตาล็อกหน้าแรก และไม่นับ stock รวมของร้าน */
   isService?: boolean;
+  /**
+   * ขายได้ไม่จำกัด — ส่งรหัสใบเดิมให้ทุกคนโดยไม่ตัดออกจากคลัง
+   *
+   * `stock` ของสินค้าแบบนี้ไม่มีความหมาย อย่าเอาไปคิดว่าเหลือเท่าไรหรือหมดหรือยัง
+   * ให้เช็ค `isUnlimited` ก่อนเสมอ
+   */
+  isUnlimited?: boolean;
 }
 
 /** A product in the cart — still linked to the live product record. */

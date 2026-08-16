@@ -59,6 +59,7 @@ export function toProduct(row: Row): Product {
     reviews,
     isFeatured: Boolean(row.is_featured),
     isService: Boolean(row.is_service),
+    isUnlimited: Boolean(row.is_unlimited),
   };
 }
 
@@ -167,6 +168,7 @@ export function toProductRow(input: Row): Row {
   if (input.badge !== undefined) row.badge = optionalStr(input.badge) ?? null;
   if (input.isFeatured !== undefined) row.is_featured = Boolean(input.isFeatured);
   if (input.isService !== undefined) row.is_service = Boolean(input.isService);
+  if (input.isUnlimited !== undefined) row.is_unlimited = Boolean(input.isUnlimited);
 
   return row;
 }

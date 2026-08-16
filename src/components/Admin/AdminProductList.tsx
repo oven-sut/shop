@@ -131,29 +131,32 @@ export const AdminProductList: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <Badge
                       className={`font-bold px-2 py-0.5 rounded text-[11px] border-0 ${
-                        p.stock <= 5
+                        !p.isUnlimited && p.stock <= 5
                           ? 'bg-neutral-50 text-neutral-900 border border-neutral-400'
                           : 'bg-neutral-100 text-neutral-700'
                       }`}
                     >
-                      {p.stock} ชิ้น
+                      {p.isUnlimited ? 'ไม่จำกัด' : `${p.stock} ชิ้น`}
                     </Badge>
-                    <div className="flex items-center bg-neutral-50 border border-neutral-200 rounded">
-                      <button
-                        onClick={() => handleStockAdjustment(p, -1)}
-                        className="px-2 py-1 hover:bg-neutral-200 text-neutral-600"
-                        aria-label={`ลดสต็อก ${p.name}`}
-                      >
-                        -
-                      </button>
-                      <button
-                        onClick={() => handleStockAdjustment(p, 1)}
-                        className="px-2 py-1 hover:bg-neutral-200 text-neutral-600 border-l border-neutral-200"
-                        aria-label={`เพิ่มสต็อก ${p.name}`}
-                      >
-                        +
-                      </button>
-                    </div>
+                    {/* ของที่ขายไม่จำกัดไม่มีตัวเลขให้บวกลบ */}
+                    {!p.isUnlimited && (
+                      <div className="flex items-center bg-neutral-50 border border-neutral-200 rounded">
+                        <button
+                          onClick={() => handleStockAdjustment(p, -1)}
+                          className="px-2 py-1 hover:bg-neutral-200 text-neutral-600"
+                          aria-label={`ลดสต็อก ${p.name}`}
+                        >
+                          -
+                        </button>
+                        <button
+                          onClick={() => handleStockAdjustment(p, 1)}
+                          className="px-2 py-1 hover:bg-neutral-200 text-neutral-600 border-l border-neutral-200"
+                          aria-label={`เพิ่มสต็อก ${p.name}`}
+                        >
+                          +
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -253,32 +256,36 @@ export const AdminProductList: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <Badge
                           className={`font-bold px-2 py-0.5 rounded text-[11px] border-0 ${
-                            p.stock <= 0
+                            p.isUnlimited
+                              ? 'bg-neutral-100 text-neutral-700'
+                              : p.stock <= 0
                               ? 'bg-neutral-50 text-neutral-900 border border-neutral-400'
                               : p.stock <= 5
                               ? 'bg-neutral-50 text-neutral-700 border border-neutral-400'
                               : 'bg-neutral-100 text-neutral-700'
                           }`}
                         >
-                          {p.stock} ชิ้น
+                          {p.isUnlimited ? 'ไม่จำกัด' : `${p.stock} ชิ้น`}
                         </Badge>
                         
-                        <div className="flex items-center bg-neutral-50 border border-neutral-200 rounded">
-                          <button
-                            onClick={() => handleStockAdjustment(p, -1)}
-                            className="px-1.5 py-0.5 hover:bg-neutral-200 text-neutral-600"
-                            title="ลดสต็อก 1"
-                          >
-                            -
-                          </button>
-                          <button
-                            onClick={() => handleStockAdjustment(p, 1)}
-                            className="px-1.5 py-0.5 hover:bg-neutral-200 text-neutral-600 border-l border-neutral-200"
-                            title="เพิ่มสต็อก 1"
-                          >
-                            +
-                          </button>
-                        </div>
+                        {!p.isUnlimited && (
+                          <div className="flex items-center bg-neutral-50 border border-neutral-200 rounded">
+                            <button
+                              onClick={() => handleStockAdjustment(p, -1)}
+                              className="px-1.5 py-0.5 hover:bg-neutral-200 text-neutral-600"
+                              title="ลดสต็อก 1"
+                            >
+                              -
+                            </button>
+                            <button
+                              onClick={() => handleStockAdjustment(p, 1)}
+                              className="px-1.5 py-0.5 hover:bg-neutral-200 text-neutral-600 border-l border-neutral-200"
+                              title="เพิ่มสต็อก 1"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
 

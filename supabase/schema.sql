@@ -163,6 +163,17 @@ create index if not exists products_featured_idx on public.products (created_at 
 -- และไม่นับ stock ของแถวนี้รวมเข้ากับ "จำนวนสินค้าที่เหลือ" ของทั้งร้าน
 alter table public.products add column if not exists is_service boolean not null default false;
 
+/*
+ * ขายได้ไม่จำกัด — ของที่ส่งมอบซ้ำได้โดยไม่หมด
+ *
+ * เช่นลิงก์ดาวน์โหลด คีย์ที่ใช้ร่วมกันได้ หรือรหัสส่วนลดที่แจกได้ทุกคน สินค้าพวกนี้
+ * ไม่มี "จำนวนที่เหลือ" ให้ตัด คอลัมน์ stock ของแถวนี้จึงไม่มีความหมายและไม่มีอะไร
+ * ไปแตะมันอีก: place_order ไม่ตัด, refund_order ไม่คืน, ทริกเกอร์คลังรหัสไม่เขียนทับ
+ *
+ * ลูกค้าที่ซื้อจะได้รหัสใบแรกในคลังของสินค้าชิ้นนั้นทุกคน โดยรหัสไม่ถูกตัดออกจากคลัง
+ */
+alter table public.products add column if not exists is_unlimited boolean not null default false;
+
 drop trigger if exists products_touch_updated_at on public.products;
 create trigger products_touch_updated_at
   before update on public.products
@@ -430,6 +441,7 @@ declare
   v_order_id text;
   v_settings public.store_settings;
   v_claimed integer;
+  v_code public.product_codes;
 begin
   if v_user is null then
     raise exception 'not_authenticated' using errcode = '28000';
@@ -462,13 +474,16 @@ begin
       raise exception 'product_not_found:%', v_item ->> 'product_id' using errcode = '22023';
     end if;
 
-    if v_product.stock < v_quantity then
-      raise exception 'out_of_stock:%', v_product.name using errcode = '22023';
-    end if;
+    -- สินค้าที่ขายไม่จำกัดไม่มีสต็อกให้เช็คหรือตัด ที่เหลือคิดราคาเหมือนกันทุกอย่าง
+    if not v_product.is_unlimited then
+      if v_product.stock < v_quantity then
+        raise exception 'out_of_stock:%', v_product.name using errcode = '22023';
+      end if;
 
-    update public.products
-    set stock = stock - v_quantity
-    where id = v_product.id;
+      update public.products
+      set stock = stock - v_quantity
+      where id = v_product.id;
+    end if;
 
     v_subtotal := v_subtotal + (v_product.price * v_quantity);
 
@@ -535,8 +550,37 @@ begin
   for v_item in select * from jsonb_array_elements(v_items) loop
     v_quantity := (v_item ->> 'quantity')::integer;
 
+    select * into v_product
+    from public.products
+    where id = (v_item ->> 'product_id')::uuid;
+
+    if v_product.is_unlimited then
+      -- ── ของที่ขายซ้ำได้ไม่จำกัด ────────────────────────────────────────
+      -- ส่งรหัสใบแรกในคลังให้ทุกคน และไม่แตะ claimed_at เพราะรหัสใบนี้ไม่ได้
+      -- ถูกใช้ไป คนถัดไปที่ซื้อต้องได้ใบเดียวกัน
+      select * into v_code
+      from public.product_codes
+      where product_id = v_product.id
+      order by created_at
+      limit 1;
+
+      -- ยังไม่ได้ลงรหัสไว้ = ขายได้แต่ยังไม่มีอะไรส่งมอบ (เหมือนสินค้าที่คลังว่าง)
+      if found then
+        insert into public.order_fulfillments (
+          order_id, user_id, supplier, supplier_ref, game_title,
+          account_username, account_password, code_requests_max, status
+        )
+        select
+          v_order_id, v_user, 'manual',
+          -- supplier_ref unique ทั้งตาราง และรหัสใบเดิมถูกส่งซ้ำได้เรื่อย ๆ
+          -- จึงผูก ref กับคำสั่งซื้อ ไม่ใช่กับแถวในคลังแบบของที่ตัดสต็อก
+          'manual-' || v_order_id || '-' || v_product.id::text || '-' || g.n::text,
+          v_item ->> 'name', v_code.label, v_code.code, 0, 'delivered'
+        from generate_series(1, v_quantity) as g(n);
+      end if;
+
     -- สินค้าที่ไม่เคยมีรหัสในคลังเลย = ขายแบบอื่น (ซัพพลายเออร์ หรือไม่ต้องส่งมอบ)
-    if exists (
+    elsif exists (
       select 1 from public.product_codes
       where product_id = (v_item ->> 'product_id')::uuid
     ) then
@@ -884,9 +928,19 @@ create table if not exists public.product_codes (
   created_at timestamptz not null default now()
 );
 
--- รหัสซ้ำในสินค้าเดียวกันคือความผิดพลาดเสมอ — เท่ากับขายของชิ้นเดิมสองรอบ
-create unique index if not exists product_codes_unique_idx
-  on public.product_codes (product_id, code);
+/*
+ * รหัสซ้ำในสินค้าเดียวกันได้
+ *
+ * เดิมมี unique index กันไว้ เพราะคิดว่าหนึ่งแถวคือ "รหัสหนึ่งใบ" การมีรหัสเดียวกัน
+ * สองแถวจึงแปลว่าจะขายของชิ้นเดิมสองรอบ แต่ของที่ร้านขายจริงไม่ได้เป็นแบบนั้นทั้งหมด
+ * — คีย์ชุดเดียวที่ซื้อมาหลายสิทธิ์ หรือรหัสส่วนลดที่แจกได้หลายคน ก็มีของให้ส่งมอบ
+ * จริงตามจำนวนแถว
+ *
+ * นิยามจึงเปลี่ยนเป็น "หนึ่งแถวคือของหนึ่งชิ้นที่ขายได้หนึ่งครั้ง" โดยไม่สนว่าข้อความ
+ * ในช่อง code จะซ้ำกับแถวอื่นไหม ส่วนการกันขายซ้ำยังอยู่ครบที่ claimed_at กับ
+ * `for update skip locked` ใน place_order ซึ่งเป็นตัวที่ทำหน้าที่นี้จริงมาตลอด
+ */
+drop index if exists public.product_codes_unique_idx;
 
 -- คิวของที่ยังขายได้ ใช้ตอนจองรหัสใน place_order
 create index if not exists product_codes_available_idx
@@ -919,13 +973,15 @@ begin
     v_product := new.product_id;
   end if;
 
+  -- สินค้าที่ขายไม่จำกัดไม่มีสต็อกให้คำนวณ คลังรหัสของมันเป็นแค่ "รหัสที่จะส่งให้"
+  -- ไม่ใช่ "ของที่เหลืออยู่" — เขียนทับ stock ของมันจะกลายเป็นเลขที่ไม่มีความหมาย
   update public.products
   set stock = (
     select count(*)
     from public.product_codes
     where product_id = v_product and claimed_at is null
   )
-  where id = v_product;
+  where id = v_product and not is_unlimited;
 
   return null;
 end;
@@ -973,11 +1029,12 @@ begin
     return v_order; -- คืนไปแล้ว ไม่คืนซ้ำ
   end if;
 
-  -- คืนสต็อกที่ตัดไปตอนสั่งซื้อ
+  -- คืนสต็อกที่ตัดไปตอนสั่งซื้อ — ของที่ขายไม่จำกัดไม่เคยถูกตัด จึงไม่มีอะไรให้คืน
   for v_item in select * from jsonb_array_elements(v_order.items) loop
     update public.products
     set stock = stock + coalesce((v_item ->> 'quantity')::integer, 0)
-    where id = (v_item ->> 'product_id')::uuid;
+    where id = (v_item ->> 'product_id')::uuid
+      and not is_unlimited;
   end loop;
 
   -- คืนรหัสเข้าคลังให้ขายใหม่ได้ ต้องอยู่หลังลูปคืนสต็อกด้านบน เพราะทริกเกอร์

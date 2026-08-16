@@ -9,7 +9,11 @@ export const StoreStatsBar: React.FC = () => {
 
   // บริการ (เช่น รับทำเว็บไซต์) ไม่ใช่ของนับสต็อกได้จริง — ไม่นับรวมในสถิติของร้าน
   const catalogProducts = products.filter((p) => !p.isService);
-  const totalStockRemaining = catalogProducts.reduce((sum, p) => sum + p.stock, 0);
+  // ของที่ขายไม่จำกัดก็เหมือนกัน: คอลัมน์ stock ของมันเป็นเลขที่ไม่มีใครดูแล
+  // บวกเข้าไปจะได้ "จำนวนสินค้าที่เหลือ" ที่ไม่ตรงกับอะไรเลย
+  const totalStockRemaining = catalogProducts
+    .filter((p) => !p.isUnlimited)
+    .reduce((sum, p) => sum + p.stock, 0);
 
   const stats = [
     { label: 'จำนวนผู้ใช้งาน', value: storefrontStats.totalUsers, unit: 'คน', icon: Users },

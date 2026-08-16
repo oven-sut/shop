@@ -36,7 +36,6 @@ function parseCodes(input: unknown): { label: string | null; code: string }[] {
     lines = input.split(/\r?\n/);
   }
 
-  const seen = new Set<string>();
   const parsed: { label: string | null; code: string }[] = [];
 
   for (const line of lines) {
@@ -50,10 +49,10 @@ function parseCodes(input: unknown): { label: string | null; code: string }[] {
       MAX_CODE_LENGTH
     );
 
-    // Duplicates inside one paste would make the insert fail as a whole against
-    // the unique index, so collapse them here rather than reject the batch.
-    if (!code || seen.has(code)) continue;
-    seen.add(code);
+    // Repeats are kept, not collapsed. A line is a unit of stock, so pasting the
+    // same key ten times is how a shop stocks ten sales of it — the pool used to
+    // refuse that and silently hand back one.
+    if (!code) continue;
 
     parsed.push({ label: label?.slice(0, MAX_CODE_LENGTH) ?? null, code });
   }
@@ -121,14 +120,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const note = typeof body.note === 'string' ? body.note.trim().slice(0, 500) || null : null;
 
+    // insert ตรง ๆ ไม่ใช่ upsert: รหัสซ้ำไม่ใช่ความขัดแย้งอีกต่อไป หนึ่งบรรทัด
+    // คือของหนึ่งชิ้น วางรหัสเดิมสิบบรรทัดก็คือมีของสิบชิ้นที่ขายได้สิบครั้ง
     const supabase = await createRouteClient();
     const { data, error } = await supabase
       .from('product_codes')
-      .upsert(
-        entries.map((entry) => ({ product_id: id, code: entry.code, label: entry.label, note })),
-        // รหัสที่มีอยู่แล้วในสินค้าชิ้นนี้ให้ข้ามไป การเผลอวางซ้ำเป็นเรื่องปกติ
-        // และไม่ควรทำให้ทั้งชุดล้ม
-        { onConflict: 'product_id,code', ignoreDuplicates: true }
+      .insert(
+        entries.map((entry) => ({ product_id: id, code: entry.code, label: entry.label, note }))
       )
       .select('id');
 
@@ -139,11 +137,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json(
       {
         success: true,
-        message:
-          added === entries.length
-            ? `เพิ่มรหัสเข้าคลัง ${added} รายการแล้ว`
-            : `เพิ่มรหัสเข้าคลัง ${added} รายการ (ข้ามรหัสที่มีอยู่แล้ว ${entries.length - added})`,
-        data: { added, skipped: entries.length - added },
+        message: `เพิ่มรหัสเข้าคลัง ${added} รายการแล้ว`,
+        data: { added, skipped: 0 },
       },
       { status: 201 }
     );

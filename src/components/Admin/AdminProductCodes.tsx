@@ -19,6 +19,11 @@ interface ProductCode {
 
 interface Props {
   productId: string;
+  /**
+   * สินค้าที่ขายไม่จำกัด ใช้คลังนี้คนละความหมาย: รหัสใบแรกคือของที่ส่งให้ทุกคน
+   * ไม่ใช่คิวของที่จะถูกตัดออกทีละใบ
+   */
+  isUnlimited?: boolean;
   /** Lets the modal disable its stock field once the pool is in charge of it. */
   onStockChange?: (info: { available: number; managed: boolean }) => void;
 }
@@ -29,8 +34,14 @@ interface Props {
  * หนึ่งบรรทัดคือของหนึ่งชิ้นที่ขายได้หนึ่งครั้ง พอมีรหัสอยู่ในคลัง สต็อกของสินค้า
  * จะถูกคำนวณจากจำนวนรหัสที่ยังไม่ถูกขายโดยอัตโนมัติ (ทริกเกอร์ในฐานข้อมูล)
  * แอดมินจึงไม่ต้องมาไล่แก้ตัวเลขสต็อกเอง และเลขสองตัวนี้ไม่มีทางไม่ตรงกัน
+ *
+ * รหัสซ้ำกันได้ — สิบบรรทัดที่เป็นคีย์เดียวกันคือของสิบชิ้นที่ขายได้สิบครั้ง
  */
-export const AdminProductCodes: React.FC<Props> = ({ productId, onStockChange }) => {
+export const AdminProductCodes: React.FC<Props> = ({
+  productId,
+  isUnlimited = false,
+  onStockChange,
+}) => {
   const { showToast, refreshProducts } = useShop();
 
   const [codes, setCodes] = useState<ProductCode[]>([]);
@@ -102,7 +113,10 @@ export const AdminProductCodes: React.FC<Props> = ({ productId, onStockChange })
         <div>
           <label className="font-semibold text-neutral-700">คลังรหัสสำหรับขาย</label>
           <p className="text-[11px] text-neutral-400 mt-0.5">
-            หนึ่งบรรทัดต่อหนึ่งชิ้น · ใส่ <code className="font-mono">ชื่อผู้ใช้|รหัสผ่าน</code>{' '}
+            {isUnlimited
+              ? 'ขายไม่จำกัด — ลูกค้าทุกคนจะได้รหัสใบแรกในรายการนี้ ใบอื่นยังไม่ถูกใช้'
+              : 'หนึ่งบรรทัดต่อหนึ่งชิ้น'}{' '}
+            · ใส่ <code className="font-mono">ชื่อผู้ใช้|รหัสผ่าน</code>{' '}
             ถ้าเป็นไอดีเกม หรือใส่รหัสอย่างเดียวก็ได้
           </p>
         </div>
@@ -138,7 +152,9 @@ export const AdminProductCodes: React.FC<Props> = ({ productId, onStockChange })
         />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-[11px] text-neutral-400">
-            รหัสที่มีอยู่แล้วในสินค้าชิ้นนี้จะถูกข้าม ไม่นับซ้ำ
+            {isUnlimited
+              ? 'ขายไม่จำกัดใช้แค่ใบแรก ใส่เพิ่มได้แต่ยังไม่ถูกหยิบไปใช้'
+              : 'ใส่รหัสเดิมซ้ำได้ นับเป็นของคนละชิ้น'}
           </span>
           <Button
             type="button"
