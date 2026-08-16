@@ -6,6 +6,7 @@ import { Navbar } from '../components/Navbar';
 import { HeroImageBanner } from '../components/HeroImageBanner';
 import { AnnouncementBanner } from '../components/AnnouncementBanner';
 import { StoreStatsBar } from '../components/StoreStatsBar';
+import { RecentPurchasesBar } from '../components/RecentPurchasesBar';
 import { FeatureBar } from '../components/FeatureBar';
 import { ProductCard } from '../components/ProductCard';
 import { ProductGridSkeleton } from '../components/ProductCardSkeleton';
@@ -45,6 +46,7 @@ function StorefrontContent() {
           <HeroImageBanner />
           <AnnouncementBanner />
           <StoreStatsBar />
+          <RecentPurchasesBar />
         </div>
 
         {/* Feature Highlights */}
