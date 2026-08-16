@@ -367,7 +367,9 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <ShopProvider>
+    // ไม่ต้องมีแผ่นคลุม: ฟอร์มล็อกอินใช้ได้ทันทีโดยไม่ต้องรอ API และคนที่ยังไม่ล็อกอิน
+    // จะได้ 401 จากทุกเส้นอยู่แล้ว บังไว้ก็มีแต่ทำให้ช้า
+    <ShopProvider splash={false}>
       <Suspense>
         <LoginContent />
       </Suspense>

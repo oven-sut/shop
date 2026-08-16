@@ -11,6 +11,7 @@ import {
   WalletTransaction,
 } from '../types/ecommerce';
 import { DEFAULT_SETTINGS, StoreSettings } from '../lib/settings';
+import { SplashScreen } from '../components/SplashScreen';
 import { useAuth } from './AuthContext';
 
 interface Toast {
@@ -135,7 +136,17 @@ const readStored = <T,>(key: string, fallback: T): T => {
   }
 };
 
-export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+/**
+ * `splash` คุมแผ่นคลุมตอนโหลดครั้งแรก
+ *
+ * เปิดไว้เป็นค่าเริ่มต้นเพราะหน้าที่มี provider นี้ล้วนต้องรอข้อมูลก่อนถึงจะมีอะไรให้ดู
+ * ยกเว้นหน้า login ที่ฟอร์มใช้งานได้ทันทีและ API ทุกเส้นจะตอบ 401 อยู่แล้ว
+ * เอาแผ่นคลุมไปบังไว้มีแต่ทำให้ช้าโดยไม่ได้อะไร
+ */
+export const ShopProvider: React.FC<{ children: React.ReactNode; splash?: boolean }> = ({
+  children,
+  splash = true,
+}) => {
   const { isAdmin } = useAuth();
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -603,6 +614,10 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         showToast,
       }}
     >
+      {/* Covers the page until the first load settles. Rendered here so every
+          page that has this provider gets it without opting in — and above
+          `children`, which keep loading underneath. */}
+      {splash && <SplashScreen loading={isLoading} storeName={settings.storeName} />}
       {children}
     </ShopContext.Provider>
   );
