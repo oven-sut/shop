@@ -3,11 +3,11 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Store, LayoutDashboard, Package, Boxes, ShoppingCart, Users, BarChart3, Settings } from 'lucide-react';
+import { Store, LayoutDashboard, Package, Boxes, ShoppingCart, Users, BarChart3, ScrollText, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-type AdminTab = 'overview' | 'products' | 'supplier' | 'orders' | 'users' | 'analytics' | 'settings';
+type AdminTab = 'overview' | 'products' | 'supplier' | 'orders' | 'users' | 'analytics' | 'audit' | 'settings';
 
 interface AdminHeaderProps {
   activeTab: AdminTab;
@@ -27,6 +27,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeTab, setActiveTa
     { id: 'orders', label: 'คำสั่งซื้อ (Orders)', short: 'คำสั่งซื้อ', icon: ShoppingCart },
     { id: 'users', label: 'ผู้ใช้งาน (Users)', short: 'ผู้ใช้งาน', icon: Users },
     { id: 'analytics', label: 'วิเคราะห์ & รายงาน', short: 'วิเคราะห์', icon: BarChart3 },
+    { id: 'audit', label: 'บันทึกระบบ (Log)', short: 'บันทึก', icon: ScrollText },
     { id: 'settings', label: 'ตั้งค่าร้านค้า', short: 'ตั้งค่า', icon: Settings }
   ];
 

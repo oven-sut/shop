@@ -15,7 +15,7 @@ Tailwind CSS 4, Base UI/shadcn, Supabase (Auth + Postgres + Storage) และ R
    │     • ยังไม่ล็อกอิน → page เด้งไป /login  |  /api/* ตอบ 401
    │     • /docs และ /openapi.json → 404 ถ้าไม่ใช่แอดมิน
    │     • /login /auth/* /terms /privacy /cookies /contact เปิดสาธารณะ
-   │     • /api/topups/webhook/* เปิดสาธารณะ (เกตเวย์ไม่มีบัญชีในร้าน — body ไม่ถูกเชื่อถือ)
+   │     • /api/topups/webhook/* และ /api/cron/* เปิดสาธารณะ (ไม่มี session — กันด้วย secret ในพาธ)
    │
    ├─ Pages (Server Components + Client Components)
    │     • src/app/layout.tsx อ่าน user จาก cookie แล้วส่งเข้า AuthProvider
@@ -81,6 +81,10 @@ src/
 │     ├─ topups/webhook/[secret] POST เกตเวย์แจ้งว่าจ่ายแล้ว (เปิดสาธารณะ)
 │     ├─ users                 GET รายชื่อผู้ใช้ | POST สร้างบัญชี (แอดมิน)
 │     │  └─ [id]               PATCH สิทธิ์/ระงับ/ชื่อ | DELETE ลบถาวร | [id]/wallet POST ปรับยอดเงิน
+│     ├─ audit                 GET บันทึกระบบ (แอดมิน, อ่านอย่างเดียว)
+│     ├─ backups               GET รายการ+ลิงก์ดาวน์โหลด | POST สำรองเดี๋ยวนี้ (แอดมิน)
+│     ├─ cron/backup/[secret]  GET|POST ตัวตั้งเวลาเรียกให้สำรอง (เปิดสาธารณะ)
+│     ├─ stats/dashboard       GET ตัวเลขทั้งหมดของหน้าภาพรวม (แอดมิน)
 │     ├─ settings              GET อ่าน | PATCH แก้ (แอดมิน)
 │     └─ uploads               POST อัปโหลดรูปสินค้า (แอดมิน)
 │
@@ -96,6 +100,8 @@ src/
 │  ├─ topup-charge.ts          ← เติมเงินจาก charge ที่เกตเวย์ยืนยันแล้ว (ใช้ร่วม 2 ทาง)
 │  ├─ topup-channels.ts        ← สวิตช์เปิด/ปิดช่องทางเติมเงิน (ใช้ร่วมทั้ง 3 ฝั่ง)
 │  ├─ contact.ts               ← ช่องทางติดต่อ + กฎว่าค่าไหนทำเป็นลิงก์ได้
+│  ├─ audit.ts                 ← recordAudit() เขียนบันทึกระบบ (ห้ามทำให้งานหลักล้ม)
+│  ├─ backup.ts                ← ดัมป์ทุกตาราง → gzip → Storage + ลบไฟล์เก่า
 │  ├─ gateway/                 ← เกตเวย์รับชำระเงิน: types.ts, omise.ts, index.ts
 │  ├─ rdcw.ts                  ← เรียก RDCW Slip Verify และ normalise ผลลัพธ์
 │  └─ supabase/
@@ -109,7 +115,7 @@ src/
 ├─ components/
 │  ├─ CookieConsent.tsx        ← แถบยินยอมคุกกี้
 │  ├─ Navbar, HeroBanner, FeatureBar, ProductCard, CartDrawer, CheckoutModal, ...
-│  ├─ Admin/                   ← Header, Overview, ProductList, ProductModal, OrderList, Users, Analytics
+│  ├─ Admin/                   ← Header, Overview(dashboard), ProductList, OrderList, Users, Analytics, AuditLog
 │  └─ ui/                      ← shadcn/Base UI
 │
 └─ types/                      ← auth.ts, ecommerce.ts
@@ -145,6 +151,7 @@ API ทุกเส้นต้องยืนยันตัวตน ราย
 | `topups` | สลิปที่ผ่านการตรวจแล้ว, `trans_ref` unique | ฟังก์ชันเท่านั้น |
 | `orders` | คำสั่งซื้อ + snapshot ของรายการสินค้า | `place_order()` |
 | `products` `coupons` `store_settings` | ข้อมูลร้าน | แอดมิน (ผ่าน RLS) |
+| `audit_logs` | ใครทำอะไรกับอะไร | service key เท่านั้น (อ่าน: แอดมิน) |
 
 ไม่มี RLS policy ไหนให้ client เขียน `wallets` / `topups` / `wallet_transactions` ได้เลย
 

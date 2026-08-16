@@ -9,6 +9,7 @@ import { AdminOrderList } from '../../components/Admin/AdminOrderList';
 import { AdminUsers } from '../../components/Admin/AdminUsers';
 import { AdminAnalytics } from '../../components/Admin/AdminAnalytics';
 import { AdminSupplier } from '../../components/Admin/AdminSupplier';
+import { AdminAuditLog } from '../../components/Admin/AdminAuditLog';
 import { ToastContainer } from '../../components/ToastContainer';
 import Link from 'next/link';
 import {
@@ -493,7 +494,7 @@ function StoreSettingsPanel() {
 function AdminContent() {
   const { isLoading } = useShop();
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'supplier' | 'orders' | 'users' | 'analytics' | 'settings'
+    'overview' | 'products' | 'supplier' | 'orders' | 'users' | 'analytics' | 'audit' | 'settings'
   >('overview');
 
   return (
@@ -518,6 +519,8 @@ function AdminContent() {
         {activeTab === 'users' && <AdminUsers />}
 
         {activeTab === 'analytics' && <AdminAnalytics />}
+
+        {activeTab === 'audit' && <AdminAuditLog />}
 
         {activeTab === 'settings' &&
           (isLoading ? (

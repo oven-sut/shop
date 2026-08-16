@@ -2318,6 +2318,209 @@
           }
         }
       }
+    },
+    "/api/audit": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "บันทึกระบบ (audit log)",
+        "operationId": "listAuditLogs",
+        "description": "อ่านได้เฉพาะแอดมิน · เขียนไม่ได้เลยจากทุกทาง — บรรทัดใหม่มาจาก service key ฝั่งเซิร์ฟเวอร์เท่านั้น",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "ISO timestamp — ขอหน้าถัดไป (keyset paging)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "description": "ระบุตรง ๆ เช่น order.status หรือลงท้ายจุดเพื่อเอาทั้งกลุ่ม เช่น topup.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actorId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "ค้นในข้อความสรุป",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/backups": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "รายการไฟล์สำรอง + ลิงก์ดาวน์โหลด",
+        "operationId": "listBackups",
+        "description": "bucket เป็น private — ลิงก์ที่คืนมาถูกเซ็นชื่อและหมดอายุใน 120 วินาที",
+        "parameters": [
+          {
+            "name": "download",
+            "in": "query",
+            "description": "ชื่อไฟล์ที่อยากได้ลิงก์",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "503": {
+            "description": "อ่าน bucket ไม่ได้ (ยังไม่ได้รัน schema.sql ล่าสุด)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "สำรองข้อมูลเดี๋ยวนี้",
+        "operationId": "runBackupNow",
+        "description": "โค้ดตัวเดียวกับที่ cron เรียก ต่างแค่คนกด · จำกัด 3 ครั้ง/ชั่วโมง",
+        "responses": {
+          "200": {
+            "description": "สำรองสำเร็จ"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "สำรองถี่เกินไป",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/cron/backup/{secret}": {
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "ตัวตั้งเวลาเรียกให้สำรองข้อมูล (ไม่ต้องล็อกอิน)",
+        "operationId": "cronBackup",
+        "security": [],
+        "description": "เปิดสาธารณะเพราะตัวตั้งเวลาไม่มี session · secret ในพาธคือด่านเดียวของเส้นนี้ ปฏิบัติกับมันเหมือนรหัสผ่าน · รองรับ GET ด้วยเพราะบางตัวตั้งเวลาส่งได้แต่ GET",
+        "parameters": [
+          {
+            "name": "secret",
+            "in": "path",
+            "required": true,
+            "description": "ค่าเดียวกับ BACKUP_CRON_SECRET",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำรองสำเร็จ"
+          },
+          "404": {
+            "description": "secret ไม่ตรง หรือยังไม่ได้ตั้ง BACKUP_CRON_SECRET"
+          },
+          "429": {
+            "description": "เรียกถี่เกินไป",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/api/stats/dashboard": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "ตัวเลขทั้งหมดของหน้าภาพรวม",
+        "operationId": "getDashboard",
+        "description": "รวมทุกอย่างในคำขอเดียวเพื่อให้เป็นภาพ ณ วินาทีเดียวกัน: ยอดขาย/คำสั่งซื้อ/กระเป๋าเงิน/เติมเงินแยกช่องทาง/ขายดี/สต็อกต่ำ/ผู้ใช้/บันทึกล่าสุด/ไฟล์สำรองล่าสุด",
+        "responses": {
+          "200": {
+            "description": "สำเร็จ"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "500": {
+            "$ref": "#/components/responses/ServerError"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2373,6 +2576,16 @@
       },
       "ServerError": {
         "description": "ข้อผิดพลาดฝั่งเซิร์ฟเวอร์",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "เฉพาะผู้ดูแลระบบเท่านั้น",
         "content": {
           "application/json": {
             "schema": {
