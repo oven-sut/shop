@@ -2656,6 +2656,141 @@
           }
         }
       }
+    },
+    "/api/newsletter": {
+      "post": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "สมัครรับข่าวสาร",
+        "operationId": "subscribeNewsletter",
+        "description": "สมัครซ้ำด้วยอีเมลเดิม = อัปเดตแถวเดิม (upsert บนอีเมล) และล้างสถานะยกเลิกให้ · คืนโค้ดต้อนรับถ้าแอดมินตั้งไว้",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "source": {
+                    "type": "string",
+                    "default": "footer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "สำเร็จ"
+          },
+          "400": {
+            "description": "อีเมลไม่ถูกต้อง",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "description": "สมัครถี่เกินไป",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Wallet"
+        ],
+        "summary": "ยกเลิกรับข่าวสาร",
+        "operationId": "unsubscribeNewsletter",
+        "description": "ใส่ ?token= จากลิงก์ท้ายอีเมล (ไม่ต้องล็อกอิน) หรือเรียกตอนล็อกอินเพื่อยกเลิกของตัวเอง · แอดมินระบุ ?email= เพื่อถอดคนอื่นได้",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ยกเลิกแล้ว"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "รายชื่อผู้รับข่าว (แอดมิน)",
+        "operationId": "listNewsletter",
+        "parameters": [
+          {
+            "name": "all",
+            "in": "query",
+            "description": "1 = รวมคนที่ยกเลิกแล้ว",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "description": "csv = ดาวน์โหลดไฟล์",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "csv"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3358,6 +3493,10 @@
             "type": "boolean",
             "default": true,
             "description": "ปิดแล้วสินค้าที่มาจากซัพพลายเออร์หายจากหน้าร้านและ place_order() ปฏิเสธ"
+          },
+          "newsletterWelcomeCoupon": {
+            "type": "string",
+            "description": "โค้ดต้อนรับที่โชว์ให้คนเพิ่งสมัครรับข่าว (เว้นว่าง = ไม่แจก)"
           }
         }
       },

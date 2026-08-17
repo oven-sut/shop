@@ -1,15 +1,48 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useShop } from '../context/ShopContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 
 export const Footer: React.FC = () => {
   const { isAdmin } = useAuth();
+  const { showToast } = useShop();
+
+  const [email, setEmail] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [coupon, setCoupon] = useState<string | null>(null);
+
+  /**
+   * สมัครรับข่าวสารจริง — เดิมฟอร์มนี้ `preventDefault()` เฉย ๆ แล้วไม่ทำอะไรต่อ
+   *
+   * สมัครซ้ำด้วยอีเมลเดิมไม่เป็นไร ฝั่งเซิร์ฟเวอร์ upsert ให้เป็นแถวเดียวเสมอ
+   */
+  const subscribe = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!email.trim()) return;
+
+    setIsSending(true);
+    const response = await fetch('/api/newsletter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, source: 'footer' }),
+    });
+    const body = await response.json().catch(() => ({}));
+    setIsSending(false);
+
+    showToast(body.message || (body.success ? 'สมัครรับข่าวสารแล้ว' : 'สมัครไม่สำเร็จ'), body.success ? 'success' : 'warning');
+
+    if (body.success) {
+      setEmail('');
+      setCoupon(body.data?.coupon ?? null);
+    }
+  };
 
   return (
     <footer className="bg-white border-t border-neutral-200 text-neutral-600 mt-20">
@@ -77,19 +110,35 @@ export const Footer: React.FC = () => {
               รับข่าวสาร &amp; โค้ดส่วนลด
             </h4>
             <p className="text-xs text-neutral-500">ใส่อีเมลเพื่อรับข่าวแอปใหม่และโปรโมชัน</p>
-            <form onSubmit={(e) => e.preventDefault()} className="flex gap-2">
+            <form onSubmit={subscribe} className="flex gap-2">
               <Input
                 type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSending}
                 placeholder="อีเมลของคุณ..."
                 className="h-10 w-full bg-white border-neutral-300 rounded-md text-xs text-neutral-900 placeholder-neutral-400"
               />
               <Button
                 type="submit"
-                className="h-10 bg-neutral-900 hover:bg-neutral-700 text-white font-medium text-xs px-5 rounded-md transition-colors shrink-0 border-0"
+                disabled={isSending}
+                className="h-10 bg-neutral-900 hover:bg-neutral-700 text-white font-medium text-xs px-5 rounded-md transition-colors shrink-0 border-0 disabled:opacity-50"
               >
+                {isSending && <Spinner className="mr-1.5" />}
                 สมัคร
               </Button>
             </form>
+
+            {/* โค้ดต้อนรับโผล่ก็ต่อเมื่อแอดมินตั้งไว้จริง — ไม่สัญญาสิ่งที่ยังไม่มี */}
+            {coupon && (
+              <p className="text-xs text-neutral-900">
+                โค้ดส่วนลดของคุณ:{' '}
+                <span className="font-mono font-bold bg-neutral-100 border border-neutral-200 rounded-md px-2 py-0.5">
+                  {coupon}
+                </span>
+              </p>
+            )}
           </div>
 
         </div>

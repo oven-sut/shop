@@ -82,6 +82,7 @@ src/
 │     ├─ users                 GET รายชื่อผู้ใช้ | POST สร้างบัญชี (แอดมิน)
 │     │  └─ [id]               PATCH สิทธิ์/ระงับ/ชื่อ | DELETE ลบถาวร | [id]/wallet POST ปรับยอดเงิน
 │     ├─ supplier/byshop       GET แคตาล็อก+ประวัติ | POST สั่งซื้อ/แจ้งปัญหา (แอดมิน)
+│     ├─ newsletter            POST สมัครรับข่าว | DELETE ยกเลิก | GET รายชื่อ+CSV (แอดมิน)
 │     ├─ audit                 GET บันทึกระบบ (แอดมิน, อ่านอย่างเดียว)
 │     ├─ backups               GET รายการ+ลิงก์ดาวน์โหลด | POST สำรองเดี๋ยวนี้ (แอดมิน)
 │     ├─ cron/backup/[secret]  GET|POST ตัวตั้งเวลาเรียกให้สำรอง (เปิดสาธารณะ)
@@ -154,6 +155,7 @@ API ทุกเส้นต้องยืนยันตัวตน ราย
 | `orders` | คำสั่งซื้อ + snapshot ของรายการสินค้า | `place_order()` |
 | `products` `coupons` `store_settings` | ข้อมูลร้าน | แอดมิน (ผ่าน RLS) |
 | `audit_logs` | ใครทำอะไรกับอะไร | service key เท่านั้น (อ่าน: แอดมิน) |
+| `newsletter_subscribers` | อีเมลที่สมัครรับข่าว | service key เท่านั้น (ไม่มี policy ให้ client) |
 
 ไม่มี RLS policy ไหนให้ client เขียน `wallets` / `topups` / `wallet_transactions` ได้เลย
 

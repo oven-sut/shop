@@ -1300,3 +1300,36 @@ set public = excluded.public,
 -- ลงเอง (supplier is null) ยังขายตามปกติ — ใช้ตอนต้นทางล่ม/เครดิตหมด จะได้ไม่รับเงิน
 -- ลูกค้ามาแล้วส่งของไม่ได้
 alter table public.store_settings add column if not exists sell_apps_enabled boolean not null default true;
+
+-- ============================================================================
+-- รับข่าวสาร (newsletter)
+-- ============================================================================
+-- เก็บอีเมลที่สมัครรับข่าว ใช้ตอนจะส่งข่าวหรือแจกโค้ดส่วนลด
+--
+-- อีเมลถูกเก็บเป็นตัวพิมพ์เล็กเสมอ (ฟังก์ชันฝั่ง route lower() ให้ก่อน) และ unique
+-- ทั้งตาราง — สมัครซ้ำคือ "อัปเดตแถวเดิม" ไม่ใช่แถวใหม่ ไม่งั้นเวลาส่งจริงจะส่งซ้ำคนเดิม
+create table if not exists public.newsletter_subscribers (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique check (email = lower(trim(email)) and position('@' in email) > 1),
+  -- ใครสมัคร ถ้าตอนนั้นล็อกอินอยู่ — บัญชีถูกลบก็ยังเก็บอีเมลไว้ (set null)
+  user_id uuid references auth.users (id) on delete set null,
+  source text not null default 'footer',
+  -- ยกเลิกรับข่าวแล้วไม่ลบแถวทิ้ง: เก็บไว้กันสมัครใหม่โดยไม่ตั้งใจแล้วโดนส่งซ้ำ
+  -- และเป็นหลักฐานว่าเคยขอยกเลิกเมื่อไหร่
+  unsubscribed_at timestamptz,
+  -- ใส่ท้ายลิงก์ "ยกเลิกรับข่าว" ในอีเมล จะได้ยกเลิกได้โดยไม่ต้องล็อกอิน
+  unsubscribe_token text not null default encode(gen_random_bytes(18), 'hex'),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists newsletter_active_idx
+  on public.newsletter_subscribers (created_at desc)
+  where unsubscribed_at is null;
+
+alter table public.newsletter_subscribers enable row level security;
+
+-- ไม่มี policy ให้ client อ่านหรือเขียนเลย: รายชื่ออีเมลของลูกค้าทั้งร้านอยู่ในนี้
+-- ทุกอย่างผ่าน route ฝั่งเซิร์ฟเวอร์ด้วย service key แล้วกรองสิทธิ์ที่นั่น
+
+-- โค้ดส่วนลดต้อนรับ — โชว์ให้คนที่เพิ่งสมัครรับข่าว (เว้นว่าง = ไม่แจก)
+alter table public.store_settings add column if not exists newsletter_welcome_coupon text not null default '';

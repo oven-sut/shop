@@ -21,6 +21,8 @@ export interface StoreSettings {
   topupVoucherEnabled: boolean;
   /** ปิดแล้วสินค้าจากซัพพลายเออร์หายจากหน้าร้านและสั่งซื้อไม่ได้ */
   sellAppsEnabled: boolean;
+  /** โค้ดส่วนลดต้อนรับที่โชว์ให้คนเพิ่งสมัครรับข่าว (เว้นว่าง = ไม่แจก) */
+  newsletterWelcomeCoupon: string;
   /** ช่องทางติดต่อที่แสดงหน้า /contact — ดู lib/contact.ts */
   contactLine: string;
   contactEmail: string;
@@ -70,6 +72,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   topupTruemoneyEnabled: true,
   topupVoucherEnabled: true,
   sellAppsEnabled: true,
+  newsletterWelcomeCoupon: '',
   contactLine: '',
   contactEmail: '',
   contactPhone: '',
@@ -111,6 +114,7 @@ export function toSettings(row: Row | null | undefined): StoreSettings {
     topupTruemoneyEnabled: row.topup_truemoney_enabled !== false,
     topupVoucherEnabled: row.topup_voucher_enabled !== false,
     sellAppsEnabled: row.sell_apps_enabled !== false,
+    newsletterWelcomeCoupon: (row.newsletter_welcome_coupon as string) ?? '',
     contactLine: (row.contact_line as string) ?? '',
     contactEmail: (row.contact_email as string) ?? '',
     contactPhone: (row.contact_phone as string) ?? '',
@@ -157,6 +161,7 @@ export function toSettingsRow(input: Record<string, unknown>): Row {
   set('topupTruemoneyEnabled', 'topup_truemoney_enabled', Boolean);
   set('topupVoucherEnabled', 'topup_voucher_enabled', Boolean);
   set('sellAppsEnabled', 'sell_apps_enabled', Boolean);
+  set('newsletterWelcomeCoupon', 'newsletter_welcome_coupon', (v) => String(v).trim().toUpperCase());
   set('contactLine', 'contact_line', String);
   set('contactEmail', 'contact_email', String);
   set('contactPhone', 'contact_phone', String);

@@ -14,7 +14,9 @@ import { AdminAuditLog } from '../../components/Admin/AdminAuditLog';
 import { ToastContainer } from '../../components/ToastContainer';
 import Link from 'next/link';
 import {
+  Download,
   Image as ImageIcon,
+  Mail,
   Megaphone,
   MessageCircle,
   Save,
@@ -457,6 +459,43 @@ function StoreSettingsPanel() {
                     );
                   })}
                 </div>
+              </div>
+
+              {/* รับข่าวสาร — โค้ดต้อนรับกับรายชื่อผู้สมัคร */}
+              <div className="p-4 bg-neutral-100/60 rounded-md border border-neutral-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-neutral-900" />
+                  <span className="font-bold text-neutral-900">รับข่าวสาร &amp; โค้ดส่วนลด</span>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-neutral-700 mb-1">
+                    โค้ดส่วนลดต้อนรับ
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="เช่น WELCOME10 (เว้นว่าง = ไม่แจกโค้ด)"
+                    value={form.newsletterWelcomeCoupon}
+                    onChange={(e) => update('newsletterWelcomeCoupon', e.target.value.toUpperCase())}
+                    className="w-full bg-white border-neutral-200 text-neutral-900 font-mono"
+                  />
+                  {/* โค้ดนี้แค่ "แสดงให้ดู" — ตัวที่ทำให้ใช้ได้จริงคือคูปองในหน้าคูปอง */}
+                  <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">
+                    โชว์ให้คนที่เพิ่งกดสมัครในฟุตเตอร์ — ต้องไปสร้างคูปองรหัสเดียวกันนี้ไว้ด้วย
+                    ไม่งั้นลูกค้าเอาไปใช้ตอนเช็คเอาต์ไม่ได้
+                  </p>
+                </div>
+
+                <a
+                  href="/api/newsletter?format=csv"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-neutral-900 underline underline-offset-2"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  ดาวน์โหลดรายชื่อผู้สมัคร (CSV)
+                </a>
+                <p className="text-[11px] text-neutral-500 leading-relaxed -mt-1">
+                  ระบบเก็บอีเมลไว้ให้ แต่ยังไม่ส่งเมลเอง — เอาไฟล์นี้ไปเข้าตัวส่งเมลที่ใช้อยู่
+                </p>
               </div>
 
               {/* ปิดขายแอปจากซัพพลายเออร์ — บังคับใน place_order ด้วย ไม่ใช่แค่ซ่อนหน้าร้าน */}
