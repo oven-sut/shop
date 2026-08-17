@@ -90,11 +90,14 @@ export async function POST(request: NextRequest) {
       const productId = typeof body.productId === 'string' ? body.productId.trim() : '';
       if (!productId) return badRequest('ต้องระบุ productId ของ BYShop');
 
-      const result = await buyByshopProduct({
-        productId,
-        customerUsername:
-          typeof body.customerUsername === 'string' ? body.customerUsername.trim() : undefined,
-      });
+      // BYShop ผูกทุกออเดอร์กับ "ยูสเซอร์ลูกค้า" ฝั่งเขา และใช้ค่านี้กรองประวัติทีหลัง
+      // ถ้าแอดมินไม่ระบุ ใช้อีเมลแอดมินเอง — ตรงกับความจริงว่าใครเป็นคนกดซื้อ
+      const customerUsername =
+        typeof body.customerUsername === 'string' && body.customerUsername.trim()
+          ? body.customerUsername.trim().slice(0, 100)
+          : user.email;
+
+      const result = await buyByshopProduct({ productId, customerUsername });
 
       // เงินออกจากเครดิตร้าน ต้องมีบรรทัดในบันทึกระบบทุกครั้ง
       await recordAudit({
@@ -102,8 +105,8 @@ export async function POST(request: NextRequest) {
         actor: user,
         targetType: 'byshop_product',
         targetId: productId,
-        summary: `สั่งซื้อสินค้า BYShop id ${productId}`,
-        meta: { productId, response: result },
+        summary: `สั่งซื้อสินค้า BYShop id ${productId} ในนาม ${customerUsername}`,
+        meta: { productId, customerUsername, response: result },
         request,
       });
 

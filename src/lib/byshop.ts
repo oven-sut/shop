@@ -8,7 +8,7 @@ import { SupplierError } from './supplier';
  * | เส้น | เมธอด | ต้องส่ง | ได้อะไร |
  * | --- | --- | --- | --- |
  * | `/api/product` | GET | — (ไม่ต้องมีคีย์) | รายการสินค้า + สต็อก |
- * | `/api/buy` | POST | `keyapi`, `id` | บัญชีที่ซื้อได้ |
+ * | `/api/buy` | POST | `keyapi`, `id`, `username_customer` | บัญชีที่ซื้อได้ |
  * | `/api/history` | POST | `keyapi` (+`orderid` หรือ `username_customer`) | ประวัติ + email/password |
  * | `/api/report_fix` | POST | `keyapi`, `orderid`, `report_id` | แจ้งปัญหาออเดอร์ |
  *
@@ -16,10 +16,12 @@ import { SupplierError } from './supplier';
  * — ความผิดพลาดอยู่ใน `{"status":"error","message":"..."}` ของ body ไม่ใช่ใน status code
  * จึงต้องอ่าน body ทุกครั้ง ห้ามเชื่อ `response.ok`
  *
- * ⚠️ ฟิลด์ของ `/api/buy` นอกจาก `keyapi` **ยังไม่ได้ยืนยันกับของจริง** — เส้นนี้ตรวจคีย์
- * ก่อนตรวจฟิลด์ ("keyapi ไม่ถูกต้อง") จึงหาชื่อฟิลด์จากภายนอกไม่ได้ ตัวอย่างที่ได้มา 3 ไฟล์
- * ไม่มีของเส้นซื้อ ดังนั้นการซื้อจึงยังไม่ถูกต่อเข้าระบบส่งของอัตโนมัติ มีแต่ปุ่มให้แอดมิน
- * กดยิงเองหนึ่งรายการเพื่อดูคำตอบจริงก่อน
+ * ⚠️ ตัวอย่างที่ได้มา 3 ไฟล์ไม่มีของเส้นซื้อ สัญญาของ `/api/buy` จึงค่อย ๆ ยืนยันจากคำตอบจริง:
+ * ต้นทางตรวจทีละฟิลด์แล้วบอกว่าขาดอะไร ("keyapi ไม่ถูกต้อง" → "กรุณาใส่ username_customer")
+ * ตอนนี้ยืนยันแล้วว่าต้องมี `keyapi` กับ `username_customer` ส่วนชื่อฟิลด์สินค้ายังใช้ `id`
+ * ตามที่ `/api/product` ใช้ — ถ้ายิงแล้วยังได้ "กรุณาใส่ …" อีก ชื่อในข้อความนั้นคือคำตอบ
+ *
+ * ระหว่างที่ยังไม่ครบ การซื้อจึงยังไม่ต่อเข้าระบบส่งของอัตโนมัติ มีแต่ปุ่มให้แอดมินกดเอง
  */
 
 const DEFAULT_BASE_URL = 'https://api_app_premium.byshop.me/api';
@@ -214,12 +216,25 @@ export async function fetchByshopHistory(
  */
 export async function buyByshopProduct(input: {
   productId: string;
-  customerUsername?: string;
+  customerUsername: string;
 }): Promise<Record<string, unknown>> {
-  const form: Record<string, string> = { keyapi: requireKey(), id: input.productId };
-  if (input.customerUsername) form.username_customer = input.customerUsername;
+  const customerUsername = input.customerUsername.trim();
 
-  const body = await call('/buy', form);
+  // ต้นทางตอบ "กรุณาใส่ username_customer" ถ้าไม่ส่ง — กันไว้ตรงนี้ก่อนเสียเที่ยว
+  if (!customerUsername) {
+    throw new SupplierError(
+      'byshop_missing_customer',
+      'ต้องระบุยูสเซอร์ลูกค้า (username_customer) ที่จะผูกกับรายการนี้ฝั่ง BYShop',
+      400
+    );
+  }
+
+  const body = await call('/buy', {
+    keyapi: requireKey(),
+    id: input.productId,
+    username_customer: customerUsername,
+  });
+
   return isRecord(body) ? body : { result: body };
 }
 

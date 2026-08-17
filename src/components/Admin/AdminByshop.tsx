@@ -57,6 +57,8 @@ export const AdminByshop: React.FC = () => {
 
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
+  /** BYShop บังคับให้ทุกออเดอร์ผูกกับ "ยูสเซอร์ลูกค้า" ฝั่งเขา และใช้ค่านี้กรองประวัติทีหลัง */
+  const [customerUsername, setCustomerUsername] = useState('');
   const [busyId, setBusyId] = useState('');
   const [reveal, setReveal] = useState<string | null>(null);
   const [lastResponse, setLastResponse] = useState<unknown>(null);
@@ -161,6 +163,15 @@ export const AdminByshop: React.FC = () => {
           className="h-9 w-56 bg-white border-neutral-200 text-xs"
         />
 
+        <Input
+          type="text"
+          placeholder="ยูสเซอร์ลูกค้า (เว้นว่าง = อีเมลคุณ)"
+          value={customerUsername}
+          onChange={(e) => setCustomerUsername(e.target.value)}
+          className="h-9 w-60 bg-white border-neutral-200 text-xs"
+          title="BYShop ผูกทุกออเดอร์กับยูสเซอร์ลูกค้า และใช้ค่านี้กรองประวัติภายหลัง"
+        />
+
         <Button
           type="button"
           variant="outline"
@@ -209,7 +220,12 @@ export const AdminByshop: React.FC = () => {
                   type="button"
                   variant="outline"
                   disabled={!configured || outOfStock || busyId === product.id}
-                  onClick={() => post({ action: 'buy', productId: product.id }, product.id)}
+                  onClick={() =>
+                    post(
+                      { action: 'buy', productId: product.id, customerUsername },
+                      product.id
+                    )
+                  }
                   className="h-8 px-2.5 text-[11px] border-neutral-300 shrink-0"
                   title={outOfStock ? 'สินค้าหมด' : 'สั่งซื้อจาก BYShop ด้วยเครดิตของร้าน'}
                 >
