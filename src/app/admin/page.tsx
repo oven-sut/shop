@@ -9,6 +9,7 @@ import { AdminOrderList } from '../../components/Admin/AdminOrderList';
 import { AdminUsers } from '../../components/Admin/AdminUsers';
 import { AdminAnalytics } from '../../components/Admin/AdminAnalytics';
 import { AdminSupplier } from '../../components/Admin/AdminSupplier';
+import { AdminByshop } from '../../components/Admin/AdminByshop';
 import { AdminAuditLog } from '../../components/Admin/AdminAuditLog';
 import { ToastContainer } from '../../components/ToastContainer';
 import Link from 'next/link';
@@ -512,7 +513,15 @@ function AdminContent() {
 
         {activeTab === 'products' && <AdminProductList />}
 
-        {activeTab === 'supplier' && <AdminSupplier />}
+        {activeTab === 'supplier' && (
+          <div className="space-y-8">
+            <AdminSupplier />
+            {/* เจ้าที่สองในแท็บเดียวกัน — แยกกันด้วยเส้นคั่น ไม่ต้องเพิ่มแท็บใหม่ */}
+            <div className="pt-6 border-t border-neutral-200">
+              <AdminByshop />
+            </div>
+          </div>
+        )}
 
         {activeTab === 'orders' && <AdminOrderList />}
 

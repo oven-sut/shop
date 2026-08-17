@@ -32,6 +32,8 @@ export type AuditAction =
   | 'topup.slip'
   | 'topup.voucher'
   | 'topup.gateway'
+  | 'supplier.buy'
+  | 'supplier.report'
   | 'backup.run'
   | 'backup.prune';
 

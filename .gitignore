@@ -43,3 +43,8 @@ next-env.d.ts
 # ภาพหน้าจอที่วางไว้ชั่วคราวตอนคุยงาน ไม่ใช่ของโปรเจกต์
 image.png
 *.screenshot.png
+
+# ตัวอย่าง PHP ของซัพพลายเออร์ที่วางไว้อ่าน ไม่ใช่โค้ดของโปรเจกต์
+report_fix/
+product_php/
+history_php/

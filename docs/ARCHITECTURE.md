@@ -81,6 +81,7 @@ src/
 │     ├─ topups/webhook/[secret] POST เกตเวย์แจ้งว่าจ่ายแล้ว (เปิดสาธารณะ)
 │     ├─ users                 GET รายชื่อผู้ใช้ | POST สร้างบัญชี (แอดมิน)
 │     │  └─ [id]               PATCH สิทธิ์/ระงับ/ชื่อ | DELETE ลบถาวร | [id]/wallet POST ปรับยอดเงิน
+│     ├─ supplier/byshop       GET แคตาล็อก+ประวัติ | POST สั่งซื้อ/แจ้งปัญหา (แอดมิน)
 │     ├─ audit                 GET บันทึกระบบ (แอดมิน, อ่านอย่างเดียว)
 │     ├─ backups               GET รายการ+ลิงก์ดาวน์โหลด | POST สำรองเดี๋ยวนี้ (แอดมิน)
 │     ├─ cron/backup/[secret]  GET|POST ตัวตั้งเวลาเรียกให้สำรอง (เปิดสาธารณะ)
@@ -100,6 +101,7 @@ src/
 │  ├─ topup-charge.ts          ← เติมเงินจาก charge ที่เกตเวย์ยืนยันแล้ว (ใช้ร่วม 2 ทาง)
 │  ├─ topup-channels.ts        ← สวิตช์เปิด/ปิดช่องทางเติมเงิน (ใช้ร่วมทั้ง 3 ฝั่ง)
 │  ├─ contact.ts               ← ช่องทางติดต่อ + กฎว่าค่าไหนทำเป็นลิงก์ได้
+│  ├─ byshop.ts                ← ซัพพลายเออร์ BYShop (product/buy/history/report_fix)
 │  ├─ audit.ts                 ← recordAudit() เขียนบันทึกระบบ (ห้ามทำให้งานหลักล้ม)
 │  ├─ backup.ts                ← ดัมป์ทุกตาราง → gzip → Storage + ลบไฟล์เก่า
 │  ├─ gateway/                 ← เกตเวย์รับชำระเงิน: types.ts, omise.ts, index.ts
