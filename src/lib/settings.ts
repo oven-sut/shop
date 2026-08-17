@@ -19,6 +19,8 @@ export interface StoreSettings {
   topupQrEnabled: boolean;
   topupTruemoneyEnabled: boolean;
   topupVoucherEnabled: boolean;
+  /** ปิดแล้วสินค้าจากซัพพลายเออร์หายจากหน้าร้านและสั่งซื้อไม่ได้ */
+  sellAppsEnabled: boolean;
   /** ช่องทางติดต่อที่แสดงหน้า /contact — ดู lib/contact.ts */
   contactLine: string;
   contactEmail: string;
@@ -67,6 +69,7 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   topupQrEnabled: true,
   topupTruemoneyEnabled: true,
   topupVoucherEnabled: true,
+  sellAppsEnabled: true,
   contactLine: '',
   contactEmail: '',
   contactPhone: '',
@@ -107,6 +110,7 @@ export function toSettings(row: Row | null | undefined): StoreSettings {
     topupQrEnabled: row.topup_qr_enabled !== false,
     topupTruemoneyEnabled: row.topup_truemoney_enabled !== false,
     topupVoucherEnabled: row.topup_voucher_enabled !== false,
+    sellAppsEnabled: row.sell_apps_enabled !== false,
     contactLine: (row.contact_line as string) ?? '',
     contactEmail: (row.contact_email as string) ?? '',
     contactPhone: (row.contact_phone as string) ?? '',
@@ -152,6 +156,7 @@ export function toSettingsRow(input: Record<string, unknown>): Row {
   set('topupQrEnabled', 'topup_qr_enabled', Boolean);
   set('topupTruemoneyEnabled', 'topup_truemoney_enabled', Boolean);
   set('topupVoucherEnabled', 'topup_voucher_enabled', Boolean);
+  set('sellAppsEnabled', 'sell_apps_enabled', Boolean);
   set('contactLine', 'contact_line', String);
   set('contactEmail', 'contact_email', String);
   set('contactPhone', 'contact_phone', String);

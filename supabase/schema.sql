@@ -474,6 +474,12 @@ begin
       raise exception 'product_not_found:%', v_item ->> 'product_id' using errcode = '22023';
     end if;
 
+    -- ปิดขายแอปจากซัพพลายเออร์ = ปิดที่นี่ด้วย ไม่ใช่แค่ซ่อนในหน้าร้าน
+    -- ตะกร้าที่ค้างอยู่ในเบราว์เซอร์ยิงตรงมาได้เสมอ
+    if v_product.supplier is not null and not coalesce(v_settings.sell_apps_enabled, true) then
+      raise exception 'app_sales_closed:%', v_product.name using errcode = '22023';
+    end if;
+
     -- สินค้าที่ขายไม่จำกัดไม่มีสต็อกให้เช็คหรือตัด ที่เหลือคิดราคาเหมือนกันทุกอย่าง
     if not v_product.is_unlimited then
       if v_product.stock < v_quantity then
@@ -1286,3 +1292,11 @@ values ('backups', 'backups', false, 104857600)
 on conflict (id) do update
 set public = excluded.public,
     file_size_limit = excluded.file_size_limit;
+
+-- ============================================================================
+-- เปิด/ปิดการขายแอปจากซัพพลายเออร์
+-- ============================================================================
+-- ปิดแล้วสินค้าที่มาจากซัพพลายเออร์จะหายจากหน้าร้านและสั่งซื้อไม่ได้ ส่วนของที่ร้าน
+-- ลงเอง (supplier is null) ยังขายตามปกติ — ใช้ตอนต้นทางล่ม/เครดิตหมด จะได้ไม่รับเงิน
+-- ลูกค้ามาแล้วส่งของไม่ได้
+alter table public.store_settings add column if not exists sell_apps_enabled boolean not null default true;

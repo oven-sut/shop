@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin } from '@/lib/api-auth';
-import { badRequest, serverError } from '@/lib/api-response';
+import { badRequest, dbError, serverError } from '@/lib/api-response';
 import { recordAudit } from '@/lib/audit';
 import {
   BYSHOP_FIX_STATUS,
   BYSHOP_REPORT_REASONS,
   buyByshopProduct,
+  byshopInfoToText,
   fetchByshopHistory,
   isByshopConfigured,
   listByshopProducts,
@@ -13,6 +14,7 @@ import {
 } from '@/lib/byshop';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { SupplierError } from '@/lib/supplier';
+import { createRouteClient } from '@/lib/supabase/server';
 
 /**
  * BYShop — แคตาล็อก ประวัติ สั่งซื้อ และแจ้งปัญหา (แอดมินเท่านั้น)
@@ -113,6 +115,71 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'ส่งคำสั่งซื้อไปที่ BYShop แล้ว', data: result });
     }
 
+    if (action === 'import') {
+      const ids: string[] = Array.isArray(body.productIds)
+        ? body.productIds.slice(0, 100).map(String)
+        : [];
+
+      if (!ids.length) return badRequest('เลือกสินค้าที่จะนำเข้าอย่างน้อยหนึ่งรายการ');
+
+      // ราคาขายหน้าร้าน: ต้นทางให้มาราคาเดียวซึ่งคือต้นทุนของเรา จึงต้องบวกกำไรเอง
+      // ปัดขึ้นเป็นจำนวนเต็มบาท ราคาลงท้าย .40 บาทอ่านแล้วสับสนเปล่า ๆ
+      const markup = Number.isFinite(Number(body.markupPercent))
+        ? Math.min(Math.max(Number(body.markupPercent), 0), 500)
+        : 20;
+
+      const catalogue = await listByshopProducts();
+      const selected = catalogue.filter((product) => ids.includes(product.id));
+
+      if (!selected.length) {
+        return NextResponse.json(
+          { success: false, error: 'not_found', message: 'ไม่พบสินค้านี้ในแคตาล็อกของ BYShop' },
+          { status: 404 }
+        );
+      }
+
+      const rows = selected.map((product) => ({
+        name: product.name,
+        category: product.category || 'แอปพรีเมียม',
+        price: Math.ceil(product.price * (1 + markup / 100)),
+        stock: product.stock,
+        description: byshopInfoToText(product.infoHtml),
+        image: product.image,
+        specs: { หมวด: product.category, สถานะต้นทาง: product.status },
+        supplier: 'byshop',
+        supplier_product_id: product.id,
+        supplier_type: 'app',
+        supplier_cost: product.price,
+        is_featured: Boolean(body.isFeatured),
+      }));
+
+      const supabase = await createRouteClient();
+      // upsert บนคู่ (supplier, supplier_product_id): กดนำเข้าซ้ำ = อัปเดตราคา/สต็อก
+      // ของเดิม ไม่ใช่สร้างสินค้าซ้ำในร้าน
+      const { data, error } = await supabase
+        .from('products')
+        .upsert(rows, { onConflict: 'supplier,supplier_product_id' })
+        .select('id, name, price, stock');
+
+      if (error) return dbError(error, 403);
+
+      await recordAudit({
+        action: 'product.create',
+        actor: user,
+        targetType: 'product',
+        targetId: `byshop:${ids.join(',')}`.slice(0, 200),
+        summary: `นำเข้าสินค้าจาก BYShop ${data.length} รายการ (บวกกำไร ${markup}%)`,
+        meta: { markup, imported: data },
+        request,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `นำเข้า ${data.length} รายการเข้าหน้าร้านแล้ว (บวกกำไร ${markup}%)`,
+        data,
+      });
+    }
+
     if (action === 'report') {
       const orderId = typeof body.orderId === 'string' ? body.orderId.trim() : '';
       const reportId = Number(body.reportId);
@@ -137,7 +204,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'แจ้งปัญหาไปที่ BYShop แล้ว', data: result });
     }
 
-    return badRequest("action ต้องเป็น 'buy' หรือ 'report'");
+    return badRequest("action ต้องเป็น 'import', 'buy' หรือ 'report'");
   } catch (error) {
     if (error instanceof SupplierError) {
       return NextResponse.json(

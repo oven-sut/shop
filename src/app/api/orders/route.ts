@@ -206,6 +206,11 @@ function describe(message: string): string {
   }
   if (message.includes('product_not_found')) return 'มีสินค้าในตะกร้าที่ถูกลบไปแล้ว กรุณาตรวจสอบตะกร้าอีกครั้ง';
   if (message.includes('store_closed')) return 'ขณะนี้ร้านปิดรับคำสั่งซื้อชั่วคราว';
+
+  if (message.includes('app_sales_closed')) {
+    // ตะกร้าค้างในเบราว์เซอร์ยังมีของที่เพิ่งถูกปิดขายได้ บอกให้รู้ว่าเป็นชิ้นไหน
+    return `ตอนนี้ร้านปิดขาย "${message.split('app_sales_closed:')[1]?.trim()}" ชั่วคราว กรุณาเอาออกจากตะกร้าแล้วลองใหม่`;
+  }
   if (message.includes('empty_cart')) return 'ตะกร้าว่าง';
 
   // Anything else is a Postgres error rather than one of the function's own

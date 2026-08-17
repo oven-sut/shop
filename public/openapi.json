@@ -2521,6 +2521,141 @@
           }
         }
       }
+    },
+    "/api/supplier/byshop": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "BYShop — แคตาล็อก + ประวัติการซื้อ",
+        "operationId": "getByshop",
+        "description": "แคตาล็อกดูได้แม้ยังไม่ตั้ง SUPPLIER_BYSHOP_KEYAPI (เส้นนั้นของต้นทางไม่ต้องยืนยันตัวตน) ส่วนประวัติต้องมีคีย์",
+        "parameters": [
+          {
+            "name": "history",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          },
+          {
+            "name": "orderId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customer",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "สำเร็จ"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "502": {
+            "description": "ติดต่อ BYShop ไม่ได้"
+          },
+          "503": {
+            "description": "ยังไม่ได้ตั้งคีย์ หรือคีย์ใช้ไม่ได้"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "นำเข้าสินค้า / สั่งซื้อ / แจ้งปัญหา",
+        "operationId": "postByshop",
+        "description": "action: 'import' นำสินค้าเข้าหน้าร้าน (upsert ตาม supplier_product_id, บวกกำไร markupPercent) · 'buy' สั่งซื้อจริงด้วยเครดิตร้าน (ต้องมี username_customer) · 'report' แจ้งปัญหาออเดอร์",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "action"
+                ],
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "import",
+                      "buy",
+                      "report"
+                    ]
+                  },
+                  "productIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "สำหรับ import"
+                  },
+                  "markupPercent": {
+                    "type": "number",
+                    "default": 20,
+                    "description": "บวกกำไรกี่ % จากต้นทุน (0–500)"
+                  },
+                  "isFeatured": {
+                    "type": "boolean"
+                  },
+                  "productId": {
+                    "type": "string",
+                    "description": "สำหรับ buy"
+                  },
+                  "customerUsername": {
+                    "type": "string",
+                    "description": "ยูสเซอร์ลูกค้าฝั่ง BYShop — เว้นว่าง = อีเมลแอดมิน"
+                  },
+                  "orderId": {
+                    "type": "string",
+                    "description": "สำหรับ report"
+                  },
+                  "reportId": {
+                    "type": "integer",
+                    "description": "1–9 ตามรายการเหตุผล"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "สำเร็จ"
+          },
+          "400": {
+            "description": "พารามิเตอร์ไม่ถูกต้อง หรือ BYShop ปฏิเสธ"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "สั่งซื้อถี่เกินไป"
+          },
+          "503": {
+            "description": "ยังไม่ได้ตั้งคีย์"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3218,6 +3353,11 @@
           "contactNote": {
             "type": "string",
             "description": "ข้อความเพิ่มเติมที่หน้า /contact — แสดงที่หน้า /contact ซึ่งเปิดสาธารณะ"
+          },
+          "sellAppsEnabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "ปิดแล้วสินค้าที่มาจากซัพพลายเออร์หายจากหน้าร้านและ place_order() ปฏิเสธ"
           }
         }
       },

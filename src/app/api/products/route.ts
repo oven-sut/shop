@@ -3,14 +3,17 @@ import { requireAdmin, requireApiUser } from '@/lib/api-auth';
 import { recordAudit } from '@/lib/audit';
 import { badRequest, dbError, quoteFilterValue, serverError } from '@/lib/api-response';
 import { toProduct, toProductRow } from '@/lib/mappers';
+import { loadSettings } from '@/lib/settings';
 import { createRouteClient } from '@/lib/supabase/server';
 
 /** Long enough for any real product name, short enough to keep `ilike` cheap. */
 const MAX_SEARCH_LENGTH = 100;
 
 export async function GET(request: NextRequest) {
-  const { response: unauthorized } = await requireApiUser();
+  const { user, response: unauthorized } = await requireApiUser();
   if (unauthorized) return unauthorized;
+
+  const isAdmin = user.role === 'admin';
 
   try {
     const { searchParams } = new URL(request.url);
@@ -29,6 +32,11 @@ export async function GET(request: NextRequest) {
       .select('*, product_reviews(*)')
       .order('created_at', { ascending: false })
       .order('created_at', { referencedTable: 'product_reviews', ascending: false });
+
+    // ปิดขายแอปจากซัพพลายเออร์ = ไม่ต้องโชว์ให้ลูกค้าเห็นด้วย (place_order ปฏิเสธอยู่แล้ว
+    // ถ้าดันสั่งมา) — แอดมินยังเห็นครบ จะได้จัดการของที่ปิดขายอยู่ได้
+    const settings = await loadSettings(supabase);
+    if (!settings.sellAppsEnabled && !isAdmin) query = query.is('supplier', null);
 
     if (category && category !== 'ทั้งหมด') query = query.eq('category', category);
     if (featured === 'true') query = query.eq('is_featured', true);

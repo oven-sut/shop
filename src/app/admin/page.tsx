@@ -459,6 +459,30 @@ function StoreSettingsPanel() {
                 </div>
               </div>
 
+              {/* ปิดขายแอปจากซัพพลายเออร์ — บังคับใน place_order ด้วย ไม่ใช่แค่ซ่อนหน้าร้าน */}
+              <div className="p-4 bg-neutral-50 rounded-md border border-neutral-200 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="font-bold text-neutral-900 block">ขายแอปจากซัพพลายเออร์</span>
+                  <span className="text-neutral-500 text-[11px] leading-relaxed">
+                    ปิดแล้วสินค้าที่นำเข้าจากซัพพลายเออร์จะหายจากหน้าร้านและสั่งซื้อไม่ได้
+                    (ของที่ร้านลงเองยังขายปกติ) — ใช้ตอนต้นทางล่มหรือเครดิตหมด
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={form.sellAppsEnabled}
+                  onClick={() => update('sellAppsEnabled', !form.sellAppsEnabled)}
+                  className={`shrink-0 px-4 py-2 rounded-md text-xs font-bold border transition-all ${
+                    form.sellAppsEnabled
+                      ? 'bg-neutral-900 text-white border-neutral-900'
+                      : 'bg-white text-neutral-400 border-neutral-300'
+                  }`}
+                >
+                  {form.sellAppsEnabled ? 'เปิดขาย' : 'ปิดขาย'}
+                </button>
+              </div>
+
               <div className="p-4 bg-neutral-50 rounded-md border border-neutral-200 flex items-center justify-between">
                 <div>
                   <span className="font-bold text-neutral-900 block">สถานะเปิด/ปิดรับคำสั่งซื้อ</span>

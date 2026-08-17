@@ -238,6 +238,31 @@ export async function buyByshopProduct(input: {
   return isRecord(body) ? body : { result: body };
 }
 
+/**
+ * HTML จาก `product_info` → ข้อความล้วน
+ *
+ * ต้นทางส่ง HTML ดิบมา ส่วน `products.description` ของเราถูกแสดงเป็นข้อความ ถ้าเก็บ
+ * ทั้งก้อนไว้ลูกค้าจะเห็นแท็กเต็มไปหมด และถ้าไปเรนเดอร์เป็น HTML ก็คือเปิดช่อง XSS
+ * ให้ต้นทาง — จึงถอดแท็กทิ้งตั้งแต่ตอนนำเข้า
+ */
+export function byshopInfoToText(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|h\d|li|div)>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n')
+    .slice(0, 4000);
+}
+
 /** แจ้งปัญหาออเดอร์ — `reportId` ต้องเป็นหนึ่งใน BYSHOP_REPORT_REASONS */
 export async function reportByshopIssue(input: {
   orderId: string;

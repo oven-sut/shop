@@ -59,6 +59,9 @@ export const AdminByshop: React.FC = () => {
   const [search, setSearch] = useState('');
   /** BYShop บังคับให้ทุกออเดอร์ผูกกับ "ยูสเซอร์ลูกค้า" ฝั่งเขา และใช้ค่านี้กรองประวัติทีหลัง */
   const [customerUsername, setCustomerUsername] = useState('');
+  const [selected, setSelected] = useState<string[]>([]);
+  const [markup, setMarkup] = useState('20');
+  const [isImporting, setIsImporting] = useState(false);
   const [busyId, setBusyId] = useState('');
   const [reveal, setReveal] = useState<string | null>(null);
   const [lastResponse, setLastResponse] = useState<unknown>(null);
@@ -100,6 +103,28 @@ export const AdminByshop: React.FC = () => {
     showToast(body.message || (body.success ? 'สำเร็จ' : 'ไม่สำเร็จ'), body.success ? 'success' : 'warning');
     if (body.success) load();
   };
+
+  const importSelected = async () => {
+    if (!selected.length) {
+      showToast('เลือกสินค้าที่จะนำเข้าก่อน', 'warning');
+      return;
+    }
+
+    setIsImporting(true);
+    const response = await fetch('/api/supplier/byshop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'import', productIds: selected, markupPercent: Number(markup) }),
+    });
+    const body = await response.json().catch(() => ({}));
+    setIsImporting(false);
+
+    showToast(body.message || (body.success ? 'นำเข้าแล้ว' : 'นำเข้าไม่สำเร็จ'), body.success ? 'success' : 'warning');
+    if (body.success) setSelected([]);
+  };
+
+  const toggle = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const categories = [...new Set(products.map((product) => product.category).filter(Boolean))].sort();
 
@@ -182,6 +207,55 @@ export const AdminByshop: React.FC = () => {
         </Button>
       </div>
 
+      {/* นำเข้าหน้าร้าน — ต้นทางให้ราคาเดียวซึ่งคือต้นทุน จึงต้องบอกว่าจะบวกกำไรกี่ % */}
+      <div className="border border-neutral-200 rounded-md p-3 bg-neutral-50 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-neutral-900">
+          เลือกไว้ {selected.length} รายการ
+        </span>
+
+        <label className="text-xs text-neutral-500 flex items-center gap-1.5">
+          บวกกำไร
+          <Input
+            type="number"
+            min={0}
+            max={500}
+            value={markup}
+            onChange={(e) => setMarkup(e.target.value)}
+            className="h-8 w-20 bg-white border-neutral-200 text-xs"
+          />
+          %
+        </label>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setSelected(shown.map((product) => product.id))}
+          className="h-8 px-2.5 text-[11px] border-neutral-300"
+        >
+          เลือกทั้งหมดที่เห็น ({shown.length})
+        </Button>
+        {selected.length > 0 && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setSelected([])}
+            className="h-8 px-2.5 text-[11px] border-neutral-300"
+          >
+            ล้าง
+          </Button>
+        )}
+
+        <Button
+          type="button"
+          onClick={importSelected}
+          disabled={isImporting || selected.length === 0}
+          className="h-8 px-3 text-[11px] bg-neutral-900 hover:bg-neutral-700 text-white rounded-md border-0 disabled:opacity-40 ml-auto"
+        >
+          {isImporting && <Spinner className="mr-1.5" />}
+          {isImporting ? 'กำลังนำเข้า...' : 'นำเข้าหน้าร้าน'}
+        </Button>
+      </div>
+
       <div className="border border-neutral-200 rounded-md divide-y divide-neutral-100 bg-white">
         {shown.length === 0 ? (
           <p className="text-xs text-neutral-400 py-10 text-center">ไม่มีสินค้าที่ตรงกับเงื่อนไข</p>
@@ -190,6 +264,14 @@ export const AdminByshop: React.FC = () => {
             const outOfStock = product.stock < 1;
             return (
               <div key={product.id} className="p-3 flex items-center gap-3 text-xs">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(product.id)}
+                  onChange={() => toggle(product.id)}
+                  aria-label={`เลือก ${product.name}`}
+                  className="size-4 shrink-0 accent-neutral-900"
+                />
+
                 {product.image ? (
                   <img
                     src={product.image}
