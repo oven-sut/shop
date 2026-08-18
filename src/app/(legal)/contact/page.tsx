@@ -1,14 +1,65 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ContactField, filledContacts } from '@/lib/contact';
+import { JsonLd } from '@/components/JsonLd';
+import { ContactField, contactHref, filledContacts } from '@/lib/contact';
+import {
+  ORGANIZATION_ID,
+  WEBSITE_ID,
+  absoluteUrl,
+  breadcrumbSchema,
+  graph,
+  organizationSchema,
+  pageMetadata,
+} from '@/lib/seo';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'ติดต่อเรา',
-  description: 'ช่องทางติดต่อทีมงาน NEO APP — LINE, Discord, อีเมล, โทรศัพท์ และเวลาทำการ',
-  alternates: { canonical: '/contact' },
-};
+  description:
+    'ทักทีมงาน NEO APP ได้ทาง LINE, Discord, อีเมล หรือโทรศัพท์ — ' +
+    'สอบถามสินค้า แจ้งปัญหาคำสั่งซื้อ หรือติดตามการเติมเงิน พร้อมเวลาทำการล่าสุด',
+  path: '/contact',
+});
+
+/**
+ * โครงสร้างข้อมูลของหน้านี้
+ *
+ * หน้าติดต่อเป็นหน้าเดียวที่มีข้อมูลจริงของร้านให้ประกาศ — อีเมล เบอร์ และโปรไฟล์
+ * ช่องอื่น ๆ ทั้งหมดอ้าง `@id` ก้อนเดียวกับที่ root layout ประกาศไว้ Google จึงรวม
+ * เป็นร้านเดียว ไม่ใช่สององค์กรที่ชื่อพ้องกัน
+ *
+ * ใช้ `contactHref()` ตัวเดียวกับที่หน้านี้ใช้ทำลิงก์ ค่าที่แอดมินกรอกมาแบบเดา URL
+ * ไม่ได้จึงไม่หลุดลงโครงสร้างข้อมูลในรูปแบบที่ตรวจสอบไม่ได้
+ */
+function contactSchema(contacts: Record<ContactField, string>) {
+  const sameAs = (['contactFacebook', 'contactDiscord', 'contactLine'] as const)
+    .map((field) => contactHref(field, contacts[field]))
+    .filter((href): href is string => Boolean(href?.startsWith('http')));
+
+  const url = absoluteUrl('/contact');
+
+  return graph(
+    organizationSchema({
+      email: contacts.contactEmail.trim() || undefined,
+      telephone: contacts.contactPhone.trim() || undefined,
+      sameAs,
+    }),
+    {
+      '@type': 'ContactPage',
+      '@id': `${url}#page`,
+      url,
+      name: 'ติดต่อเรา',
+      inLanguage: 'th-TH',
+      isPartOf: { '@id': WEBSITE_ID },
+      about: { '@id': ORGANIZATION_ID },
+    },
+    breadcrumbSchema([
+      { name: 'หน้าแรก', path: '/' },
+      { name: 'ติดต่อเรา', path: '/contact' },
+    ])
+  );
+}
 
 /** คอลัมน์ที่หน้านี้อ่านได้ ไม่มีคอลัมน์การเงินอยู่ในชุดนี้ */
 const COLUMNS: Record<ContactField, string> = {
@@ -72,6 +123,8 @@ export default async function ContactPage() {
 
   return (
     <>
+      <JsonLd data={contactSchema(contacts)} />
+
       <h1 className="text-2xl font-bold tracking-tight">ติดต่อเรา</h1>
       <p className="text-sm text-neutral-500 mt-2 leading-relaxed">
         มีคำถามเรื่องสินค้า การสั่งซื้อ หรือการเติมเงิน ทักมาได้ตามช่องทางด้านล่าง

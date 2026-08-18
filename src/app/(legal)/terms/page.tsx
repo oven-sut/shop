@@ -1,17 +1,27 @@
 import type { Metadata } from 'next';
+import { JsonLd } from '@/components/JsonLd';
+import { breadcrumbSchema, graph, pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'ข้อกำหนดการใช้งาน',
   description:
-    'ข้อกำหนดการใช้งาน NEO APP — เงื่อนไขการสั่งซื้อ การเติมเงินเข้ากระเป๋า การส่งมอบสินค้าดิจิทัล และการคืนเงิน',
-  alternates: { canonical: '/terms' },
-};
+    'เงื่อนไขการสั่งซื้อสินค้าดิจิทัลกับ NEO APP — การเติมเงินเข้ากระเป๋า การส่งมอบสินค้า ' +
+    'การรับประกัน และเงื่อนไขการคืนเงิน',
+  path: '/terms',
+});
 
 const UPDATED = '14 สิงหาคม 2569';
 
 export default function TermsPage() {
   return (
     <div className="space-y-6 text-sm leading-relaxed text-neutral-700">
+      <JsonLd
+        data={graph(breadcrumbSchema([
+          { name: 'หน้าแรก', path: '/' },
+          { name: 'ข้อกำหนดการใช้งาน', path: '/terms' },
+        ]))}
+      />
+
       <header className="space-y-1 pb-4 border-b border-neutral-100">
         <h1 className="text-2xl font-extrabold text-neutral-900">ข้อกำหนดการใช้งาน</h1>
         <p className="text-xs text-neutral-400">ปรับปรุงล่าสุด {UPDATED}</p>

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
+import { SITE_HOST, SITE_NAME, SITE_TAGLINE } from '@/lib/seo';
 
 /**
  * The card that appears when the URL is pasted into LINE, Facebook, X, Discord
@@ -11,7 +12,7 @@ import { ImageResponse } from 'next/og';
  * a square transparent PNG, which the platforms letterbox onto whatever
  * background they please. 1200×630 is the size every one of them crops to.
  */
-export const alt = 'NEO APP — ร้านขายแอปพลิเคชันและบริการดิจิทัล';
+export const alt = `${SITE_NAME} — ${SITE_TAGLINE}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -40,16 +41,16 @@ export default async function OpengraphImage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={markSrc} alt="" width={96} height={94} />
           <div style={{ fontSize: 64, fontWeight: 700, color: '#171717', letterSpacing: -1 }}>
-            NEO APP
+            {SITE_NAME}
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ fontSize: 52, fontWeight: 600, color: '#171717', lineHeight: 1.25 }}>
-            ร้านขายแอปพลิเคชันและบริการดิจิทัล
+            {SITE_TAGLINE}
           </div>
           <div style={{ fontSize: 34, color: '#525252', lineHeight: 1.4 }}>
-            เติมเงินเข้ากระเป๋าแล้วซื้อได้ทันที · ตรวจสลิปกับธนาคารอัตโนมัติ
+            เติมเงินด้วยสลิป · ระบบตรวจกับธนาคารอัตโนมัติ
           </div>
         </div>
 
@@ -63,8 +64,9 @@ export default async function OpengraphImage() {
             paddingTop: 28,
           }}
         >
-          <span>ส่งมอบอัตโนมัติ 24 ชั่วโมง</span>
-          <span>neo.owenx.shop</span>
+          <span>จ่ายแล้วรับสินค้าทันที ตลอด 24 ชั่วโมง</span>
+          {/* โดเมนมาจาก env เดียวกับที่ทำ canonical — ไม่ต้องแก้สองที่เวลาย้ายโดเมน */}
+          <span>{SITE_HOST}</span>
         </div>
       </div>
     ),

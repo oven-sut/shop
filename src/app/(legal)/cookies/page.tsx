@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
+import { JsonLd } from '@/components/JsonLd';
+import { breadcrumbSchema, graph, pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'นโยบายคุกกี้',
   description:
-    'NEO APP ใช้คุกกี้และพื้นที่เก็บข้อมูลในเบราว์เซอร์อย่างไรบ้าง และตั้งค่าความยินยอมได้ที่ไหน',
-  alternates: { canonical: '/cookies' },
-};
+    'รายการคุกกี้และพื้นที่เก็บข้อมูลในเบราว์เซอร์ที่ NEO APP ใช้ ' +
+    'แต่ละตัวทำหน้าที่อะไร และเปลี่ยนความยินยอมได้ที่ไหน',
+  path: '/cookies',
+});
 
 const UPDATED = '14 สิงหาคม 2569';
 
@@ -40,6 +43,13 @@ const COOKIES = [
 export default function CookiesPage() {
   return (
     <div className="space-y-6 text-sm leading-relaxed text-neutral-700">
+      <JsonLd
+        data={graph(breadcrumbSchema([
+          { name: 'หน้าแรก', path: '/' },
+          { name: 'นโยบายคุกกี้', path: '/cookies' },
+        ]))}
+      />
+
       <header className="space-y-1 pb-4 border-b border-neutral-100">
         <h1 className="text-2xl font-extrabold text-neutral-900">นโยบายคุกกี้</h1>
         <p className="text-xs text-neutral-400">ปรับปรุงล่าสุด {UPDATED}</p>

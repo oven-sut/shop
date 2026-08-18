@@ -1,17 +1,27 @@
 import type { Metadata } from 'next';
+import { JsonLd } from '@/components/JsonLd';
+import { breadcrumbSchema, graph, pageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: 'นโยบายความเป็นส่วนตัว',
   description:
-    'นโยบายความเป็นส่วนตัวของ NEO APP — ข้อมูลที่เก็บ วิธีใช้งาน ระยะเวลาจัดเก็บ และสิทธิของเจ้าของข้อมูล',
-  alternates: { canonical: '/privacy' },
-};
+    'NEO APP เก็บข้อมูลอะไรของคุณบ้าง เอาไปใช้ทำอะไร เก็บไว้นานแค่ไหน ' +
+    'และคุณขอแก้ไขหรือลบได้อย่างไร',
+  path: '/privacy',
+});
 
 const UPDATED = '14 สิงหาคม 2569';
 
 export default function PrivacyPage() {
   return (
     <div className="space-y-6 text-sm leading-relaxed text-neutral-700">
+      <JsonLd
+        data={graph(breadcrumbSchema([
+          { name: 'หน้าแรก', path: '/' },
+          { name: 'นโยบายความเป็นส่วนตัว', path: '/privacy' },
+        ]))}
+      />
+
       <header className="space-y-1 pb-4 border-b border-neutral-100">
         <h1 className="text-2xl font-extrabold text-neutral-900">นโยบายความเป็นส่วนตัว</h1>
         <p className="text-xs text-neutral-400">ปรับปรุงล่าสุด {UPDATED}</p>
